@@ -20,10 +20,11 @@ from lib import spacenet_yaml_config as spacenet_yaml_config
 # ---------------------------------- PARSE VARS ------------------------------------- #
 # =================================================================================== #
 
-config_file_path            = "../config_files/"
+config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
 sat_config_sub_path         = "sat_config_files/"
-tle_file_path               = "./utils/"
+top_gen_path                = "dynamic-topology-generator/"
+tle_file_path               = top_gen_path+"utils/"
 data_filepath               = "/home/spacenet/Desktop/spacenet_files/"
 output_filepath             = data_filepath+"output/"
 connectivity_matrix_path    = output_filepath+"connectivity_matrix/"
