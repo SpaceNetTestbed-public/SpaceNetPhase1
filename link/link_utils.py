@@ -21,12 +21,9 @@ CONTENTS:       LINK UTILITY FUNCTIONS/ (STARTS AT 55)
 # ------------------------------- IMPORT PACKAGES ----------------------------------- #
 # =================================================================================== #
 
-import os
-import numpy as np
 import math
 import itur
 import requests
-import json
 import sys
 sys.path.append("../")
 from mobility.mobility_utils import *

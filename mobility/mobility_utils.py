@@ -1,4 +1,4 @@
-from skyfield.api import N, W, wgs84, load, EarthSatellite
+from skyfield.api import wgs84, load
 import math
 import threading
 
@@ -150,9 +150,6 @@ def distance_between_two_satellites(
 
     return distance
 
-# removed find_nearest_sat_in_adjacent_plane, as it was not being used in any file or function
-
-# removed get_differences_in_GSLs_between_iterations, as it was not being used in any file or function
 
 def find_adjacent_orbit_sat( 
                             origin_sat, 
@@ -171,7 +168,6 @@ def find_adjacent_orbit_sat(
 
     Returns:
         nearest_sat_in_adj_plane (object): satellite in the adjacent plane nearest to the original satellite
-
     """
     
     # Get the list of satellites in the specified adjacent plane
@@ -188,14 +184,13 @@ def find_adjacent_orbit_sat(
         distance = distance_between_two_satellites(origin_sat, adj_plane_sats[i], t)
 
         # Check if the calculated distance is smaller than both the current minimum distance and a threshold value
-        if distance < min_distance: # and distance < 5016000:
+        if distance < min_distance and distance < 5016000:
             min_distance = distance # update the minimum distance
             nearest_sat_in_adj_plane = adj_plane_sats[i] # set the current adj. plane sat as the nearest to the original sat
 
     # Return the name of the nearest satellite in the adjacent plane
-    return nearest_sat_in_adj_plane.name.split(" ")[0]
+    return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None
 
-# removed find_adjacent_orbit_sat_oneweb, as oneweb test cases are not being considered at this time
 
 def mininet_add_ISLs(
                     connectivity_matrix, 
@@ -248,18 +243,19 @@ def mininet_add_ISLs(
                 current_sat = satellites_by_index[sat]
                 current_sat = satellites_by_name[str(current_sat)]
 
-                # Find satellites in adjacent orbits
+                # Find satellites in first adjacent orbit and assign ISL connectivity
                 sat_adjacent_orbit_1 = find_adjacent_orbit_sat(current_sat, (i+1)%n_orbits, satellites_sorted_in_orbits, t)
-                sat_adjacent_orbit_1 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_1))]
-
+                if sat_adjacent_orbit_1 is not None:
+                    sat_adjacent_orbit_1 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_1))]
+                    connectivity_matrix[sat][sat_adjacent_orbit_1] = 1
+                    connectivity_matrix[sat_adjacent_orbit_1][sat] = 1
+                
+                # Find satellites in second adjacent orbit and assign ISL connectivity
                 sat_adjacent_orbit_2 = find_adjacent_orbit_sat(current_sat, (i-1)%n_orbits, satellites_sorted_in_orbits, t)
-                sat_adjacent_orbit_2 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_2))]
-
-                # Establish ISLs with satellites in adjacent orbits
-                connectivity_matrix[sat][sat_adjacent_orbit_1] = 1
-                connectivity_matrix[sat_adjacent_orbit_1][sat] = 1
-                connectivity_matrix[sat][sat_adjacent_orbit_2] = 1
-                connectivity_matrix[sat_adjacent_orbit_2][sat] = 1
+                if sat_adjacent_orbit_2 is not None:
+                    sat_adjacent_orbit_2 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_2))]
+                    connectivity_matrix[sat][sat_adjacent_orbit_2] = 1
+                    connectivity_matrix[sat_adjacent_orbit_2][sat] = 1
 
             # Update the total number of satellites
             total_sat_now += n_sats_per_orbit
@@ -267,7 +263,6 @@ def mininet_add_ISLs(
     # Return the updated connectivity matrix
     return connectivity_matrix
 
-# removed mininet_add_GSLs (mininet_add_GSLs_parallel serves the same purpose and is more up-to-date)
 
 def mininet_add_GSLs_parallel(
                               connectivity_matrix, 
@@ -582,7 +577,7 @@ def M_gs_sat_association_criteria_BasedOnDistance(
 
 # removed M_gs_sat_association_criteria_BasedOnDistance_alan, as it was not being used in any file or function
 
-def calculate_link_charateristics_for_gsls_isls(
+def calculate_link_characteristics_for_gsls_isls(
                                                 connectivity_matrix, 
                                                 satellites_by_index, 
                                                 satellites_by_name, 

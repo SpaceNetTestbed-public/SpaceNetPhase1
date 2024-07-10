@@ -214,6 +214,9 @@ def save_topology(
     f.close()
 
 
+
+
+
 def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
@@ -225,7 +228,7 @@ def save_routes(
     station node in the topology.
 
     Args:
-        routes (list):                  List of all possible routes determined by BF algorithm starting 
+        routes (dict):                  Dictionary of all possible routes determined by BF algorithm starting 
                                         from any satellite/ground to any sequence of connected 
                                         satellite/ground nodes
         operator_name (str):            Constellation/operator name
@@ -238,19 +241,21 @@ def save_routes(
 
     # Generate a new file
     routes_log = open(routing_file_path+operator_name+"/routes_"+timestamp+".txt", "a")
-    
+
     # Iterate over the routes list
-    for route in routes:
-        current_route = route[0][:]
-        routes_log.write(str(current_route)[1:-1] + "\n")
+    for _, route in routes.items():
+        current_route = ', '.join(map(str, route))
+        routes_log.write(current_route + "\n")
     
     # Close file to minimize memory leaks
     routes_log.close()
 
 
+
+
 def save_optimal_path(
                         optimal_path            : list, 
-                        timestap                : int,
+                        timestamp                : int,
                         operator_name           : str, 
                         optimal_file_path       : str
                      ):
@@ -259,7 +264,7 @@ def save_optimal_path(
 
     Args:
         optimal_path (list):            List of the optimal route between source/destination nodes
-        timestamp (int):                Unix time
+        timestamp (list):               Unix time as a list
         operator_name (str):            Constellation/operator name
         optimal_file_path (str):        Path to output optimal path files
 
@@ -268,11 +273,13 @@ def save_optimal_path(
     """
 
     # Generate a new file
-    optimal_log = open(optimal_file_path+operator_name+"/best_path_"+timestap+".txt", "w")
+    optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
     
     # Iterate over the optimal path list
-    for path in optimal_path:
-        optimal_log.write(str(path) + "\n")
+    if optimal_path != None:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_path)[1:-1] + "\n")
+    else:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
 
     # Close file to minimize memory leaks
     optimal_log.close()

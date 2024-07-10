@@ -1,23 +1,22 @@
-import argparse
-import re
 import time
 import os
-import numpy as np
-import datetime
 
 import threading
-import queue
-from copy import copy, deepcopy
 
 import networkx as nx
 import matplotlib.pyplot as plt
 import bellmanford as bf
-import itertools
-from multiprocessing import Process, Manager, Pool
+from multiprocessing import Pool
 
 import sys
 sys.path.append("./")
 from routing.routing_utils import *
+
+
+
+
+
+
 
 def gs_routing_worker(data_path, gs_sat, links_updated, num_of_satellites, satellites_by_index, list_of_Intf_IPs, constellation_routes):
     """
@@ -57,6 +56,12 @@ def gs_routing_worker(data_path, gs_sat, links_updated, num_of_satellites, satel
             file.writelines(update_routes[1].strip() + " & \n") # Write the GSL ip route command to the file (append with & to run in background)
             file.close() # Close the file
 
+
+
+
+
+
+
 def update_GSL_thread(sat_id, change, constellation_routes, links_updated, list_of_Intf_IPs, satellites_by_index, gs_network_address, update_gsl_routing_cmd):
     """
     UNUSED?
@@ -87,235 +92,78 @@ def update_GSL_thread(sat_id, change, constellation_routes, links_updated, list_
         if sat_id != int(change[0]): # If the satellite ID is not equal to the destination satellite ID (VERIFY)
             print("Error: cannot find the route between sat", sat_id, " and sat", change[0]) # Print an error message to the console
 
-def static_routing_worker(args):
+
+
+# ================================================================================================
+# FLOYD-WARSHALL ALG. IMPLEMENTATION (INITIAL ROUTING)
+# ================================================================================================
+def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency, source_dest_nodes):
     """
-    Perform static routing from source node to target node using Bellman-Ford algorithm.
+    Perform initial routing for a constellation network using Floyd-Warshall algorithm.
 
     Args:
-        args: A tuple containing the following parameters:
-            - G: The graph representing the network.
-            - p: The source node.
-            - q: The target node.
-
-    Returns:
-        list: A list containing the path nodes from source to target.
-
-    """
-    (
-        G,
-        p,
-        q
-    ) = args
-
-    new_path = []
-    path_length, path_nodes, negative_cycle = bf.bellman_ford(G, source=p, target=q, weight="weight") # Perform Bellman-Ford algorithm to find the shortest path from source to target
-    new_path.append(path_nodes) # Append the nodes along identified path to the new_path list
-
-    return new_path # Return the new_path list
-
-def static_routing_worker(args):
-    """
-    !!Functionally equivelant to static_routing_works(args) listed above!!
-    Perform static routing from source to destination using Bellman-Ford algorithm.
-
-    Args:
-        args (tuple): A tuple containing the following arguments:
-            - Gr (networkx.Graph): The graph representing the network.
-            - source (int): The source node.
-            - destination (int): The destination node.
-
-    Returns:
-        list: A list containing the path nodes from source to destination.
-    """
-    (
-        Gr,
-        source,
-        destination
-    ) = args
-
-    new_path = []
-    path_length, path_nodes, negative_cycle = bf.bellman_ford(Gr, source=source, target=destination, weight="weight") # Perform Bellman-Ford algorithm to find the shortest path from source to target
-    new_path.append(path_nodes) # Append the nodes along identified path to the new_path list
-
-    return new_path # Return the new_path list
-
-def initial_routing(satellites, ground_stations, connectivity_matrix):
-    """
-    Performs initial routing for a constellation network with given satellites, ground stations, and connectivity matrix for the current time. (Version 1?)
-
-    Args:
-        satellites (list): List of satellite nodes.
-        ground_stations (list): List of ground station nodes.
+        satellites (list):          List of satellite nodes.
+        ground_stations (list):     List of ground station nodes.
         connectivity_matrix (list): Matrix representing the connectivity between nodes.
+        latency (list):             Matrix representing the latency between nodes (unused?).
+        source_dest_nodes (tuple):  Default is None. If provided, then return output of shortest-path first route between Source/Destination nodes
 
     Returns:
-        list: List of static routes for the constellation network.
-    """
-    mega_constellation_graph = nx.Graph() # Create a new NetworkX graph for the constellation network
-    for n in range(len(satellites)+len(ground_stations)): # For each satellite and ground station
-        mega_constellation_graph.add_node(n) # Add the satellite or ground station to the graph (nodes where n > len(satellites) are ground stations)
-
-    for i in range(len(connectivity_matrix)): # For each row in the connectivity matrix
-        for j in range(len(connectivity_matrix[i])): # For each column in the connectivity matrix
-            if connectivity_matrix[i][j] == 1: # If there is a connection between the nodes
-                # print i, j
-                mega_constellation_graph.add_edge(i, j, weight=1) # Add an edge between the nodes with a weight of 1 (latency[i][j] - starlink, 1 - hopcount oneweb) (VERIFY)
-
-    static_routing_list_args = []
-    print(len(mega_constellation_graph.edges())) # Print the number of edges in the graph
-    for p in range(len(satellites)+len(ground_stations)): # Iterate through pairings of each satellite/ground station with every other satellite/ground station
-        for q in range(p, len(satellites)+len(ground_stations)): 
-            static_routing_list_args.append((mega_constellation_graph, p, q)) # Append the graph with source and destination nodes to the static_routing_list_args list
-
-    pool = Pool(20)
-    static_routes = pool.map(static_routing_worker, static_routing_list_args) # Spin up 20 threads to call static_routing_worker() on the list of static_routing_list_args
-    pool.close()
-    pool.join()
-
-    return static_routes # Return the list of generated static routes
-
-def initial_routing_v2(satellites, ground_stations, connectivity_matrix, latency):
-    """
-    Perform initial routing for a constellation network (version 2).
-
-    Args:
-        satellites (list): List of satellite nodes.
-        ground_stations (list): List of ground station nodes.
-        connectivity_matrix (list): Matrix representing the connectivity between nodes.
-        latency (list): Matrix representing the latency between nodes (unused?).
-
-    Returns:
-        list: List of static routes.
-
-    """
-    mega_constellation_graph = nx.Graph() # Create a new NetworkX graph for the constellation network
-    for n in range(len(satellites)+len(ground_stations)): # For each satellite and ground station
-        mega_constellation_graph.add_node(n) # Add the satellite or ground station to the graph (nodes where n > len(satellites) are ground stations)
-
-    for i in range(len(connectivity_matrix)): # For each row in the connectivity matrix
-        for j in range(len(connectivity_matrix[i])): # For each column in the connectivity matrix
-            if connectivity_matrix[i][j] == 1: # If there is a connection between the nodes
-                # print i,j
-                mega_constellation_graph.add_edge(i, j, weight=1) # Add an edge between the nodes with a weight of 1 (latency[i][j] - starlink, 1 - hopcount oneweb) (VERIFY)
-
-    static_routing_list_args = []
-    # print "number of egdes ", len(mega_constellation_graph.edges())
-    for p in range(len(satellites)+len(ground_stations)): # Iterate through pairings of each satellite/ground station with every other satellite (no ground station pairing)
-        for q in range(p, len(satellites)):#+len(ground_stations)
-            static_routing_list_args.append((mega_constellation_graph, p, q)) # Append the graph with source and destination nodes to the static_routing_list_args list
-
-    # print mega_constellation_graph.edges.data()
-    pool = Pool(20)
-    static_routes = pool.map(static_routing_worker, static_routing_list_args) # Spin up 20 threads to call static_routing_worker() on the list of static_routing_list_args
-    pool.close()
-    pool.join()
-
-    return static_routes # Return the list of generated static routes
-
-def update_routing_v2(satellites, ground_stations, connectivity_matrix, latency, p, q):
-    """
-    Update the routing in the mega constellation network (Version 2).
-
-    Args:
-        satellites (list): List of satellite nodes in the network.
-        ground_stations (list): List of ground station nodes in the network.
-        connectivity_matrix (list): Matrix representing the connectivity between nodes.
-        latency (list): Matrix representing the latency between nodes.
-        p (int): Parameter p for the routing algorithm.
-        q (int): Parameter q for the routing algorithm.
-
-    Returns:
-        list: List of static routes in the mega constellation network.
+        dict: Dictionary of static routes with keys as (source, destination) tuples and values as lists of nodes in the path.
     """
 
-    mega_constellation_graph = nx.Graph() # Create a new NetworkX graph for the constellation network
-    for n in range(len(satellites)+len(ground_stations)): # For each satellite and ground station
-        mega_constellation_graph.add_node(n) # Add the satellite or ground station to the graph (nodes where n > len(satellites) are ground stations)
+    mega_constellation_graph = nx.Graph()  # Create a new NetworkX graph for the constellation network
+    for n in range(len(satellites) + len(ground_stations)):  # For each satellite and ground station
+        mega_constellation_graph.add_node(n)  # Add the satellite or ground station to the graph
 
-    for i in range(len(connectivity_matrix)): # For each row in the connectivity matrix
-        for j in range(len(connectivity_matrix[i])): # For each column in the connectivity matrix
-            if connectivity_matrix[i][j] == 1: # If there is a connection between the nodes
-                # print i,j
-                mega_constellation_graph.add_edge(i, j, weight=1) # Add an edge between the nodes with a weight of 1 (latency[i][j] - starlink, 1 - hopcount oneweb) (VERIFY)
+    for i in range(len(connectivity_matrix)):  # For each row in the connectivity matrix
+        for j in range(len(connectivity_matrix[i])):  # For each column in the connectivity matrix
+            if connectivity_matrix[i][j] == 1:  # If there is a connection between the nodes
+                mega_constellation_graph.add_edge(i, j, weight=1)  # Add an edge between the nodes with a weight of 1
 
-    static_routing_list_args = []
-    static_routing_list_args.append((mega_constellation_graph, p, q)) # Append the graph with source and destination nodes to the static_routing_list_args list
+    # Use Floyd-Warshall algorithm to find shortest paths between all pairs of nodes
+    pred, _ = nx.floyd_warshall_predecessor_and_distance(mega_constellation_graph, weight="weight")
 
-    # print mega_constellation_graph.edges.data()
-    pool = Pool(20)
-    static_routes = pool.map(static_routing_worker, static_routing_list_args) # Spin up 20 threads to call static_routing_worker() on the list of static_routing_list_args
-    pool.close()
-    pool.join()
+    # Find optimal route if provided
+    optimal_output = None
+    if source_dest_nodes:   # Check if source exists
+        src, dest = source_dest_nodes
+        if src in pred and dest in pred[src]:   # Check if a path to destination from source exists
+            optimal_path = []
+            current_node = dest
+            while current_node != src:
+                optimal_path.append(current_node)
+                current_node = pred[src][current_node]
+            optimal_path.append(src)
+            optimal_path.reverse()
+            optimal_output = optimal_path
 
-    return static_routes
+    # Iterate over results and only look at satellite nodes for the routing
+    static_routes = {}
+    for source in range(len(satellites)):  # Iterate only over satellite nodes as sources
+        if source not in pred:  # Check if there are any paths from this source
+            continue
+        for destination in range(len(satellites)):  # Iterate only over satellite nodes as destinations
+            if source != destination:
+                # Initialize path reconstruction if a path exists
+                if destination in pred[source]:
+                    path = []
+                    current_node = destination
+                    while current_node != source:
+                        path.append(current_node)
+                        current_node = pred[source][current_node]
+                    path.append(source)  # Append the source at the end
+                    path.reverse()  # Reverse the list to get the correct order
+                    static_routes[(source, destination)] = path
 
-def get_optimal_route(satellites, ground_stations, connectivity_matrix, source, destination):
-    """
-    Calculates the optimal route between a source and destination node in a mega constellation network.
-
-    Args:
-        satellites (list): List of satellite nodes in the network.
-        ground_stations (list): List of ground station nodes in the network.
-        connectivity_matrix (list): Matrix representing the connectivity between nodes.
-        source (int): Source node index.
-        destination (int): Destination node index.
-
-    Returns:
-        list: List of nodes representing the optimal route from source to destination.
-    """
-
-    # Topology Graph
-    mega_constellation_graph = nx.Graph() # Create a new NetworkX graph for the constellation network
-    
-    # Add Sat/GS nodes into Topology Graph
-    for n in range(len(satellites)+len(ground_stations)): # For each satellite and ground station
-        mega_constellation_graph.add_node(n) # Add the satellite or ground station to the graph (nodes where n > len(satellites) are ground stations)
-
-    # Add whether the link is up
-    for i in range(len(connectivity_matrix)): # For each row in the connectivity matrix
-        for j in range(len(connectivity_matrix[i])): # For each column in the connectivity matrix
-            if connectivity_matrix[i][j] == 1: # If there is a connection between the nodes
-                mega_constellation_graph.add_edge(i, j, weight=1) # Add an edge between the nodes with a weight of 1 (latency[i][j] - starlink, 1 - hopcount oneweb) (VERIFY)
-
-    # Use Bellman-Ford Alg.
-    _, optimal_path, _ = bf.bellman_ford(mega_constellation_graph, source=source, target=destination, weight="weight") # Perform Bellman-Ford algorithm to find the shortest path from source to target
-
-    return optimal_path # Return the optimal path
+    if source_dest_nodes:
+        return (static_routes, optimal_output)
+    else:
+        return static_routes
 
 
-# def static_routing(G, destinations, num_of_satellites, num_of_ground_stations, num_of_threads):
-#     """
-#     Perform static routing for a given graph and destinations.
-#
-#     Args:
-#         G (networkx.Graph): The graph representing the constellation.
-#         destinations (list): List of destinations to route to.
-#         num_of_satellites (int): Number of satellites in the constellation.
-#         num_of_ground_stations (int): Number of ground stations in the constellation.
-#         num_of_threads (int): Number of threads to use for parallel processing.
-#
-#     Returns:
-#         list: List of static routes for each destination.
-#
-#    Note:
-#        "list_args" is not defined and will likely error-out if used.
-#    """
-#    for i in range(num_of_satellites+num_of_ground_stations):  # For each satellite and ground station
-#        for dest in destinations: # For each destination
-#            destination = -1 # Initialize destination variable to -1
-#            if "gs" in dest[0]: # If the destination is a ground station
-#                destination = int(dest[0][2:])+num_of_satellites # Set the destination to the ground station number (ground station numbers start after the satellite numbers)
-#             elif "sat" in dest[0]: # If the destination is a satellite
-#                destination = int(dest[0][3:]) # Set the destination to the satellite number
 
-#             list_args.append((G, i, destination)) # Append the graph with source and destination nodes to the list_args list
 
-#     pool = Pool(num_of_threads)
-#     static_routes = pool.map(static_routing_worker, list_args) # Spin up num_of_threads threads to call static_routing_worker() on the list of list_args
-#     pool.close()
-#     pool.join()
-
-#     return static_routes # Return the list of generated static routes
 
 def static_routing_update_commands(static_routes, links, list_of_Intf_IPs, satellites):
     """
@@ -371,6 +219,12 @@ def static_routing_update_commands(static_routes, links, list_of_Intf_IPs, satel
             if src_node_intf != "" and last_h_node_intf != "" and dest_node_intf != "": # If the source node interface, last hop node interface, and destination node interface are not empty
                 cmd_on_dest_node = "ip route add "+get_network_address(get_node_intf_ip(src_node_intf, list_of_Intf_IPs))+"/28 via "+get_node_intf_ip(last_h_node_intf, list_of_Intf_IPs)+" dev "+dest_node_intf # Set the command on the destination node to add the network address of the source node via the last hop node interface
                 print(cmd_on_dest_node) # Print the command to the console
+
+
+
+
+
+
 
 def get_static_route_parameter_optimised(route, links, list_of_Intf_IPs, satellites):
     """
@@ -484,6 +338,14 @@ def get_static_route_parameter_optimised(route, links, list_of_Intf_IPs, satelli
         # parameters.append(out_interface_2)
 
     return parameters # Return the parameters list
+
+
+
+
+
+
+
+
 
 def get_static_route_parameter(route, links, list_of_Intf_IPs, satellites):
     """
@@ -628,6 +490,12 @@ def get_static_route_parameter(route, links, list_of_Intf_IPs, satellites):
     return parameters # Return the parameters list
 
 
+
+
+
+
+
+
 def find_route_between_src_dest(src_sat, dest_sat, constellation_routes):
     """
     Finds the route between the source satellite and the destination satellite in the given constellation routes.
@@ -659,6 +527,14 @@ def find_route_between_src_dest(src_sat, dest_sat, constellation_routes):
 
     return -1 # Return -1 if no route is found
 
+
+
+
+
+
+
+
+
 def get_gs_ip(list_of_Intf_IPs, gs):
     """
     Get the IP address associated with a given ground station.
@@ -675,6 +551,15 @@ def get_gs_ip(list_of_Intf_IPs, gs):
             return pair["IP"] # Return the IP address associated with the ground station
 
     return -1 # Return -1 if the ground station is not found
+
+
+
+
+
+
+
+
+
 
 def gs_routing(data_path, gs_statellite_pair, links_updated, num_of_satellites, satellites_by_index, list_of_Intf_IPs, constellation_routes, main_configurations, border_gateway):
     """
@@ -733,6 +618,15 @@ def gs_routing(data_path, gs_statellite_pair, links_updated, num_of_satellites, 
             file.writelines(update_routes[1].strip()+" & \n") # Write the update to the file and append & to run the command in the background
             file.close() # Close the file
 
+
+
+
+
+
+
+
+
+
 def gs_routing_parallel(data_path, gs_statellite_pair, links_updated, num_of_satellites, satellites_by_index, list_of_Intf_IPs, constellation_routes, num_of_threads):
     """
     Perform parallel ground station routing.
@@ -760,6 +654,16 @@ def gs_routing_parallel(data_path, gs_statellite_pair, links_updated, num_of_sat
         thread.start() # Start the thread
     for thread in thread_list: # For each thread in the thread list
         thread.join() # Join the thread
+
+
+
+
+
+
+
+
+
+
 
 def lightweight_routing(data_path, route_changes, links_updated, num_of_satellites, satellites_by_index, list_of_Intf_IPs, constellation_routes, t_time, border_gateway):
     """
@@ -873,6 +777,10 @@ def lightweight_routing(data_path, route_changes, links_updated, num_of_satellit
         allchanges_log.close() # Close the all changes log file
 
     # print gsl_ch, isl_ch
+
+
+
+
 
 def check_changes_in_topology(last, new):
     """
