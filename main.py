@@ -34,6 +34,7 @@ connectivity_matrix_path    = output_filepath+"connectivity/"
 routing_file_path           = output_filepath+"routing/"
 arranged_sat_file_path      = output_filepath+"general/"
 sat_orbit_file_path         = output_filepath+"satellites_orbits/"
+node_index_file_path        = output_filepath+"node_indices/"
 optimal_file_path           = output_filepath+"optimal_routes/"
 
 # =================================================================================== #
@@ -66,12 +67,13 @@ def main():
     # Convert the start time to UTC and Unix timestamp
     time_utc = ts.utc(*map(int, epoch_start))
     time_timestamp = convert_time_utc_to_unix(time_utc)
-    print(epoch_start)
+    print("..... Phase-0: Configuration Set-up:")
+    print(".......... Epoch: ", epoch_start)
 
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
-    print(operator_name+tle_timestamp)
+    print(".......... TLE File: ", path_of_recent_TLE)
 
     # Load the satellites from the TLE file
     satellites = load.tle_file(path_of_recent_TLE)
@@ -89,6 +91,9 @@ def main():
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
+    # Save satellite and ground station indices
+    save_node_index(satellites_by_index, ground_stations, node_index_file_path, tle_timestamp, operator_name)
+
     # Get the total number of satellites and ground stations
     num_of_satellites = len(orbital_data)
     num_of_ground_stations = len(ground_stations)
@@ -98,10 +103,20 @@ def main():
         print(".......... Total number of satellites = ", num_of_satellites)
         print(".......... Total number of ground_stations = ", num_of_ground_stations, "\n")
 
+    # Instantiate simulation time history
     time_hist = np.arange(0.0, simulation_length, time_resolution_in_seconds)
 
+    # Check if there's any files that exist
+    y, mon, d, h, min, s = convert_time_utc_to_ymdhms(ts.utc(*map(int, epoch_start)))
+    if  os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt") \
+        or os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt") \
+        or os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
+            user_response = input(f"Files for this simulation already exists. Do you want to overwrite them? (y/n): ")
+            if user_response.lower() == 'n':
+                return
+            
     # Loop over the time history, update the topology and save it in a file
-    for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Creating topology files'):
+    for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network topology'):
         
         # Update the time
         indx += 1
@@ -131,6 +146,8 @@ def main():
         links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
 
         # Save the topology
+        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
         save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
 
         # Pre-compute the routing tables
@@ -140,9 +157,13 @@ def main():
             all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], None)
 
         # Save the routes
+        if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
         save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
 
         # Save the optimal routes between provided src/dest
+        if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
 

@@ -229,6 +229,7 @@ def mininet_add_ISLs(
 
             # Iterate through each satellite in the current orbit
             for j in range(n_sats_per_orbit):
+                
                 # Determine the index of the current satellite
                 sat = total_sat_now + j
                 

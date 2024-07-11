@@ -214,9 +214,6 @@ def save_topology(
     f.close()
 
 
-
-
-
 def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
@@ -251,11 +248,9 @@ def save_routes(
     routes_log.close()
 
 
-
-
 def save_optimal_path(
                         optimal_path            : list, 
-                        timestamp                : int,
+                        timestamp               : int,
                         operator_name           : str, 
                         optimal_file_path       : str
                      ):
@@ -283,6 +278,47 @@ def save_optimal_path(
 
     # Close file to minimize memory leaks
     optimal_log.close()
+
+
+def save_node_index(
+                        satellites_by_index     : dict, 
+                        ground_stations         : list, 
+                        node_index_file_path    : str,
+                        timestamp               : int,
+                        operator_name           : str
+                   ):
+    """
+    Saves the matching node indices and their corresponding aliases.
+
+    Args:
+        satellites_by_index (dict):     Satellites_by_index (dict): satellites sorted by index
+                                        satellite/ground nodes
+        ground_stations (list):         List of supplied ground stations
+        node_index_file_path (str):     Path to output the node index matching file
+        timestamp (int):                Unix time
+        operator_name (str):            Constellation/operator name
+
+    Returns:
+        Saves the node indices as a .txt file.
+    """
+
+    # Generate a new file
+    nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
+    nodeindex_log_write.close()
+
+    # Append to file
+    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
+
+    # Iterate over the satellites_by_index
+    for sat_indx, sat_alias in satellites_by_index.items():
+        nodeindex_log.write(str(sat_indx)+":"+str(sat_alias)+"\n")
+
+    # Iterate over ground station list
+    for gs in ground_stations:
+        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+"GS-"+str(gs['gid'])+"\n")
+
+    # Close file to minimize memory leaks
+    nodeindex_log.close()
 
 
 # =================================================================================== #

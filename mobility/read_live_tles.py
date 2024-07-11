@@ -74,13 +74,14 @@ def get_orbital_planes_classifications(
 
         # Compute orbiting altitude
         tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400
-        tle_a           = (396800. / (tle_n ** 2)) ** (1. / 3.) - 6378.135
+        tle_a           = (398600.4418 / (tle_n ** 2)) ** (1. / 3.) - 6378.135
 
         # Inclination of constellation shell
         # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
         #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
+
         if tle_a < (orbits_altitude + 5) and tle_a >= (orbits_altitude - 5):
-                
+
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])
             dump_orbital_data["Satellites"].append(Lines[i].strip())
@@ -92,13 +93,11 @@ def get_orbital_planes_classifications(
             dump_orbital_data["Mean motion"].append(tle_second_line[7])
 
     # Collect RAAN values in data dump
-    list_of_values = [-1 for c in range(len(dump_orbital_data["RAAN"]))]
+    list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
 
     # Extract RAAN values for classification
     for i in range(0, len(dump_orbital_data["RAAN"])):
         list_of_values[i] = float(dump_orbital_data["RAAN"][i])
-
-    # print(len(dump_orbital_data["RAAN"]))
     
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
@@ -150,7 +149,7 @@ def get_orbital_planes_classifications(
         totalsatellites += count_sats_per_orbit
 
     # Print total satellites for checking before completing sim
-    print(totalsatellites)
+    print(".......... No. of Sat Nodes: ", totalsatellites)
 
     # Return the collected orbital information separated by orbit
     return data_orbits

@@ -1,5 +1,5 @@
 # Main configuration script for the SpaceNet Mininet Simulator
-ConstellationName: starlink1411_15_2 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink100_15_2 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 OutputFilePath: script_output/
 DeleteAppResults: False
 Verbose: True
