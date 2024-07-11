@@ -620,7 +620,6 @@ def arrange_satellites(
                         satellites_by_index     : {},
                         timestamp               : object,
                         tle_timestamp           : str,
-                        arranged_sat_file_path  : str,
                         sat_orbit_file_path     : str
                       ) -> dict:
     """
@@ -634,7 +633,6 @@ def arrange_satellites(
         satellites_by_index (empty dic):    Satellite information arranged by index, given as an empty dictionary
         timestamp (object):                 Skyfield object datetime
         tle_timestamp (str):                Attached unix timestamp of the TLE file
-        arranged_sat_file_path (str):       Path to output the arranged satellite files
         sat_orbit_file_path (str):          Path to output the satellite orbit files
 
     Returns:

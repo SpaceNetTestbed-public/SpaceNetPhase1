@@ -149,7 +149,7 @@ def get_orbital_planes_classifications(
         totalsatellites += count_sats_per_orbit
 
     # Print total satellites for checking before completing sim
-    print(".......... No. of Sat Nodes: ", totalsatellites)
+    # print(".......... No. of Sat Nodes: ", totalsatellites)
 
     # Return the collected orbital information separated by orbit
     return data_orbits

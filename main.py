@@ -27,15 +27,6 @@ find_optimal_routes         = True
 config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
 sat_config_sub_path         = "sat_config_files/"
-tle_file_path               = "utils/"
-data_filepath               = "/mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/"
-output_filepath             = data_filepath+"output/"
-connectivity_matrix_path    = output_filepath+"connectivity/"
-routing_file_path           = output_filepath+"routing/"
-arranged_sat_file_path      = output_filepath+"general/"
-sat_orbit_file_path         = output_filepath+"satellites_orbits/"
-node_index_file_path        = output_filepath+"node_indices/"
-optimal_file_path           = output_filepath+"optimal_routes/"
 
 # =================================================================================== #
 # -------------------------------- MAIN FUNCTION ------------------------------------ #
@@ -47,6 +38,16 @@ def main():
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
 
+    # Path configuration
+    output_filepath             = sat_config["OutputFilePath"]
+    gs_file_path                = sat_config["GroundStationFile"]
+    tle_file_path               = sat_config["TLEFilePath"]
+    connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
+    routing_file_path           = output_filepath+"/routing/"
+    sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
+    node_index_file_path        = output_filepath+"/node_indices/"
+    optimal_file_path           = output_filepath+"/optimal_routes/"
+    
     # Load the timescale and initialize variables
     ts = load.timescale()
     inc = 0
@@ -67,13 +68,18 @@ def main():
     # Convert the start time to UTC and Unix timestamp
     time_utc = ts.utc(*map(int, epoch_start))
     time_timestamp = convert_time_utc_to_unix(time_utc)
-    print("..... Phase-0: Configuration Set-up:")
-    print(".......... Epoch: ", epoch_start)
 
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
-    print(".......... TLE File: ", path_of_recent_TLE)
+    print("\n\n..... Phase-0: Configuration Set-up:")
+    print(".......... Operator Name: \t\t", operator_name)
+    print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(tle_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
+    print(".......... End Epoch: \t\t\t", datetime.fromtimestamp(int(tle_timestamp)+int(simulation_length)).strftime('%B %d, %Y %H:%M:%S UTC'))
+    print(".......... Simulation Step-Size: \t", sat_config["EpochIntervalDuration"], "s")
+    print(".......... Simulation Interval Count: \t", sat_config["EpochIntervalCount"])
+    print(".......... Simulation Length: \t\t", simulation_length, "s") 
+    print(".......... TLE File: \t\t\t", path_of_recent_TLE, "\n")
 
     # Load the satellites from the TLE file
     satellites = load.tle_file(path_of_recent_TLE)
@@ -83,11 +89,11 @@ def main():
     satellites_by_index = {}
 
     # Read the ground stations from the file specified in the configurations
-    ground_stations = read_gs(sat_config["GroundStationFile"])
+    ground_stations = read_gs(gs_file_path)
 
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
-    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, arranged_sat_file_path, sat_orbit_file_path)
+    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path)
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
@@ -101,22 +107,27 @@ def main():
     # Print debug information if enabled in the configurations
     if sat_config["Debug"] == 1:
         print(".......... Total number of satellites = ", num_of_satellites)
-        print(".......... Total number of ground_stations = ", num_of_ground_stations, "\n")
+        print(".......... Total number of ground_stations = ", num_of_ground_stations)
+        print(".......... Phase-1 complete.\n")
 
     # Instantiate simulation time history
     time_hist = np.arange(0.0, simulation_length, time_resolution_in_seconds)
+
+    # Start topology generation
+    print("..... Phase-2: Building topology and connectivity matrices:")
 
     # Check if there's any files that exist
     y, mon, d, h, min, s = convert_time_utc_to_ymdhms(ts.utc(*map(int, epoch_start)))
     if  os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt") \
         or os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt") \
         or os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
-            user_response = input(f"Files for this simulation already exists. Do you want to overwrite them? (y/n): ")
+            user_response = input(f"\033[91m.......... Files for this simulation already exists. Do you want to overwrite them?\033[0m (y/n): ")
             if user_response.lower() == 'n':
                 return
-            
+            else: print("\033[94m", end="")
+                  
     # Loop over the time history, update the topology and save it in a file
-    for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network topology'):
+    for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
         
         # Update the time
         indx += 1
@@ -166,6 +177,7 @@ def main():
             os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
+    print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
 
 
 if __name__ == '__main__':

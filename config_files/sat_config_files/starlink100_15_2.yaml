@@ -28,3 +28,5 @@ shell1:
 Source: gs5
 Destination: gs12
 GroundStationFile: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_default.txt
+OutputFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/
+TLEFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/
