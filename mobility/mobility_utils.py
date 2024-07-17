@@ -187,18 +187,23 @@ def find_adjacent_orbit_sat(
         if distance < min_distance and distance < 5016000:
             min_distance = distance # update the minimum distance
             nearest_sat_in_adj_plane = adj_plane_sats[i] # set the current adj. plane sat as the nearest to the original sat
+            if origin_sat.name == "STARLINK-1215" and nearest_sat_in_adj_plane.name == "STARLINK-1234":
+                print(min_distance*1e-3)
+
+    # if origin_sat.name == "STARLINK-1215":
+    #     print(min_distance*1e-3, nearest_sat_in_adj_plane.name)
 
     # Return the name of the nearest satellite in the adjacent plane
     return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None
 
 
 def mininet_add_ISLs(
-                    connectivity_matrix, 
-                    satellites_sorted_in_orbits, 
-                    satellites_by_name, 
-                    satellites_by_index, 
-                    isl_config, 
-                    t
+                        connectivity_matrix, 
+                        satellites_sorted_in_orbits, 
+                        satellites_by_name, 
+                        satellites_by_index, 
+                        isl_config, 
+                        t
                     ):
     """
     Adds Inter-Satellite Links (ISLs) to the connectivity matrix
@@ -217,48 +222,50 @@ def mininet_add_ISLs(
     
     # Get the number of orbits
     n_orbits = len(satellites_sorted_in_orbits)
+
     # Initialize the total number of satellites
     total_sat_now = 0
 
     # Check the ISL configuration (only one for the time being)
     if isl_config == "SAME_ORBIT_AND_GRID_ACROSS_ORBITS":
+        
         # Iterate through each orbit
-        for i in range(len(satellites_sorted_in_orbits)):
+        for i in range(n_orbits):
+           
             # Get the number of satellites in the current orbit
             n_sats_per_orbit = len(satellites_sorted_in_orbits[i])
-
+            
             # Iterate through each satellite in the current orbit
             for j in range(n_sats_per_orbit):
                 
                 # Determine the index of the current satellite
                 sat = total_sat_now + j
                 
-                # Find the index of another satellite in the same orbit
+                # Intra-Orbit connection
                 sat_same_orbit = total_sat_now + ((j + 1) % n_sats_per_orbit)
-                
-                # Establish ISL between the current satellite and the one in the same orbit
                 connectivity_matrix[sat][sat_same_orbit] = 1
                 connectivity_matrix[sat_same_orbit][sat] = 1
 
-                 # Get information about the current satellite
-                current_sat = satellites_by_index[sat]
-                current_sat = satellites_by_name[str(current_sat)]
+                # Retrieve current satellite's name
+                current_sat_name = satellites_by_index[sat]
+                current_sat = satellites_by_name[current_sat_name]
 
-                # Find satellites in first adjacent orbit and assign ISL connectivity
-                sat_adjacent_orbit_1 = find_adjacent_orbit_sat(current_sat, (i+1)%n_orbits, satellites_sorted_in_orbits, t)
-                if sat_adjacent_orbit_1 is not None:
-                    sat_adjacent_orbit_1 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_1))]
-                    connectivity_matrix[sat][sat_adjacent_orbit_1] = 1
-                    connectivity_matrix[sat_adjacent_orbit_1][sat] = 1
-                
-                # Find satellites in second adjacent orbit and assign ISL connectivity
-                sat_adjacent_orbit_2 = find_adjacent_orbit_sat(current_sat, (i-1)%n_orbits, satellites_sorted_in_orbits, t)
-                if sat_adjacent_orbit_2 is not None:
-                    sat_adjacent_orbit_2 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_2))]
-                    connectivity_matrix[sat][sat_adjacent_orbit_2] = 1
-                    connectivity_matrix[sat_adjacent_orbit_2][sat] = 1
+                # Inter-Orbit connections
+                # For the satellite in the next orbit
+                sat_adjacent_orbit_1 = find_adjacent_orbit_sat(current_sat, (i + 1)%n_orbits, satellites_sorted_in_orbits, t)
+                sat_adjacent_orbit_1_index = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(sat_adjacent_orbit_1)]
 
-            # Update the total number of satellites
+                # For the satellite in the previous orbit
+                sat_adjacent_orbit_2 = find_adjacent_orbit_sat(current_sat, (i - 1)%n_orbits, satellites_sorted_in_orbits, t)
+                sat_adjacent_orbit_2_index = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(sat_adjacent_orbit_2)]
+
+                # Establishing connections
+                connectivity_matrix[sat][sat_adjacent_orbit_1_index] = 1
+                connectivity_matrix[sat_adjacent_orbit_1_index][sat] = 1
+                connectivity_matrix[sat][sat_adjacent_orbit_2_index] = 1
+                connectivity_matrix[sat_adjacent_orbit_2_index][sat] = 1
+
+            # Update the current total number of satellites
             total_sat_now += n_sats_per_orbit
 
     # Return the updated connectivity matrix
@@ -603,8 +610,9 @@ def calculate_link_characteristics_for_gsls_isls(
     
     # Initialize matrices for latency and throughput
     matrix_size = len(satellites_by_index)+len(ground_stations)
-    latency_matrix = [[0.0 for c in range(matrix_size)] for r in range(matrix_size)]
-    throughput_matrix = [[0.0 for c in range(matrix_size)] for r in range(matrix_size)]
+    latency_matrix = [[0.0 for _ in range(matrix_size)] for _ in range(matrix_size)]
+    throughput_matrix = [[0.0 for _ in range(matrix_size)] for _ in range(matrix_size)]
+    distance_matrix = [[0 for _ in range(matrix_size)] for _ in range(matrix_size)]
     
     # Define constants
     channel_bandwidth_downlink = 240
@@ -618,13 +626,15 @@ def calculate_link_characteristics_for_gsls_isls(
             # ISL between two satellites
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1000                                           #speed of light
+                distance_matrix[i][j]       = int(distance_meters)
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e6                                          #speed of light
                 throughput_matrix[i][j]     = 500            #20Gbps
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] == 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1000            #speed of light
+                distance_matrix[i][j]       = int(distance_meters)
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e6            #speed of light
                 snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                 channel_width               = channel_bandwidth_downlink
                 throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
@@ -642,7 +652,8 @@ def calculate_link_characteristics_for_gsls_isls(
             # GSL between satellite and ground station
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j >= len(satellites_by_index):
                 distance_meters             = distance_between_ground_station_satellite(ground_stations[j-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[i])], t)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1000            #speed of light
+                distance_matrix[i][j]       = int(distance_meters)
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e6           #speed of light
                 snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[i])], ground_stations[j-len(satellites_by_index)], t, distance_meters, "downlink")
                 throughput_matrix[i][j]     = density*channel_bandwidth_downlink*(math.log(1+snr)/math.log(2))
                 if throughput_matrix[i][j] > 500:
@@ -651,7 +662,8 @@ def calculate_link_characteristics_for_gsls_isls(
     # Return latency and throughput matrices
     return {
                 "latency_matrix": latency_matrix,
-                "throughput_matrix": throughput_matrix
+                "throughput_matrix": throughput_matrix,
+                "distance_matrix": distance_matrix
             }
 
 ###################################################

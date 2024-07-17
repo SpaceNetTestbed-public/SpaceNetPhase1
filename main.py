@@ -39,7 +39,7 @@ def main():
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
 
     # Path configuration
-    output_filepath             = sat_config["OutputFilePath"]
+    output_filepath             = main_config["OutputFilePath"]
     gs_file_path                = sat_config["GroundStationFile"]
     tle_file_path               = sat_config["TLEFilePath"]
     connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
@@ -163,9 +163,9 @@ def main():
 
         # Pre-compute the routing tables
         if find_optimal_routes:
-            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], optimal_path_nodes)
+            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes)
         else:
-            all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], None)
+            all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None)
 
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite

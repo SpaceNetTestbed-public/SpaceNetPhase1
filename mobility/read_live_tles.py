@@ -103,6 +103,8 @@ def get_orbital_planes_classifications(
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
     totalsatellites = 0
 
+    print(breaks)
+
     # Iterate over each determined natural break
     for b in range(1, len(breaks)):
         

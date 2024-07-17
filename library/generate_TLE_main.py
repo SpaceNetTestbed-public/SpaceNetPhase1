@@ -118,7 +118,7 @@ if __name__ == "__main__":
     filename    = "starlink_" + str(int(time.time()))
 
     # Epoch Year / Fractional Day
-    epoch       = [24, 19.708333333]
+    epoch       = [24, 100]
 
     # Orbital Elements (a-km, e, i-deg, w-deg, raan-deg, TA-deg)
     oe          = [6878, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
@@ -130,7 +130,7 @@ if __name__ == "__main__":
     inc_range   = None
 
     # Range of RAAN
-    raan_range = np.array(range(0, 360, 18)) # number of orbits = 360/range_stepsize
+    raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
 
     # Total Number of Satellites
     num_sats = len(ta_range)*len(raan_range)

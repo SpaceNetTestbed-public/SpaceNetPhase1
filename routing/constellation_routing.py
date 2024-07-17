@@ -59,9 +59,6 @@ def gs_routing_worker(data_path, gs_sat, links_updated, num_of_satellites, satel
 
 
 
-
-
-
 def update_GSL_thread(sat_id, change, constellation_routes, links_updated, list_of_Intf_IPs, satellites_by_index, gs_network_address, update_gsl_routing_cmd):
     """
     UNUSED?
@@ -97,7 +94,7 @@ def update_GSL_thread(sat_id, change, constellation_routes, links_updated, list_
 # ================================================================================================
 # FLOYD-WARSHALL ALG. IMPLEMENTATION (INITIAL ROUTING)
 # ================================================================================================
-def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency, source_dest_nodes):
+def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency, distance, source_dest_nodes):
     """
     Perform initial routing for a constellation network using Floyd-Warshall algorithm.
 
@@ -106,6 +103,7 @@ def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency
         ground_stations (list):     List of ground station nodes.
         connectivity_matrix (list): Matrix representing the connectivity between nodes.
         latency (list):             Matrix representing the latency between nodes (unused?).
+        distance (list):            Matrix representing distance between nodes
         source_dest_nodes (tuple):  Default is None. If provided, then return output of shortest-path first route between Source/Destination nodes
 
     Returns:
@@ -128,40 +126,19 @@ def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency
     optimal_output = None
     if source_dest_nodes:   # Check if source exists
         src, dest = source_dest_nodes
-        if src in pred and dest in pred[src]:   # Check if a path to destination from source exists
-            optimal_path = []
-            current_node = dest
-            while current_node != src:
-                optimal_path.append(current_node)
-                current_node = pred[src][current_node]
-            optimal_path.append(src)
-            optimal_path.reverse()
-            optimal_output = optimal_path
+        optimal_output = nx.reconstruct_path(src, dest, pred)
 
     # Iterate over results and only look at satellite nodes for the routing
     static_routes = {}
-    for source in range(len(satellites)):  # Iterate only over satellite nodes as sources
-        if source not in pred:  # Check if there are any paths from this source
-            continue
-        for destination in range(len(satellites)):  # Iterate only over satellite nodes as destinations
-            if source != destination:
-                # Initialize path reconstruction if a path exists
-                if destination in pred[source]:
-                    path = []
-                    current_node = destination
-                    while current_node != source:
-                        path.append(current_node)
-                        current_node = pred[source][current_node]
-                    path.append(source)  # Append the source at the end
-                    path.reverse()  # Reverse the list to get the correct order
-                    static_routes[(source, destination)] = path
+    for i in range(len(satellites)):  # Iterate only over satellite nodes as sources
+        for j in range(len(satellites)):
+            if i != j:
+                static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 
     if source_dest_nodes:
         return (static_routes, optimal_output)
     else:
         return static_routes
-
-
 
 
 
