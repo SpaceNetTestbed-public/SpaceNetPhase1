@@ -41,7 +41,7 @@ def main():
     # Path configuration
     output_filepath             = main_config["OutputFilePath"]
     gs_file_path                = sat_config["GroundStationFile"]
-    tle_file_path               = sat_config["TLEFilePath"]
+    tle_file_path               = main_config["TLEFilePath"]
     connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
     routing_file_path           = output_filepath+"/routing/"
     sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
