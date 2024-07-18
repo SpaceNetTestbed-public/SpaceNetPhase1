@@ -1,6 +1,7 @@
 # Main configuration script for the SpaceNet Mininet Simulator
-ConstellationName: starlink1584_30_5 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
-OutputFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/
+ConstellationName: starlink1440_15_10 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+OutputFilePath: /home/spacenet/simulator/dynamic-topology-generator/output
+TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
 DeleteAppResults: False
 Verbose: True
 # App configurations
