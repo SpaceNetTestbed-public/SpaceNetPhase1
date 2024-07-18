@@ -18,7 +18,6 @@ virtual (fake) satellites and writes them into a file.
 
 import os
 import time
-import calendar
 import numpy as np
 import calendar
 import generate_fake_TLE as gft
@@ -121,15 +120,7 @@ if __name__ == "__main__":
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
     # File name
-    filename    = "starlink_" + str(datetime_s)
-
-    # Date/Time input
-    datetime    = (2024, 1, 19, 17, 0, 10) # year, month, day, hour, minute, second
-    datetime_s  = calendar.timegm(datetime)
-    year_start  = (datetime[0], 1, 1, 0, 0, 0)
-    
-    # File name
-    filename    = "starlink_" + str(datetime_s)
+    filename    = "starlink_" + str(int(time.time()))
 
     # Epoch Year / Fractional Day
     epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
@@ -138,14 +129,13 @@ if __name__ == "__main__":
     oe          = [6678, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
 
     # Range of TA
-    # ta_range    = np.array(range(0, 360, 6)) # number of satellites per orbit = 360/range_stepsize
-    ta_range    = np.linspace(0, 360, 22)
+    ta_range    = np.array(range(0, 360, 18)) # number of satellites per orbit = 360/range_stepsize
 
     # Range of Inc
     inc_range   = None
 
     # Range of RAAN
-    raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
+    raan_range = np.array(range(0, 360, 15)) # number of orbits = 360/range_stepsize
 
     # Total Number of Satellites
     num_sats = len(ta_range)*len(raan_range)
