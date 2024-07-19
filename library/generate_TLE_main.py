@@ -124,13 +124,15 @@ if __name__ == "__main__":
     oe          = [6878, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
 
     # Range of TA
-    ta_range    = np.array(range(0, 360, 18)) # number of satellites per orbit = 360/range_stepsize
+    # ta_range    = np.array(range(0, 360, 18)) # number of satellites per orbit = 360/range_stepsize
+    ta_range    = np.linspace(0, 360, 22)
 
     # Range of Inc
     inc_range   = None
 
     # Range of RAAN
-    raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
+    # raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
+    raan_range  = np.linspace(0, 360, 72)
 
     # Total Number of Satellites
     num_sats = len(ta_range)*len(raan_range)

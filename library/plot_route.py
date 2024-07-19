@@ -8,10 +8,10 @@ from mpl_toolkits.basemap import Basemap
 
 # Control Var:
 time_index = 1
-tle_file = open('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/starlink_tles/starlink_1720559136', 'r')
+tle_file = open('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/starlink_tles/starlink_1721156973', 'r')
 optimal_route_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_09.txt'
-node_indices_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1720559136.txt'
-total_sat_num = 400
+node_indices_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1721156973.txt'
+total_sat_num = 900
 # gs0 = (-80.4139, 37.2296, "Blacksburg") # Blacksburg
 gs1 = (-0.1278, 51.5074, "London")  # London
 # gs1 = (139.691710, 35.689500, "Tokyo") # Tokyo
@@ -28,7 +28,8 @@ gs0 = (-74.003663, 40.717042, "NYC") # NYC
 # Step 0: Initialize objects
 ts = load.timescale()
 sats = []
-plotted_sat_index = {}
+plotted_sat_alias = {}
+plotted_alias_index = {}
 # total_sat_num = 100
 # gs0 = (-0.1278, 51.5074)  # London
 
@@ -75,9 +76,8 @@ with open(optimal_route_filepath, 'r') as optimal_file:
         route_alias         = []
 
         for node in route:
-            route_alias.append(int(node))
+            route_alias.append(node_index_catalog[int(node)])
         optimal_routes.append(route_alias)
-
 
 # Define time range
 t = ts.from_datetime(dt_hist[time_index])
@@ -89,22 +89,25 @@ lat_min, lat_max = min([gs0[1], gs1[1]])-5, max([gs0[1], gs1[1]])+5
 # Step 4: Compute and filter positions
 lats, lons = [], []
 for i, sat in enumerate(sats):
-    sat_at_t    = sat.at(t)
-    lat, lon    = sat_at_t.subpoint().latitude.degrees, sat.at(t).subpoint().longitude.degrees
-    plotted_sat_index[node_alias_catalog[sat.name]] = (lat, lon)
-    lats.append(lat)
-    lons.append(lon)
+
+    # Check if sat in node alias
+    if sat.name in node_alias_catalog:
+        sat_at_t    = sat.at(t)
+        lat, lon    = sat_at_t.subpoint().latitude.degrees, sat.at(t).subpoint().longitude.degrees
+        plotted_sat_alias[sat.name] = (lat, lon)
+        plotted_alias_index[sat.name] = node_alias_catalog[sat.name]
+        lats.append(lat)
+        lons.append(lon)
     # if lon_min <= lon <= lon_max and lat_min <= lat <= lat_max:
     #     lats.append(lat)
     #     lons.append(lon)
-
 
 # Step 5: Plot the positions (continued)
 plt.figure(figsize=(10, 5))
 if lats and lons:  # Check if lists are not empty
     
     plt.scatter(lons, lats, s=1, marker="o", facecolors='none', edgecolors='black', zorder=20)
-    for lon, lat, label in zip(lons, lats, plotted_sat_index.keys()):
+    for lon, lat, label in zip(lons, lats, plotted_alias_index.values()):
         plt.text(lon, lat - 0.5, label, ha='center')  # Adjust 0.5 as needed to position the text
 
 
@@ -112,7 +115,7 @@ if lats and lons:  # Check if lists are not empty
     plt.scatter(gs1[0], gs1[1], s=100, marker='x', linewidth=2, c='b', zorder=20, label=gs1[2])
 
     # Plot the routes
-    route_points = [plotted_sat_index[node] for node in optimal_routes[time_index]]
+    route_points = [plotted_sat_alias[node_alias] for node_alias in optimal_routes[time_index]]
     route_lats, route_lons = zip(*route_points)
     route_lats = (gs0[1],) + route_lats + (gs1[1],)
     route_lons = (gs0[0],) + route_lons + (gs1[0],)

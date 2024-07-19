@@ -187,8 +187,6 @@ def find_adjacent_orbit_sat(
         if distance < min_distance and distance < 5016000:
             min_distance = distance # update the minimum distance
             nearest_sat_in_adj_plane = adj_plane_sats[i] # set the current adj. plane sat as the nearest to the original sat
-            if origin_sat.name == "STARLINK-1215" and nearest_sat_in_adj_plane.name == "STARLINK-1234":
-                print(min_distance*1e-3)
 
     # if origin_sat.name == "STARLINK-1215":
     #     print(min_distance*1e-3, nearest_sat_in_adj_plane.name)

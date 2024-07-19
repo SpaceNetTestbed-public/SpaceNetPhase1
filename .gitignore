@@ -1,8 +1,8 @@
-# output/connectivity_matrix/starlink/*
+output/connectivity_matrix/starlink/*
 output/Figures/*
-# output/node_indices/starlink/*
-# output/optimal_routes/starlink/*
-# output/routing/starlink/*
-# output/satellites_orbits/starlink/*
+output/node_indices/starlink/*
+output/optimal_routes/starlink/*
+output/routing/starlink/*
+output/satellites_orbits/starlink/*
 output/suryansh_files/*
 # utils/starlink_tles/*

@@ -5,8 +5,8 @@ TotalSatCnt: 1511
 TotalGSCnt: 24
 ConnectivityMatrixPath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/connectivity/
 RoutingFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/routing/
-EpochIntervalDuration: 15
-EpochIntervalCount: 2
+EpochIntervalDuration: 120
+EpochIntervalCount: 5
 EpochStartYear: 2024
 EpochStartMonth: 07
 EpochStartDay: 01
@@ -28,3 +28,4 @@ shell1:
 Source: gs5
 Destination: gs12
 GroundStationFile: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_default.txt
+TLEFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/
