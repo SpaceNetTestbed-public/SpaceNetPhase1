@@ -7,32 +7,19 @@ from mpl_toolkits.basemap import Basemap
 
 
 # Control Var:
-time_index = 1
-tle_file = open('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/starlink_tles/starlink_1721156973', 'r')
-optimal_route_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_09.txt'
-node_indices_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1721156973.txt'
-total_sat_num = 900
-# gs0 = (-80.4139, 37.2296, "Blacksburg") # Blacksburg
-gs1 = (-0.1278, 51.5074, "London")  # London
-# gs1 = (139.691710, 35.689500, "Tokyo") # Tokyo
-
-# tle_file = open('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/suryansh_files/starlink_1720823350', 'r')
-# optimal_route_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/suryansh_files/BFbest_path_2024_07_12.txt'
-# node_indices_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/suryansh_files/nodeindex_1720823350.txt'
-# total_sat_num = 1276
+time_index = 0
+tle_file = open('../utils/starlink_tles/starlink_1705701600', 'r')
+optimal_route_filepath = '../output/optimal_routes/starlink/best_path_2024_01_19.txt'
+node_indices_filepath = '../output/node_indices/starlink/nodeindex_1705701600.txt'
+total_sat_num = 1440
 gs0 = (-74.003663, 40.717042, "NYC") # NYC
-# gs1 = (103.850070, 1.289670, "Singapore") # Singapore
-
-
+gs1 = (-0.1278, 51.5074, "London")  # London
 
 # Step 0: Initialize objects
 ts = load.timescale()
 sats = []
 plotted_sat_alias = {}
 plotted_alias_index = {}
-# total_sat_num = 100
-# gs0 = (-0.1278, 51.5074)  # London
-
 
 # Step 1: Read TLE from the file
 lines = tle_file.readlines()
@@ -134,6 +121,6 @@ if lats and lons:  # Check if lists are not empty
     # plt.ylim((lat_min, lat_max))
     plt.legend(loc='upper left')
     plt.show()
-    # plt.savefig('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/Figures/spacenet_node'+str(total_sat_num)+'_epoch'+str(time_index)+'.svg', dpi=300, bbox_inches='tight')
+    plt.savefig('../output/Figures/spacenet_node'+str(total_sat_num)+'_epoch'+str(time_index)+'.svg', dpi=300, bbox_inches='tight')
 else:
     print("No data points to plot.")

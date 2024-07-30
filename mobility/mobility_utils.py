@@ -27,7 +27,7 @@ def calc_max_gsl_length(
     # Check for starlink operator
     if operator_name == "starlink":
         # Set a specific value for max GSL length
-        max_gsl_length_m = 1089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
+        max_gsl_length_m = 2089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
         # (additionally, the above value does not match the value one would get using the algorithm in the else case, but applied to a starlink case)
         
         return max_gsl_length_m
