@@ -22,80 +22,20 @@ CONTENTS:       TLE CONSTELLATION FUNCTIONS/ (STARTS AT 45)
 # ------------------------------- IMPORT PACKAGES ----------------------------------- #
 # =================================================================================== #
 
-from skyfield.api import N, W, wgs84, load, EarthSatellite
-from multiprocessing import Process, Manager, Pool
-import time
-import networkx as nx
-import matplotlib.pyplot as plt
-import bellmanford as bf
-import itertools
-import copy
-import collections
-import math
-import wget
-import os
-import statistics
+import numpy as np
 import jenkspy
-import sys
 from .mobility_utils import *
 
 # =================================================================================== #
 # -------------------------- TLE CONSTELLATION FUNCTIONS ---------------------------- #
 # =================================================================================== #
-def get_orbital_planes(
-                        tle_filename    : str, 
-                        shell_num       : int
-                      ) -> dict:
-    """
-    Get orbital information for satellites from a TLE file for a specific shell.
-
-    Args:
-        tle_filename (str): Path to the TLE file
-        shell_num (int):    Shell number for filtering satellites
-
-    Returns:
-        dict:               Dictionary containing orbital information for selected satellites
-                            Key: Satellite name, Value: Tuple (Inclination, Longitude of the ascending node, Orbital number)
-    """
-
-    # Initialize dictionary as empty
-    orbital_data = {}
-
-    # Open TLE file in read mode
-    tle_file = open(tle_filename, 'r')
-
-    # Extract the contents of TLE file
-    Lines = tle_file.readlines()
-
-    # Iterate through TLE file, reading three lines at a time
-    for i in range(0, len(Lines), 3):
-
-        # Extract contents in second line
-        tle_second_line = list([_f for _f in Lines[i+2].strip("\n").split(" ") if _f])
-
-        # Check if the satellite belongs to the specified shell
-        if shell_num == 1:
-            if float(tle_second_line[2]) < 53.2: #Inclination of shell 1 should be 53.0 degrees
-
-                # Determine orbit number
-                orbital_num = math.floor(float(tle_second_line[3])/5.0)
-
-                # Store orbital information in the dictionary
-                # Satellite name: (Inclination, Longitude of the ascending node, orbital number)
-                orbital_data[Lines[i].strip()] = (tle_second_line[2], tle_second_line[3], orbital_num)
-                
-                # print(Lines[i].strip(), (tle_second_line[2], tle_second_line[3], orbital_num))
-
-    # Return the collected orbital information
-    return orbital_data
-
-
 def get_orbital_planes_classifications(
                                         tle_filename                : str, 
                                         constellation               : str, 
                                         number_of_orbits            : int, 
                                         number_of_sats_per_orbits   : int, 
-                                        orbits_inclination          : float
+                                        orbits_inclination          : float,
+                                        orbits_altitude             : float
                                       ) -> dict:
     """
     Arrange satellite orbital information from a TLE (Two-Line Element) file using Jenks Natural Breaks algorithm.
@@ -106,6 +46,7 @@ def get_orbital_planes_classifications(
         number_of_orbits (int):             Number of orbital planes
         number_of_sats_per_orbits (int):    Number of satellites per orbital plane (unused)
         orbits_inclination (float):         Inclination of the orbital planes
+        orbits_altitude (float):            Altitude of the orbital planes
 
     Returns:
         dict:                               Dictionary containing arranged orbital information
@@ -116,9 +57,6 @@ def get_orbital_planes_classifications(
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
 
-    # Print TLE filename for checking before completing sim
-    print(tle_filename)
-
     # Open TLE file in read mode
     tle_file = open(tle_filename, 'r')
 
@@ -126,50 +64,40 @@ def get_orbital_planes_classifications(
     Lines = tle_file.readlines()
 
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
-    for i in range(0,len(Lines),3):
+    for i in range(0, len(Lines), 3):
 
         # First line TLE
-        tle_first_line = list([_f for _f in Lines[i+1].strip("\n").split(" ") if _f])
+        tle_first_line  = list([_f for _f in Lines[i+1].strip("\n").split(" ") if _f])
 
         # Second line TLE
         tle_second_line = list([_f for _f in Lines[i+2].strip("\n").split(" ") if _f])
-        
-        # Check if constellation is defined as 'starlink'
-        if constellation == "starlink":
-            
-            # Inclination of Starlink shell 1 should be 53.0 degrees
-            if float(tle_second_line[2]) < (orbits_inclination+0.1) and float(tle_second_line[2]) >= (orbits_inclination):
-                
-                # Store TLE data in dump_orbital_data
-                dump_orbital_data["Epoch"].append(tle_first_line[3])
-                dump_orbital_data["Satellites"].append(Lines[i].strip())
-                dump_orbital_data["Inclination"].append(tle_second_line[2])
-                dump_orbital_data["RAAN"].append(tle_second_line[3])
-                dump_orbital_data["ecc"].append(tle_second_line[4])
-                dump_orbital_data["aop"].append(tle_second_line[5])
-                dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
-                dump_orbital_data["Mean motion"].append(tle_second_line[7])
 
-        else:
-            if float(tle_second_line[2]) < (orbits_inclination+1) and float(tle_second_line[2]) >= (orbits_inclination): #Inclination of Starlink shell 1 should be 53.0 degrees
-                dump_orbital_data["Epoch"].append(tle_first_line[3])
-                dump_orbital_data["Satellites"].append(Lines[i].strip())
-                dump_orbital_data["Inclination"].append(tle_second_line[2])
-                dump_orbital_data["RAAN"].append(tle_second_line[3])
-                dump_orbital_data["ecc"].append(tle_second_line[4])
-                dump_orbital_data["aop"].append(tle_second_line[5])
-                dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
-                dump_orbital_data["Mean motion"].append(tle_second_line[7])
+        # Compute orbiting altitude
+        tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400
+        tle_a           = (398600.4418 / (tle_n ** 2)) ** (1. / 3.) - 6378.135
 
-    
+        # Inclination of constellation shell
+        # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
+        #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
+
+        if tle_a < (orbits_altitude + 5) and tle_a >= (orbits_altitude - 5):
+
+            # Store TLE data in dump_orbital_data
+            dump_orbital_data["Epoch"].append(tle_first_line[3])
+            dump_orbital_data["Satellites"].append(Lines[i].strip())
+            dump_orbital_data["Inclination"].append(tle_second_line[2])
+            dump_orbital_data["RAAN"].append(tle_second_line[3])
+            dump_orbital_data["ecc"].append(tle_second_line[4])
+            dump_orbital_data["aop"].append(tle_second_line[5])
+            dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
+            dump_orbital_data["Mean motion"].append(tle_second_line[7])
+
     # Collect RAAN values in data dump
-    list_of_values = [-1 for c in range(len(dump_orbital_data["RAAN"]))]
+    list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
 
     # Extract RAAN values for classification
     for i in range(0, len(dump_orbital_data["RAAN"])):
         list_of_values[i] = float(dump_orbital_data["RAAN"][i])
-
-    # print(len(dump_orbital_data["RAAN"]))
     
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
@@ -221,7 +149,7 @@ def get_orbital_planes_classifications(
         totalsatellites += count_sats_per_orbit
 
     # Print total satellites for checking before completing sim
-    print(totalsatellites)
+    # print(".......... No. of Sat Nodes: ", totalsatellites)
 
     # Return the collected orbital information separated by orbit
     return data_orbits

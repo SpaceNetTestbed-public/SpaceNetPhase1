@@ -225,7 +225,7 @@ def save_routes(
     station node in the topology.
 
     Args:
-        routes (list):                  List of all possible routes determined by BF algorithm starting 
+        routes (dict):                  Dictionary of all possible routes determined by BF algorithm starting 
                                         from any satellite/ground to any sequence of connected 
                                         satellite/ground nodes
         operator_name (str):            Constellation/operator name
@@ -238,11 +238,11 @@ def save_routes(
 
     # Generate a new file
     routes_log = open(routing_file_path+operator_name+"/routes_"+timestamp+".txt", "a")
-    
+
     # Iterate over the routes list
-    for route in routes:
-        current_route = route[0][:]
-        routes_log.write(str(current_route)[1:-1] + "\n")
+    for _, route in routes.items():
+        current_route = ', '.join(map(str, route))
+        routes_log.write(current_route + "\n")
     
     # Close file to minimize memory leaks
     routes_log.close()
@@ -250,7 +250,7 @@ def save_routes(
 
 def save_optimal_path(
                         optimal_path            : list, 
-                        timestap                : int,
+                        timestamp               : int,
                         operator_name           : str, 
                         optimal_file_path       : str
                      ):
@@ -259,7 +259,7 @@ def save_optimal_path(
 
     Args:
         optimal_path (list):            List of the optimal route between source/destination nodes
-        timestamp (int):                Unix time
+        timestamp (list):               Unix time as a list
         operator_name (str):            Constellation/operator name
         optimal_file_path (str):        Path to output optimal path files
 
@@ -268,14 +268,57 @@ def save_optimal_path(
     """
 
     # Generate a new file
-    optimal_log = open(optimal_file_path+operator_name+"/best_path_"+timestap+".txt", "w")
+    optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
     
     # Iterate over the optimal path list
-    for path in optimal_path:
-        optimal_log.write(str(path) + "\n")
+    if optimal_path != None:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_path)[1:-1] + "\n")
+    else:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
 
     # Close file to minimize memory leaks
     optimal_log.close()
+
+
+def save_node_index(
+                        satellites_by_index     : dict, 
+                        ground_stations         : list, 
+                        node_index_file_path    : str,
+                        timestamp               : int,
+                        operator_name           : str
+                   ):
+    """
+    Saves the matching node indices and their corresponding aliases.
+
+    Args:
+        satellites_by_index (dict):     Satellites_by_index (dict): satellites sorted by index
+                                        satellite/ground nodes
+        ground_stations (list):         List of supplied ground stations
+        node_index_file_path (str):     Path to output the node index matching file
+        timestamp (int):                Unix time
+        operator_name (str):            Constellation/operator name
+
+    Returns:
+        Saves the node indices as a .txt file.
+    """
+
+    # Generate a new file
+    nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
+    nodeindex_log_write.close()
+
+    # Append to file
+    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
+
+    # Iterate over the satellites_by_index
+    for sat_indx, sat_alias in satellites_by_index.items():
+        nodeindex_log.write(str(sat_indx)+":"+str(sat_alias)+"\n")
+
+    # Iterate over ground station list
+    for gs in ground_stations:
+        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+"GS-"+str(gs['gid'])+"\n")
+
+    # Close file to minimize memory leaks
+    nodeindex_log.close()
 
 
 # =================================================================================== #
@@ -577,7 +620,6 @@ def arrange_satellites(
                         satellites_by_index     : {},
                         timestamp               : object,
                         tle_timestamp           : str,
-                        arranged_sat_file_path  : str,
                         sat_orbit_file_path     : str
                       ) -> dict:
     """
@@ -591,7 +633,6 @@ def arrange_satellites(
         satellites_by_index (empty dic):    Satellite information arranged by index, given as an empty dictionary
         timestamp (object):                 Skyfield object datetime
         tle_timestamp (str):                Attached unix timestamp of the TLE file
-        arranged_sat_file_path (str):       Path to output the arranged satellite files
         sat_orbit_file_path (str):          Path to output the satellite orbit files
 
     Returns:
