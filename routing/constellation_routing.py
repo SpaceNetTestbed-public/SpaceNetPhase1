@@ -117,7 +117,7 @@ def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency
     for i in range(len(connectivity_matrix)):  # For each row in the connectivity matrix
         for j in range(len(connectivity_matrix[i])):  # For each column in the connectivity matrix
             if connectivity_matrix[i][j] == 1:  # If there is a connection between the nodes
-                mega_constellation_graph.add_edge(i, j, weight=int(latency[i][j]))  # Add an edge between the nodes with a weight of 1
+                mega_constellation_graph.add_edge(i, j, weight=1)#int(latency[i][j]))  # Add an edge between the nodes with a weight of 1
 
     # Use Floyd-Warshall algorithm to find shortest paths between all pairs of nodes
     pred, _ = nx.floyd_warshall_predecessor_and_distance(mega_constellation_graph, weight="weight")

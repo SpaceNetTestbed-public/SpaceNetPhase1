@@ -238,17 +238,20 @@ def mininet_add_ISLs(
                 
                 # Determine the index of the current satellite
                 sat = total_sat_now + j
-                
-                # Intra-Orbit connection
-                sat_same_orbit = total_sat_now + ((j + 1) % n_sats_per_orbit)
-                connectivity_matrix[sat][sat_same_orbit] = 1
-                connectivity_matrix[sat_same_orbit][sat] = 1
-
-                # Retrieve current satellite's name
                 current_sat_name = satellites_by_index[sat]
                 current_sat = satellites_by_name[current_sat_name]
 
-                # Inter-Orbit connections
+                # Determine the index of next satellite
+                sat_same_orbit = total_sat_now + ((j + 1) % n_sats_per_orbit)
+                current_sat_same_orbit_name = satellites_by_index[sat_same_orbit]
+                current_sat_same_orbit = satellites_by_name[current_sat_same_orbit_name]
+
+                # Intra-orbit connection
+                if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 5016000:
+                    connectivity_matrix[sat][sat_same_orbit] = 1
+                    connectivity_matrix[sat_same_orbit][sat] = 1
+                
+                # Inter-orbit connections
                 # For the satellite in the next orbit
                 sat_adjacent_orbit_1 = find_adjacent_orbit_sat(current_sat, (i + 1)%n_orbits, satellites_sorted_in_orbits, t)
                 sat_adjacent_orbit_1_index = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(sat_adjacent_orbit_1)]

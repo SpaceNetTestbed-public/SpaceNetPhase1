@@ -19,6 +19,7 @@ virtual (fake) satellites and writes them into a file.
 import os
 import time
 import numpy as np
+import calendar
 import generate_fake_TLE as gft
 
 # =================================================================================== #
@@ -117,11 +118,19 @@ if __name__ == "__main__":
     # File name
     filename    = "starlink_" + str(int(time.time()))
 
+    # Date/Time input
+    datetime    = (2024, 1, 19, 17, 0, 10) # year, month, day, hour, minute, second
+    datetime_s  = calendar.timegm(datetime)
+    year_start  = (datetime[0], 1, 1, 0, 0, 0)
+    
+    # File name
+    filename    = "starlink_" + str(datetime_s)
+
     # Epoch Year / Fractional Day
-    epoch       = [24, 100]
+    epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
 
     # Orbital Elements (a-km, e, i-deg, w-deg, raan-deg, TA-deg)
-    oe          = [6878, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
+    oe          = [6678, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
 
     # Range of TA
     # ta_range    = np.array(range(0, 360, 18)) # number of satellites per orbit = 360/range_stepsize
