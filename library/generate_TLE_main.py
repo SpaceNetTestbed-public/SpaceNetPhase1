@@ -18,6 +18,7 @@ virtual (fake) satellites and writes them into a file.
 
 import os
 import time
+import calendar
 import numpy as np
 import calendar
 import generate_fake_TLE as gft
@@ -120,7 +121,7 @@ if __name__ == "__main__":
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
     # File name
-    filename    = "starlink_" + str(int(time.time()))
+    filename    = "starlink_" + str(datetime_s)
 
     # Epoch Year / Fractional Day
     epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
