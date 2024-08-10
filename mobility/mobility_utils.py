@@ -272,6 +272,33 @@ def mininet_add_ISLs(
     # Return the updated connectivity matrix
     return connectivity_matrix
 
+def retrieve_GS_by_type(ground_stations, gs_type):
+    """
+    Retrieves a list of ground stations based on their type
+    Gateway: 0 - connects satellite network to the internet
+    Customer Terminal: 1 - connects end users to the satellite network
+    Endpoint: 2 - Internet locations connected to gateways
+
+    Args:
+        ground_stations (dict): list of ground stations
+        gs_type (int): type of ground station (0: gateway, 1: customer terminal, 2: endpoint)
+
+    Returns:
+        gs_list (list): list of ground stations of the specified type
+    """
+    
+    # Initialize the list of ground stations
+    gs_list = []
+
+    # Iterate through the list of ground stations
+    for gs in ground_stations:
+        # Check if the ground station type matches the specified type
+        if gs["type"] == gs_type:
+            # Append the ground station to the list
+            gs_list.append(gs)
+
+    # Return the list of ground stations of the specified type
+    return gs_list
 
 def mininet_add_GSLs_parallel(
                               connectivity_matrix, 
@@ -303,7 +330,7 @@ def mininet_add_GSLs_parallel(
 
     """
     
-    # Calculate maximum GSL length
+    # Retrieve maximum GSL length from config
     max_gsl_length_m = calc_max_gsl_length(sat_config, operator_name)
 
     # Check if max GSL length is valid
@@ -312,7 +339,7 @@ def mininet_add_GSLs_parallel(
             print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
             return
         
-    # Calculate number of pools and ground stations per pool (further clarification needed?)
+    # Calculate number of pools and ground stations per thread pool (for parallel execution)
     number_of_pools = len(ground_stations)/number_of_threads
     num_of_gs_per_pool = len(ground_stations)/number_of_pools
 
