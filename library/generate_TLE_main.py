@@ -18,7 +18,6 @@ virtual (fake) satellites and writes them into a file.
 
 import os
 import time
-import calendar
 import numpy as np
 import calendar
 import generate_fake_TLE as gft
@@ -116,7 +115,7 @@ def basic_generate_fake_TLE(
 if __name__ == "__main__":
 
     # Date/Time input
-    datetime    = (2024, 1, 19, 22, 0, 0) # year, month, day, hour, minute, second
+    datetime    = (2024, 7, 21, 17, 0, 0) # year, month, day, hour, minute, second
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
@@ -127,16 +126,16 @@ if __name__ == "__main__":
     epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
 
     # Orbital Elements (a-km, e, i-deg, w-deg, raan-deg, TA-deg)
-    oe          = [7878, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
-
-    # Range of TA
-    ta_range    = np.linspace(0, 360, 8)
+    oe          = [6678, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
 
     # Range of Inc
     inc_range   = None
 
-    # Range of RAAN
-    raan_range = np.linspace(0, 360, 12)
+    # Range of RAAN (third input is the number of orbital planes)
+    raan_range = np.linspace(0, 360, 24)
+
+    # Range of TA (third input is the number of satellites per orbital plane)
+    ta_range    = np.linspace(0, 360, 60)
 
     # Total Number of Satellites
     num_sats = len(ta_range)*len(raan_range)
@@ -163,7 +162,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("/home/spacenet/simulator/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a') as file:
+    with open("../utils/starlink_tles/"+filename, 'a') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))
