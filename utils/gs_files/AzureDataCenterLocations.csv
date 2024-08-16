@@ -1,0 +1,52 @@
+Azure Region Name,Azure Data Center Location,Latitude,Longitude
+East US,"Boydton, Virginia",36.6632,-78.3894
+East US 2,"Ashburn, Virginia",39.0438,-77.4874
+Central US,"Des Moines, Iowa",41.5868,-93.625
+North Central US,"Chicago, Illinois",41.8781,-87.6298
+South Central US,"San Antonio, Texas",29.4241,-98.4936
+West US,"Santa Clara, California",37.3541,-121.9552
+West US 2,"Quincy, Washington",47.2343,-119.8526
+West US 3,"Phoenix, Arizona",33.4484,-112.074
+West Central US,"Cheyenne, Wyoming",41.14,-104.8202
+West Europe,"Amsterdam, Netherlands",52.3676,4.9041
+North Europe,"Dublin, Ireland",53.3498,-6.2603
+UK South,"London, UK",51.5074,-0.1278
+UK West,"Cardiff, UK",51.4816,-3.1791
+France Central,"Paris, France",48.8566,2.3522
+France South,"Marseille, France",43.2965,5.3698
+Germany North,"Berlin, Germany",52.52,13.405
+Germany West Central,"Frankfurt, Germany",50.1109,8.6821
+Switzerland North,"Zurich, Switzerland",47.3769,8.5417
+Switzerland West,"Geneva, Switzerland",46.2044,6.1432
+Norway East,"Oslo, Norway",59.9139,10.7522
+Norway West,"Stavanger, Norway",58.969,5.7331
+Sweden Central,"Gävle, Sweden",60.6749,17.1413
+Sweden South,"Malmö, Sweden",55.6049,13.0038
+Italy North,"Milan, Italy",45.466797,9.190498
+Poland North,"Warsaw, Poland",52.229676,21.012229
+Central India,"Pune, India",18.5204,73.8567
+South India,"Chennai, India",13.0827,80.2707
+West India,"Mumbai, India",19.076,72.8777
+Japan East,"Tokyo, Japan",35.6895,139.6917
+Japan West,"Osaka, Japan",34.6937,135.5023
+Australia East,"New South Wales, Australia",-33.8688,151.2093
+Australia Southeast,"Victoria, Australia",-37.8136,144.9631
+Australia Central,"Canberra, Australia",-35.2809,149.13
+Australia Central 2,"Canberra, Australia",-35.282001,149.128998
+Southeast Asia,Singapore,1.3521,103.8198
+East Asia,Hong Kong,22.3193,114.1694
+Korea Central,"Seoul, South Korea",37.5665,126.978
+Korea South,"Busan, South Korea",35.1796,129.0756
+South Africa North,"Johannesburg, South Africa",-26.2041,28.0473
+South Africa West,"Cape Town, South Africa",-33.9249,18.4241
+Brazil South,"São Paulo State, Brazil",-23.5505,-46.6333
+Brazil Southeast,"Rio de Janeiro, Brazil",-22.9068,-43.1729
+Canada Central,"Toronto, Canada",43.6532,-79.3832
+Canada East,"Quebec City, Canada",46.8139,-71.2082
+UAE North,"Dubai, United Arab Emirates",25.276987,55.296249
+UAE Central,"Abu Dhabi, United Arab Emirates",24.4539,54.3773
+Qatar Central,"Doha, Qatar",25.276987,51.521381
+Israel Central,"Tel Aviv, Israel",32.0853,34.7818
+Israel South,"Jerusalem, Israel",31.7683,35.2137
+Mexico Central,"Querétaro, Mexico",20.5888,-100.3899
+Chile Central,"Santiago, Chile",-33.4489,-70.6693
