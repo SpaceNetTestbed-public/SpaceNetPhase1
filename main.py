@@ -6,6 +6,7 @@ from tqdm import tqdm
 from utils import *
 import numpy as np
 import re
+import time
 from mobility.read_live_tles import *
 from mobility.mobility_utils import *
 from mobility.read_gs import *
