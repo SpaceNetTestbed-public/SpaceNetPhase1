@@ -1,6 +1,7 @@
 # Azure variables
 azure_latency_json_filename = 'gs_files/azure_latency_data.json'
 azure_csv_filename = 'gs_files/AzureDataCenterLocations.csv'
+azure_dict_filename = 'gs_files/azure_server_dict.json'
 url = 'https://learn.microsoft.com/en-us/azure/networking/azure-network-latency'
 sectionIdList = ['tabpanel_2_WestUS_Americas', 'tabpanel_2_EastUS_Americas', 'tabpanel_2_CentralUS_Americas', 'tabpanel_2_Canada_Americas', 'tabpanel_2_Australia_APAC', 'tabpanel_2_Japan_APAC', 'tabpanel_2_WesternEurope_Europe', 'tabpanel_2_CentralEurope_Europe', 'tabpanel_2_NorwaySweden_Europe', 'tabpanel_2_UKNorthEurope_Europe', 'tabpanel_2_Korea_APAC', 'tabpanel_2_India_APAC', 'tabpanel_2_Asia_APAC', 'tabpanel_2_israel-qatar-uae_MiddleEast', 'tabpanel_2_southafrica_MiddleEast']
 # Wonderproxy variables
@@ -8,13 +9,38 @@ sectionIdList = ['tabpanel_2_WestUS_Americas', 'tabpanel_2_EastUS_Americas', 'ta
 wonderproxy_server_csv_filename = 'gs_files/wonderproxy_servers-2020-07-19.csv'
 wonderproxy_latency_csv_filename = 'gs_files/wonderproxy_pings-2020-07-19-2020-07-20.csv'
 wonderproxy_latency_json_filename = 'gs_files/wonderproxy_latency_data.json'
+wonderproxy_dict_filename = 'gs_files/wonderproxy_server_dict.json'
 # Unofficial Starlink Global Gateways and PoPs KMZ file variables
 kmz_file = "gs_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz"
 usable_bands = ['Ka', 'E']
 
 adjacency_threshold = 2000 # Threshold distance in kilometers for considering two points as adjacent (be within 5ms latency (10ms round-trip))
+t2t_dict_filename = 'gs_files/t2t_dict.json'
 topology_filename = 'gs_files/t2t_topology.txt'
+
+terrestrial_link_bandwidth = 10000 # Bandwidth in Mbps for terrestrial links (10 Gbps)
+
 # >>>>>>>>> WonderProxy Functions <<<<<<<<<<<<
+def load_wonderproxy_server_dict(wonderproxy_server_csv_filename, wonderproxy_latency_csv_filename, wonderproxy_dict_filename = None):
+    if wonderproxy_dict_filename is not None:
+        wonderproxy_server_dict = read_json_file(wonderproxy_dict_filename)
+        if wonderproxy_server_dict is not None:
+            return wonderproxy_server_dict
+    wonderproxy_server_dict = load_wonderproxy_server_location_coordinates(wonderproxy_server_csv_filename)
+    wonderproxy_latency_dict = load_wonderproxy_latency_dict(None, wonderproxy_latency_csv_filename, wonderproxy_server_dict)
+    unavail_server_list = []
+    for server in wonderproxy_server_dict:
+        if server not in wonderproxy_latency_dict:
+            if server not in unavail_server_list:
+                unavail_server_list.append(server)
+            continue
+        wonderproxy_server_dict[server].update(wonderproxy_latency_dict[server]) # Add latency data to server dictionary
+    print(f"{len(unavail_server_list)} servers not found in latency dictionary: {unavail_server_list}")
+    # Save the data to a json file for future use
+    if wonderproxy_dict_filename is not None:
+        write_json_file(wonderproxy_dict_filename, wonderproxy_server_dict)
+    return wonderproxy_server_dict
+
 def load_wonderproxy_server_location_coordinates(csv_filename):
     import csv
     if csv_filename is None:
@@ -35,7 +61,7 @@ def load_wonderproxy_server_location_coordinates(csv_filename):
             latitude = float(row[-2])
             longitude = float(row[-1])
             index = int(row[0])
-            wonderproxy_server_dict[locationName] = {'coordinates': (latitude, longitude), 'index': index}
+            wonderproxy_server_dict[locationName] = {'coordinates': (latitude, longitude), 'wp_index': index, 'data_source': 'WonderProxy'}
     return wonderproxy_server_dict
 
 def gen_wonderproxy_server_latency_json_from_csv(csv_filename, json_filename, wonderproxy_server_dict):
@@ -45,20 +71,23 @@ def gen_wonderproxy_server_latency_json_from_csv(csv_filename, json_filename, wo
     # Build wonderproxy_server_dict lookup table by index
     wonderproxy_server_lookup_dict = {}
     for locationName, data in wonderproxy_server_dict.items():
-        index = data['index']
+        index = data['wp_index']
         wonderproxy_server_lookup_dict[index] = locationName
     wonderproxy_latency_data = read_csv_file(csv_filename)
     if wonderproxy_latency_data is None:
         raise ValueError(f"Failed to read data from {csv_filename}")
     wonderproxy_latency_dict = {}
+    unavail_index_list = []
     for row in wonderproxy_latency_data[1:]:
         source_index = int(row[0])
         if source_index not in wonderproxy_server_lookup_dict:
-            print(f"Source index {source_index} not found in server dictionary.")
+            if source_index not in unavail_index_list:
+                unavail_index_list.append(source_index)
             continue
         dest_index = int(row[1])
         if dest_index not in wonderproxy_server_lookup_dict:
-            print(f"Destination index {dest_index} not found in server dictionary.")
+            if dest_index not in unavail_index_list:
+                unavail_index_list.append(dest_index)
             continue
         latency = float(row[4]) # Avg latency in ms
         source_name = wonderproxy_server_lookup_dict[source_index]
@@ -69,6 +98,7 @@ def gen_wonderproxy_server_latency_json_from_csv(csv_filename, json_filename, wo
         if dest_name not in wonderproxy_latency_dict:
             wonderproxy_latency_dict[dest_name] = {}
         wonderproxy_latency_dict[dest_name][source_name] = latency
+    print(f"{len(unavail_index_list)} indices not found in server dictionary: {unavail_index_list}")
     write_json_file(json_filename, wonderproxy_latency_dict)
     print(f"Data saved to {json_filename}")
     return wonderproxy_latency_dict
@@ -94,19 +124,22 @@ def add_azure_location_coordinates(azure_data_centers, csv_filename):
     encoding = detect_text_file_encoding(csv_filename)
     if encoding is None:
         raise ValueError("Failed to detect the encoding of the csv file.")
+    unavail_server_list = []
     with open(csv_filename, 'r', encoding=encoding) as file:
         reader = csv.reader(file)
         next(reader) # Skip the header row
         for row in reader:
-            regionName = row[0]
+            centerName = row[0]
             locationName = row[1]
             latitude = float(row[2])
             longitude = float(row[3])
-            if regionName in azure_data_centers:
-                azure_data_centers[regionName]['coordinates'] = (latitude, longitude)
-                azure_data_centers[regionName]['locationName'] = locationName
+            if centerName in azure_data_centers:
+                azure_data_centers[centerName]['coordinates'] = (latitude, longitude)
+                azure_data_centers[centerName]['friendly_name'] = locationName
             else:
-                print(f"Region not found in Azure Data Center dictionary: {regionName}")
+                if centerName not in unavail_server_list:
+                    unavail_server_list.append(centerName)
+    print(f"{len(unavail_server_list)} Azure data centers not found in azure_data_centers dictionary: {unavail_server_list}")
     return azure_data_centers
 
 def scrape_azure_latency_data(url, section_id='tabpanel_2_WestUS_Americas'):
@@ -149,6 +182,7 @@ def load_azure_data_center_latency(azure_latency_json_filename = None, url = Non
     if azure_data_centers is None and url is None:
         raise ValueError("Cached data not found and url is not provided.")
     elif azure_data_centers is None:
+        print("No cached data found. Scraping data from Azure website.")
         azure_data_centers = {}
         latency_data = []
         for section_id in sectionIdList:
@@ -160,18 +194,42 @@ def load_azure_data_center_latency(azure_latency_json_filename = None, url = Non
                 azure_data_centers[source] = data
             else:
                 azure_data_centers[source].update(data)
+        # Now that we have the data, convert the latencies to floats; any non-conforming entries will be marked for removal
+        # Also use this opportunity to label the source of the data
+        remove_list = []
+        for sourceName, data in azure_data_centers.items():
+            for destName, latencyStr in data.items():
+                try:
+                    data[destName] = float(latencyStr)
+                except ValueError:
+                    print(f"Error converting {latencyStr} to float for {sourceName} --> {destName}. Marking entry for removal.")
+                    remove_list.append((sourceName, destName))
+            data['data_source'] = 'Azure' # Add data source label
+        print(f"Marked {len(remove_list)} entries for removal. Deleting...: ", end="")
+        for sourceName, destName in remove_list:
+            del azure_data_centers[sourceName][destName]
+        print("Done.")
+
+        # Save the data to a json file if filename is provided for future use
         if azure_latency_json_filename is not None:
             write_json_file(azure_latency_json_filename, azure_data_centers)
             print(f"Data saved to {azure_latency_json_filename}")
     return azure_data_centers
 
-def load_azure_data_centers(azure_json_filename = None, azure_url = None, csv_filename = None):
-    azure_data_centers = load_azure_data_center_latency(azure_json_filename, azure_url)
+def load_azure_data_center_dict(azure_latency_json_filename = None, azure_url = None, csv_filename = None, azure_data_center_dict_json_filename = None):
+    if azure_data_center_dict_json_filename is not None:
+        azure_data_centers = read_json_file(azure_data_center_dict_json_filename)
+        if azure_data_centers is not None:
+            return azure_data_centers
+    azure_data_centers = load_azure_data_center_latency(azure_latency_json_filename, azure_url)
     add_azure_location_coordinates(azure_data_centers, csv_filename)
     # List any azure_data_centers that do not have coordinates
     for region, data in azure_data_centers.items():
         if 'coordinates' not in data:
             print(f"No coordinates found for region: {region}")
+    # Save the data to a json file for future use
+    if azure_data_center_dict_json_filename is not None:
+        write_json_file(azure_data_center_dict_json_filename, azure_data_centers)
     return azure_data_centers
 
 # >>>>>>>>> Coordinate/Distance Functions <<<<<<<<<<<<
@@ -255,6 +313,7 @@ def write_json_file(file_path, data):
     with open(file_path, 'w') as f:
         json.dump(data, f)
 
+# Function to write data as csv to a file
 def read_csv_file(file_path):
     import csv
     encoding = detect_text_file_encoding(file_path)
@@ -380,73 +439,240 @@ def get_ground_stations_from_placemarks(placemark_dict):
                 ground_station_dict[name] = {
                     'locationName': name,
                     'coordinates': (coordinates[0], coordinates[1]),
-                    'description': data['description']
+                    'description': data['description'],
+                    'data_source': 'Unofficial Starlink Global Gateways and PoPs KMZ'
                 }
     return ground_station_dict
 
-def load_groundstations_from_local_kml(kmz_file):
+def load_gateways_from_local_kml(kmz_file):
     kml_root = parse_local_kml_file(kmz_file, print_content=False)
     placemark_dict = extract_placemarks(kml_root)
     ground_station_dict = get_ground_stations_from_placemarks(placemark_dict)
     return ground_station_dict
 
-def genT2tTopologyFile(gs_dict, endpoint_dict_list, endpoint_latency_dict_list, topology_filename):
-    latency_matrix_dict = {} # build dictionary as 2D array of latencies between each pair of endpoints
-    
+def genT2tDict(gateway_dict, endpoint_dict_with_latency_list, t2t_dict_output_filename = None):
+    t2t_dict = {} # build dictionary as 2D array of latencies between each pair of endpoints
     aggr_endpoint_dict = {} # build dictionary of all endpoints from all dictionaries
-    for endpoint_dict in endpoint_dict_list:
-        aggr_endpoint_dict.update(endpoint_dict)
-    aggr_endpoint_latency_dict = {} # build dictionary of all latencies between each pair of endpoints
-    for endpoint_latency_dict in endpoint_latency_dict_list:
-        aggr_endpoint_latency_dict.update(endpoint_latency_dict)
+    for endpoint_dict in endpoint_dict_with_latency_list:
+        aggr_endpoint_dict.update(endpoint_dict) # --> TO DO: Consider case when endpoint names are not unique
+
     # build list of all endpoints from all dictionaries
     endpoint_name_list = aggr_endpoint_dict.keys()
-    # Loop through endpoints to build latency matrix
+    
+    # Ensure latency values have reverse mappings to sacrifice memory for lookup performance -- WHAT TO DO REGARDING LACK OF COORDINATES?
+    endpoint_non_latency_keys = ['coordinates', 'friendly_name', 'data_source', 'wp_index']
+    #for sourceEndpoint in aggr_endpoint_dict.keys():
+    #    for key, value in aggr_endpoint_dict[sourceEndpoint].items():
+    #        if key in endpoint_non_latency_keys:
+    #            continue
+    #        if value == "":
+    #            continue
+    #        if key not in aggr_endpoint_dict:
+    #            aggr_endpoint_dict[key] = {'data_source': aggr_endpoint_dict[sourceEndpoint]['data_source'] + '_derived'}
+    #        aggr_endpoint_dict[key][sourceEndpoint] = value
+
+    # Assign unique numbers to endpoints and build mappings of endpoint-to-number and number-to-endpoint
+    endpoint_to_id_dict = {endpoint: id_num for id_num, endpoint in enumerate(endpoint_name_list)}
+    id_to_endpoint_dict = {id_num: endpoint for id_num, endpoint in enumerate(endpoint_name_list)}
+    # Loop through endpoints to build t2t_dict latency values using source_ids as keys
     for source_endpoint in endpoint_name_list:
-        if source_endpoint not in latency_matrix_dict:
-            latency_matrix_dict[source_endpoint] = {}
-        for dest_endpoint in endpoint_name_list:
+        source_id = endpoint_to_id_dict[source_endpoint]
+        if source_id not in t2t_dict:
+            t2t_dict[source_id] = {'type': 'endpoint', 'name': source_endpoint}
+            for non_latency_key in endpoint_non_latency_keys:
+                if non_latency_key in aggr_endpoint_dict[source_endpoint]:
+                    t2t_dict[source_id][non_latency_key] = aggr_endpoint_dict[source_endpoint][non_latency_key]
+        for dest_endpoint in endpoint_name_list: # Now get latency values
             if source_endpoint == dest_endpoint:
                 continue
-            for endpoint_latency_dict in endpoint_latency_dict_list:
-                if source_endpoint in endpoint_latency_dict:
-                    if dest_endpoint in endpoint_latency_dict[source_endpoint]:
-                        latency = endpoint_latency_dict[source_endpoint][dest_endpoint]
-                        latency_matrix_dict[source_endpoint][dest_endpoint] = latency
-                        if dest_endpoint not in latency_matrix_dict:
-                            latency_matrix_dict[dest_endpoint] = {}
-                        latency_matrix_dict[dest_endpoint][source_endpoint] = latency # sacrifice memory for lookup performance by adding in reverse direction
-                        break
+            dest_id = endpoint_to_id_dict[dest_endpoint]
+            if dest_endpoint in aggr_endpoint_dict[source_endpoint]:
+                latency = aggr_endpoint_dict[source_endpoint][dest_endpoint]
+                t2t_dict[source_id][dest_id] = latency
+                #if dest_id not in t2t_dict:
+                #    t2t_dict[dest_id] = {'type': 'endpoint', 'name': dest_endpoint}
+                #t2t_dict[dest_id][source_id] = latency # sacrifice memory for lookup performance by adding in reverse direction
+    # Find endpoints that are within adjacency threshold of each other and add connection with latency of 10ms
+    print("Adding links between endpoints within adjacency threshold... (to form links between seperate endpoint sources)")
+    added_links_list = []
+    for source_id, source_data in t2t_dict.items():
+        for dest_id, dest_data in t2t_dict.items():
+            if (source_id == dest_id) or ((dest_id in source_data) and (source_id in dest_data)): # Skip if source and dest are the same or if the latency is already present
+                continue
+            if calc_coord_distance(source_data['coordinates'], dest_data['coordinates']) <= adjacency_threshold // 4: # tightening the restriction to be confident that the endpoints are adjacent
+                if dest_id not in source_data:
+                    source_data[dest_id] = 10
+                if source_id not in dest_data:
+                    dest_data[source_id] = 10
+                added_links_list.append((id_to_endpoint_dict[source_id], id_to_endpoint_dict[dest_id]))
+    print(f"Added {len(added_links_list)} links with 10ms latency:")
+    print(added_links_list)
     # Now add in ground station to endpoint latencies
-    adjacency_pair_dict = find_adjacency_pairs(aggr_endpoint_dict, gs_dict, None, adjacency_threshold)
+    gs_name_list = gateway_dict.keys()
+    # Give ground stations IDs and add to mappings
+    next_id = int(max(id_to_endpoint_dict.keys())) + 1
+    for gs_name in gs_name_list:
+        gs_id = next_id
+        next_id += 1
+        endpoint_to_id_dict[gs_name] = gs_id
+        id_to_endpoint_dict[gs_id] = gs_name
+    
+    adjacency_pair_dict = find_adjacency_pairs(aggr_endpoint_dict, gateway_dict, None, adjacency_threshold) # Find adjacency pairs between endpoints and ground stations
+    gs_non_latency_keys = ['coordinates', 'description', 'data_source']
     for gs_name, data in adjacency_pair_dict.items():
-        adj_endpoint, _ = data
-        adj_endpoint_latency_dict = latency_matrix_dict[adj_endpoint]
-        if gs_name not in latency_matrix_dict:
-            latency_matrix_dict[gs_name] = {}
-        for dest_endpoint, dest_latency in adj_endpoint_latency_dict.items():
+        gs_id = endpoint_to_id_dict[gs_name]
+        adj_endpoint, _ = data # Get the ground station's adjacent endpoint (don't need distance since we're adding a flat 10ms latency)
+        adj_endpoint_id = endpoint_to_id_dict[adj_endpoint]
+        if gs_id not in t2t_dict:
+            t2t_dict[gs_id] = {'type': 'gateway', 'name': gs_name} # Add ground station to t2t_dict with base entries
+            for non_latency_key in gs_non_latency_keys:
+                if non_latency_key in gateway_dict[gs_name]: # If any other non-latency keys are present in the ground station data, add them to the t2t_dict
+                    t2t_dict[gs_id][non_latency_key] = gateway_dict[gs_name][non_latency_key]
+        for key, value in t2t_dict[adj_endpoint_id].items(): # For each latency entry for the given adjacent endpoint
+            if key in endpoint_non_latency_keys or key in t2t_dict[gs_id]: # Skip non-latency keys and entries already present in the ground station's entry
+                continue
+            # assume all that's left are latency values
+            dest_id = key
+            dest_latency = value
+            if type(dest_latency) is str and dest_latency.isnumeric(): # check for latencies that are strings (shouldn't be, but just in case)
+                dest_latency = float(dest_latency) # Convert to float
             gs_latency = float(dest_latency) + 10 # assume 10ms latency from ground station to endpoint
-            latency_matrix_dict[gs_name][dest_endpoint] = gs_latency
-            latency_matrix_dict[dest_endpoint][gs_name] = gs_latency # sacrifice memory for lookup performance by adding in reverse direction
+            t2t_dict[gs_id][dest_id] = gs_latency
+            #t2t_dict[dest_endpoint][gs_name] = gs_latency # sacrifice memory for lookup performance by adding in reverse direction
 
-    # Write the topology file
+    # Write the t2t_dict to file
+    if t2t_dict_output_filename is not None:
+        write_json_file(t2t_dict_filename, t2t_dict)
+    return t2t_dict
+
+def genT2tTopology(t2t_dict):
+    t2t_topology_dict = {}
+    admin_key_list = ['type', 'name', 'coordinates', 'friendly_name', 'data_source', 'wp_index', 'description', 'locationName']
+    for source_id, data_dict in t2t_dict.items(): # Loop through all entries in the t2t_dict and generate dictionary of latencies
+        for key, value in data_dict.items():
+            if key not in admin_key_list: # Skip administrative keys
+                dest_id = key
+                latency = value
+                if source_id not in t2t_topology_dict:
+                    t2t_topology_dict[source_id] = {}
+                t2t_topology_dict[source_id][dest_id] = latency
+                if dest_id not in t2t_topology_dict:
+                    t2t_topology_dict[dest_id] = {}
+                t2t_topology_dict[dest_id][source_id] = latency
+
+    # Write topology to disk
     with open(topology_filename, 'w') as file:
-        for source_endpoint, latency_dict in latency_matrix_dict.items():
+        for source_endpoint, latency_dict in t2t_topology_dict.items():
             for dest_endpoint, latency in latency_dict.items():
-                file.write(f"{source_endpoint} {dest_endpoint} {latency}\n")
+                file.write(f"{source_endpoint},{dest_endpoint},{latency},{terrestrial_link_bandwidth}\n")
     print(f"Topology file written to {topology_filename}")
-    return latency_matrix_dict
+    
+    return t2t_topology_dict
+
+def add_gateway_gs(ground_station_dict_list, t2t_dict):
+    highest_gid = 0
+    for ground_station_dict in ground_station_dict_list:
+        gid = ground_station_dict['gid']
+        if gid > highest_gid:
+            highest_gid = gid
+    next_gid = highest_gid + 1
+    for id in range(len(t2t_dict.keys())):
+        if t2t_dict[id]['type'] == 'gateway':
+            ground_station_entry_dict = {
+                "gid": highest_gid + id,
+                "name": t2t_dict[id]['name'],
+                "latitude_degrees_str": str(t2t_dict[id]['coordinates'][0]),
+                "longitude_degrees_str": str(t2t_dict[id]['coordinates'][1]),
+                "elevation": 0.0,
+                "cartesian_x": 0.0,
+                "cartesian_y": 0.0,
+                "cartesian_z": 0.0,
+                "type": 9, # Using value of 9 to indicate gateway
+                "next_update": "",
+                "sat_re_LAC": -1
+            }
+            ground_station_dict_list.append(ground_station_entry_dict)
+    return ground_station_dict_list
+
+def load_t2t_dict(t2t_settings):
+    import os
+    t2t_dict = None
+    # Check if t2t_dict file exists, if so load it
+    if t2t_settings['t2t_dict_output_file'] != None and os.path.exists(t2t_settings['t2t_dict_output_file']): 
+        t2t_dict = read_json_file(t2t_settings['t2t_dict_output_file'])
+        if t2t_dict != None:
+            return t2t_dict
+    # No pre-existing dictionary; Generate t2t dictionary
+    endpoint_dict_list = []
+    # Generate endpoint dictionary
+    if t2t_settings['use_azure']:
+        azure_latency_url = t2t_settings['azure_endpoint_latency_url']
+        azure_location_file = t2t_settings['azure_endpoint_location_file']
+        azure_dict_output_file = t2t_settings['azure_dict_output_file']
+        if azure_dict_output_file == "": azure_dict_output_file = None
+        azure_data_center_dict = load_azure_data_center_dict(None, azure_latency_url, azure_location_file, azure_dict_output_file)
+        endpoint_dict_list.append(azure_data_center_dict)
+    # Generate endpoint dictionary
+    if t2t_settings['use_wonderproxy']:
+        wonderproxy_endpoint_location_file = t2t_settings['wonderproxy_endpoint_location_file']
+        wonderproxy_endpoint_latency_file = t2t_settings['wonderproxy_endpoint_latency_file']
+        wonderproxy_dict_output_file = t2t_settings['wonderproxy_dict_output_file']
+        wonderproxy_dict = load_wonderproxy_server_dict(wonderproxy_endpoint_location_file, wonderproxy_endpoint_latency_file, wonderproxy_endpoint_latency_file, wonderproxy_dict_output_file)
+        endpoint_dict_list.append(wonderproxy_dict)
+    # Generate gateway dictionary
+    gateway_dict = load_gateways_from_local_kml(t2t_settings['gateway_kmz_file'])
+    # Generate t2t dictionary from endpoint and gateway dictionaries
+    t2t_dict = genT2tDict(gateway_dict, endpoint_dict_list, t2t_settings['t2t_dict_output_file'])
+
+    return t2t_dict
+
+def get_t2t_settings(main_config, output_filepath):
+    #t2t_settings = {'use_t2t': True}
+    t2t_settings = {}
+    t2t_output_path = output_filepath+"/t2t/"
+    t2t_settings['t2t_output_path'] = t2t_output_path # Save output path seperately in case it is needed for other functions
+    t2t_settings['kmz_type'] = main_config["t2t_gateway_kmz_type"] # local or link
+    t2t_settings['gateway_kmz_path'] = main_config["t2t_gateway_kmz_path"] # either a file path or a url
+    if "t2t_dict_output_file" in main_config and main_config["t2t_dict_output_file"] != "":
+        t2t_settings['t2t_dict_output_file'] = main_config["t2t_dict_output_file"] 
+    else:
+        t2t_settings['t2t_dict_output_file'] = None
+    if "t2t_use_azure" in main_config:
+        t2t_settings['use_azure'] = main_config["t2t_use_azure"]
+        if t2t_settings['use_azure']:
+            t2t_settings['azure_endpoint_location_file'] = main_config["t2t_azure_endpoint_location_file"]
+            t2t_settings['azure_endpoint_latency_url'] = main_config["t2t_azure_endpoint_latency_url"]
+            if "t2t_azure_dict_output_file" in main_config and main_config["t2t_azure_dict_output_file"] != "":
+                t2t_settings['azure_dict_output_file'] = main_config["t2t_azure_dict_output_file"]
+        else:
+            t2t_settings['azure_dict_output_file'] = None
+    else:
+        t2t_settings['use_azure'] = False
+    if "t2t_use_wonderproxy" in main_config:
+        t2t_settings['use_wonderproxy'] = main_config["t2t_use_wonderproxy"]
+        if t2t_settings['use_wonderproxy']:
+            t2t_settings['wonderproxy_endpoint_location_file'] = main_config["t2t_wonderproxy_endpoint_location_file"]
+            t2t_settings['wonderproxy_endpoint_latency_file'] = main_config["t2t_wonderproxy_endpoint_latency_file"]
+            if "t2t_wonderproxy_dict_output_file" in main_config and main_config["t2t_wonderproxy_dict_output_file"] != "":
+                t2t_settings['wonderproxy_dict_output_file'] = main_config["t2t_wonderproxy_dict_output_file"]
+            else:
+                t2t_settings['wonderproxy_dict_output_file'] = None
+    else:
+        t2t_settings['use_wonderproxy'] = False
+    return t2t_settings
 
 if __name__ == '__main__':
-    azure_data_center_dict = load_azure_data_centers(azure_json_filename = azure_latency_json_filename, azure_url = url, csv_filename = azure_csv_filename)
-    azure_data_center_latency_dict = load_azure_data_center_latency(azure_latency_json_filename)
-    wonderproxy_server_dict = load_wonderproxy_server_location_coordinates(wonderproxy_server_csv_filename)
-    wonderproxy_server_latency_dict = load_wonderproxy_latency_dict(wonderproxy_json_filename = wonderproxy_latency_json_filename, csv_filename = wonderproxy_latency_csv_filename, wonderproxy_server_dict = wonderproxy_server_dict)
-    ground_station_dict = load_groundstations_from_local_kml(kmz_file)
-    t2t_topology_dict = genT2tTopologyFile(ground_station_dict, [azure_data_center_dict, wonderproxy_server_dict], [azure_data_center_latency_dict, wonderproxy_server_latency_dict], topology_filename)
-    import pprint
-    print(f"{len(t2t_topology_dict.keys())} endpoints in t2t topology loaded.")
-    pprint.pprint(t2t_topology_dict)
+    azure_data_center_dict_with_latencies = load_azure_data_center_dict(azure_latency_json_filename = azure_latency_json_filename, azure_url = url, csv_filename = azure_csv_filename)
+    #azure_data_center_latency_dict = load_azure_data_center_latency(azure_latency_json_filename)
+    #wonderproxy_server_dict = load_wonderproxy_server_location_coordinates(wonderproxy_server_csv_filename)
+    #wonderproxy_server_latency_dict = load_wonderproxy_latency_dict(wonderproxy_json_filename = wonderproxy_latency_json_filename, csv_filename = wonderproxy_latency_csv_filename, wonderproxy_server_dict = wonderproxy_server_dict)
+    wonderproxy_server_dict_with_latencies = load_wonderproxy_server_dict(wonderproxy_server_csv_filename, wonderproxy_latency_json_filename, wonderproxy_latency_csv_filename)
+    ground_station_dict = load_gateways_from_local_kml(kmz_file)
+    t2t_dict = genT2tDict(ground_station_dict, [azure_data_center_dict_with_latencies, wonderproxy_server_dict_with_latencies], topology_filename)
+    print(f"{len(t2t_dict.keys())} endpoints in t2t topology loaded.")
+    t2t_topology_dict = genT2tTopology(t2t_dict)
+    print(f"{len(t2t_topology_dict.keys())} endpoints in t2t topology written to file.")
+    
     exit()
     print(f"{len(ground_station_dict)} ground stations loaded.")
     #print("Ground station locations:")

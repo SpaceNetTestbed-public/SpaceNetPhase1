@@ -14,6 +14,8 @@ from routing.constellation_routing import *
 from utils.utils import *
 from library import spacenet_yaml_config
 
+from utils.gateway_utils import *
+
 # =================================================================================== #
 # ---------------------------------- INPUT VARS ------------------------------------- #
 # =================================================================================== #
@@ -90,6 +92,17 @@ def main():
 
     # Read the ground stations from the file specified in the configurations
     ground_stations = read_gs(gs_file_path)
+
+    # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
+    if "Use_t2t" in main_config and bool(main_config["use_t2t"]) == True:
+        print(".......... Using T2T links. Collecting settings")
+        t2t_settings = get_t2t_settings(main_config, output_filepath)
+        print(".......... T2T settings collected. Loading T2T dictionary")
+        t2t_dict = load_t2t_dict(t2t_settings)
+        
+        # Add gateways to ground station list
+        print(".......... T2T dictionary loaded. Adding Gateways to ground stations")
+        ground_stations = add_gateway_gs(ground_stations, t2t_dict)
 
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
