@@ -192,7 +192,7 @@ def main():
         output_filepath = output_filepath[:-1] # Remove the last slash if it exists
     gs_file_path                = sat_config["GroundStationFile"]
     tle_file_path               = sat_config["TLEFilePath"]
-    connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
+    connectivity_matrix_path    = output_filepath+"/connectivity/"
     routing_file_path           = output_filepath+"/routing/"
     sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
     node_index_file_path        = output_filepath+"/node_indices/"
