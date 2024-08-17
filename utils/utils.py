@@ -177,7 +177,8 @@ def save_topology(
                     links_charateristics        : dict, 
                     operator_name               : str, 
                     timestamp                   : int,
-                    connectivity_matrix_path    : str
+                    connectivity_matrix_path    : str,
+                    dt                          : int
                  ):
     """
     Saves the link characteristics (latency and bandwidth) for each sat/gs pair in the topology.
@@ -190,7 +191,8 @@ def save_topology(
                                         to connected pairs of the indices (i, j), i.e. where element == 1
         operator_name (str):            Constellation/operator name
         timestamp (int):                Unix time
-        connectivity_matrix_path (str): Path to output the connectivity matrix files                       
+        connectivity_matrix_path (str): Path to output the connectivity matrix files
+        dt (int):                       Topology granularity                       
 
     Returns:
         Saves the topology as a .txt file.
@@ -253,7 +255,8 @@ def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
                     timestamp               : int,
-                    routing_file_path       : str
+                    routing_file_path       : str,
+                    dt                      : int
                ):
     """
     Saves all possible optimal routes from the Bellman-Ford (BF) algorithm for each satellite and ground 
@@ -266,6 +269,7 @@ def save_routes(
         operator_name (str):            Constellation/operator name
         timestamp (int):                Unix time
         routing_file_path (str):        Path to output the routing files
+        dt (int):                       Topology granularity   
 
     Returns:
         Saves the routes as a .txt file.
@@ -291,7 +295,8 @@ def save_optimal_path(
                         optimal_path            : list, 
                         timestamp               : int,
                         operator_name           : str, 
-                        optimal_file_path       : str
+                        optimal_file_path       : str,
+                        dt                      : int
                      ):
     """
     Saves a single optimal route determined by BF algorithm between a source and destination node.
@@ -301,6 +306,7 @@ def save_optimal_path(
         timestamp (list):               Unix time as a list
         operator_name (str):            Constellation/operator name
         optimal_file_path (str):        Path to output optimal path files
+        dt (int):                       Topology granularity   
 
     Returns:
         Saves the route as a .txt file.
@@ -538,6 +544,38 @@ def save_cpu_time(
     # Generate a new file
     check_create_path(cpu_time_path+operator_name)
     cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "w")
+    
+    # Iterate over the optimal path list
+    if cpu_runtime != None:
+        cpu_clock_log.write(str(cpu_runtime)+"\n")
+
+    # Close file to minimize memory leaks
+    cpu_clock_log.close()
+
+
+def save_cpu_time(
+                    cpu_runtime     : float, 
+                    timestamp       : int,
+                    operator_name   : str, 
+                    cpu_time_path   : str,
+                    dt              : int
+                 ):
+    """
+    Saves the matching node indices and their corresponding aliases.
+
+    Args:
+        cpu_runtime (float):            CPU clock runtime, in seconds
+        timestamp (list):               Unix time as a list
+        operator_name (str):            Constellation/operator name
+        cpu_time_path (str):            Path to output CPU clock runtime file
+        dt (int):                       Topology granularity   
+
+    Returns:
+        Saves the CPU clock runtime as a .txt file.
+    """
+
+    # Generate a new file
+    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
     
     # Iterate over the optimal path list
     if cpu_runtime != None:

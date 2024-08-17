@@ -5,7 +5,6 @@ import threading
 
 import networkx as nx
 import matplotlib.pyplot as plt
-import bellmanford as bf
 from multiprocessing import Pool
 
 import sys
