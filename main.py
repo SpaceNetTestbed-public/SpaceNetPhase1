@@ -20,6 +20,7 @@ from library import spacenet_yaml_config
 # =================================================================================== #
 
 find_optimal_routes         = True
+cm_interval_avg             = 5
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -35,9 +36,6 @@ sat_config_sub_path         = "sat_config_files/"
 
 def main():
 
-    # Start CPU clock timer
-    cpu_clock_t0 = time.perf_counter_ns()
-
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
@@ -52,14 +50,17 @@ def main():
     node_index_file_path        = output_filepath+"/node_indices/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
     cpu_time_path               = output_filepath+"/cpu_time/"
-    
+
     # Load the timescale and initialize variables
     ts = load.timescale()
     inc = 0
     indx = 1
     time_resolution_in_seconds = sat_config["EpochIntervalDuration"]
-    simulation_length = sat_config["EpochIntervalDuration"] * sat_config["EpochIntervalCount"]
-
+    simulation_length = time_resolution_in_seconds * sat_config["EpochIntervalCount"]
+    
+    # Start CPU clock timer
+    cpu_clock_tot_t0 = time.perf_counter_ns()
+    
     # Split the start time from the configurations into individual components
     epoch_start = (
     sat_config["EpochStartYear"],
@@ -131,9 +132,6 @@ def main():
                 return
             else: print("\033[94m", end="")
 
-    # CPU time per iteration
-    cpu_time_per_it = np.array([0,]*len(time_hist))
-                  
     # Loop over the time history, update the topology and save it in a file
     for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
         
@@ -167,29 +165,61 @@ def main():
         # Calculate the link characteristics for GSLs and ISLs
         links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
 
-        # Save the topology
-        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
-
         # Pre-compute the routing tables
         if find_optimal_routes:
             all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None)
 
+        # Stop CPU timer
+        dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
+
+        # Save the topology
+        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_topology(connectivity_matrix, 
+                      links_characteristics, 
+                      operator_name, 
+                      str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
+                      connectivity_matrix_path,
+                      time_resolution_in_seconds)
+
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
+        save_routes(all_possible_routes, 
+                    operator_name, 
+                    str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
+                    routing_file_path,
+                    time_resolution_in_seconds)
 
         # Save the optimal routes between provided src/dest
         if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
-        save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
+        save_optimal_path(optimal_route, 
+                          [str(y), str(mon), str(d), str(h), str(min), str(float(s))], 
+                          operator_name, 
+                          optimal_file_path,
+                          time_resolution_in_seconds)
 
-    # Stop CPU clock timer
-    cpu_clock_tf = time.perf_counter_ns()
+        # Save the CPU clock timer
+        if inc == time_hist[0] and os.path.exists(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt")
+        save_cpu_time(dt_it, 
+                      [str(y), str(mon), str(d), str(h), str(min), str(float(s))], 
+                      operator_name, 
+                      cpu_time_path,
+                      time_resolution_in_seconds)
+
+    # Stop CPU clock timer and save total time
+    cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
+    save_cpu_time(cpu_clock_tot_dt, 
+                  [str(y), str(mon), str(d), str(h), str(min), str(float(s))], 
+                  operator_name, 
+                  cpu_time_path, 
+                  time_resolution_in_seconds)
+
+    # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
 
 

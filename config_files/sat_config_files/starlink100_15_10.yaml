@@ -6,7 +6,7 @@ TotalGSCnt: 24
 ConnectivityMatrixPath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/connectivity/
 RoutingFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/routing/
 EpochIntervalDuration: 15
-EpochIntervalCount: 2
+EpochIntervalCount: 10
 EpochStartYear: 2024
 EpochStartMonth: 07
 EpochStartDay: 09

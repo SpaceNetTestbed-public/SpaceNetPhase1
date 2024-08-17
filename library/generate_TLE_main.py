@@ -171,7 +171,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("/home/spacenet/simulator/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a') as file:
+    with open("/mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))

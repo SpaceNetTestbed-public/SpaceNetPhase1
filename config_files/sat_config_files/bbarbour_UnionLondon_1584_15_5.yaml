@@ -3,8 +3,8 @@
 # Configuration for <Constellation_name>
 TotalSatCnt: 1584
 TotalGSCnt: 2
-ConnectivityMatrixPath: /home/spacenet/simulator/dynamic-topology-generator/output/connectivity/bbarbour/
-RoutingFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/routing/bbarbour/
+ConnectivityMatrixPath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/connectivity/bbarbour/
+RoutingFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/routing/bbarbour/
 EpochIntervalDuration: 15
 EpochIntervalCount: 5
 EpochStartYear: 2024
@@ -27,5 +27,5 @@ shell1:
     inclination: 53
 Source: gs1
 Destination: gs0
-GroundStationFile: /home/spacenet/simulator/dynamic-topology-generator/utils/gs_files/gs_UnionLondon.txt
-TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
+GroundStationFile: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_UnionLondon.txt
+TLEFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/
