@@ -6,6 +6,7 @@ from tqdm import tqdm
 from utils import *
 import numpy as np
 import re
+import time
 from mobility.read_live_tles import *
 from mobility.mobility_utils import *
 from mobility.read_gs import *
@@ -34,6 +35,9 @@ sat_config_sub_path         = "sat_config_files/"
 
 def main():
 
+    # Start CPU clock timer
+    cpu_clock_t0 = time.perf_counter_ns()
+
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
@@ -47,6 +51,7 @@ def main():
     sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
     node_index_file_path        = output_filepath+"/node_indices/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
+    cpu_time_path               = output_filepath+"/cpu_time/"
     
     # Load the timescale and initialize variables
     ts = load.timescale()
@@ -125,10 +130,16 @@ def main():
             if user_response.lower() == 'n':
                 return
             else: print("\033[94m", end="")
+
+    # CPU time per iteration
+    cpu_time_per_it = np.array([0,]*len(time_hist))
                   
     # Loop over the time history, update the topology and save it in a file
     for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
         
+        # Start CPU timer
+        t0_it = time.perf_counter_ns()
+
         # Update the time
         indx += 1
 
@@ -177,6 +188,8 @@ def main():
             os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
+    # Stop CPU clock timer
+    cpu_clock_tf = time.perf_counter_ns()
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
 
 
