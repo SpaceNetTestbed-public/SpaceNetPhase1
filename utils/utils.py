@@ -76,6 +76,7 @@ import yaml
 import sys
 sys.path.append("../")
 from mobility.read_live_tles import *
+from utils.file_utils import *
 
 # =================================================================================== #
 # ---------------------------------- FILE SYSTEM ------------------------------------ #
@@ -199,7 +200,11 @@ def save_topology(
     existing_links = []
 
     # Generate a new file
-    f = open(connectivity_matrix_path+operator_name+"/topology_"+timestamp+".txt", "a")
+    file_path = connectivity_matrix_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "topology_"+timestamp+".txt"
+    #f = open(connectivity_matrix_path+operator_name+"/topology_"+timestamp+".txt", "a")
+    f = open(file_path + file_name, "a")
 
     # Iterate over the connectivity matrix list
     for i in range(len(connectivity_matrix)):
@@ -237,7 +242,11 @@ def save_routes(
     """
 
     # Generate a new file
-    routes_log = open(routing_file_path+operator_name+"/routes_"+timestamp+".txt", "a")
+    file_path = routing_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "routes_"+timestamp+".txt"
+    #routes_log = open(routing_file_path+operator_name+"/routes_"+timestamp+".txt", "a")
+    routes_log = open(file_path + file_name, "a")
 
     # Iterate over the routes list
     for _, route in routes.items():
@@ -268,7 +277,11 @@ def save_optimal_path(
     """
 
     # Generate a new file
-    optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    file_path = optimal_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "best_path_"+("_".join(timestamp[:3]))+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
     
     # Iterate over the optimal path list
     if optimal_path != None:
@@ -303,7 +316,11 @@ def save_node_index(
     """
 
     # Generate a new file
-    nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
+    file_path = node_index_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "nodeindex_"+timestamp+".txt"
+    #nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
+    nodeindex_log_write = open(file_path + file_name, "a")
     nodeindex_log_write.close()
 
     # Append to file
@@ -315,7 +332,11 @@ def save_node_index(
 
     # Iterate over ground station list
     for gs in ground_stations:
-        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+"GS-"+str(gs['gid'])+"\n")
+        if ground_stations[gs]['type'] == 9: # 9 indicates a gateway ground station
+            alias_prefix = "GW-"
+        else:
+            alias_prefix = "GS-"
+        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
 
     # Close file to minimize memory leaks
     nodeindex_log.close()
@@ -340,6 +361,7 @@ def parse_config_file_yml(
     Returns:
         dict:           Dictionary containing the parsed configuration parameters
     """
+
 
     # Obtain the constellation YAML file from main configuration YAML
     with open(filepath+"/"+filename, "r") as main_yml:
@@ -640,7 +662,11 @@ def arrange_satellites(
     """
 
     # Generate a new file
-    f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
+    file_path = sat_orbit_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "sorted_satellites_within_orbit_"+tle_timestamp+".txt"
+    #f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
+    f = open(file_path + file_name, "a")
     
     # Debugging purposes
     if sat_config["Debug"] == 1:

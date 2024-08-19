@@ -3,8 +3,8 @@
 # Configuration for <Constellation_name>
 TotalSatCnt: 1511
 TotalGSCnt: 24
-ConnectivityMatrixPath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/connectivity/
-RoutingFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/routing/
+ConnectivityMatrixPath: /home/spacenet/shared/dynamic-topology-generator/output/connectivity/
+RoutingFilePath: /home/spacenet/shared/dynamic-topology-generator/output/routing/
 EpochIntervalDuration: 120
 EpochIntervalCount: 5
 EpochStartYear: 2024
@@ -27,5 +27,5 @@ shell1:
     inclination: 53
 Source: gs5
 Destination: gs12
-GroundStationFile: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_default.txt
-TLEFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/
+GroundStationFile: /home/spacenet/dynamic-topology-generator/utils/gs_files/gs_default.txt
+TLEFilePath: /home/spacenet/dynamic-topology-generator/utils/

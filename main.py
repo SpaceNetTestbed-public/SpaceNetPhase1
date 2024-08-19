@@ -42,6 +42,8 @@ def main():
 
     # Path configuration
     output_filepath             = main_config["OutputFilePath"]
+    if output_filepath[-1] == "/":
+        output_filepath = output_filepath[:-1] # Remove the last slash if it exists
     gs_file_path                = sat_config["GroundStationFile"]
     tle_file_path               = sat_config["TLEFilePath"]
     connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
@@ -94,7 +96,7 @@ def main():
     ground_stations = read_gs(gs_file_path)
 
     # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
-    if "Use_t2t" in main_config and bool(main_config["use_t2t"]) == True:
+    if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
         print(".......... Using T2T links. Collecting settings")
         t2t_settings = get_t2t_settings(main_config, output_filepath)
         print(".......... T2T settings collected. Loading T2T dictionary")
@@ -102,7 +104,7 @@ def main():
         
         # Add gateways to ground station list
         print(".......... T2T dictionary loaded. Adding Gateways to ground stations")
-        ground_stations = add_gateway_gs(ground_stations, t2t_dict)
+        ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways)
 
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
@@ -168,6 +170,10 @@ def main():
 
         # Calculate the link characteristics for GSLs and ISLs
         links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
+
+        # Add t2t links to the connectivity matrix, if enabled
+        if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
+            connectivity_matrix, links_characteristics, t2t_dict = mininet_add_t2t_links(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
 
         # Save the topology
         if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
