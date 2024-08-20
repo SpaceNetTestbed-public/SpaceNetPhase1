@@ -288,10 +288,15 @@ def main():
             save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
 
             # Pre-compute the routing tables
-            if find_optimal_routes:
-                all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes)
+            # Add flag to include ground_stations in route calculations if using t2t links 
+            if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
+                include_ground_stations = True
             else:
-                all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None)
+                include_ground_stations = False
+            if find_optimal_routes:
+                all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes, include_ground_stations)
+            else:
+                all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None, include_ground_stations)
 
             # Save the routes
             if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
