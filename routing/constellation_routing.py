@@ -111,7 +111,8 @@ def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency
     """
 
     mega_constellation_graph = nx.Graph()  # Create a new NetworkX graph for the constellation network
-    for n in range(len(satellites) + len(ground_stations)):  # For each satellite and ground station
+    #for n in range(len(satellites) + len(ground_stations)):  # For each satellite and ground station
+    for n in range(len(connectivity_matrix)):  # For all nodes in the connectivity matrix (satellites, ground stations, and endpoints)
         mega_constellation_graph.add_node(n)  # Add the satellite or ground station to the graph
 
     for i in range(len(connectivity_matrix)):  # For each row in the connectivity matrix

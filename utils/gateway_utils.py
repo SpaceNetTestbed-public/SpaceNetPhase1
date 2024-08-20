@@ -745,6 +745,50 @@ def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characterist
     links_characteristics = {'latency_matrix': latency_matrix, 'throughput_matrix': throughput_matrix, 'distance_matrix': links_characteristics['throughput_matrix']}
     return connectivity_matrix, links_characteristics, t2t_dict
     
+def plot_nodes_links_ground_stations(satellites_by_index, ground_stations, connectivity_matrix, operator_name, time_stamp, topology = None, routes = None, t2t_dict = None):
+    if topology is not None and routes is not None:
+        print("Both topology and routes provided. Please provide only one or none. Exiting.")
+        return
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.basemap import Basemap
+    plt.figure(figsize=(10, 5))
+    # Plot basemap
+    m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='c')
+    m.drawcoastlines()
+    m.drawcountries()
+    m.fillcontinents(color='lightgray')
+    gs_types = {0 : 'Customer Terminal', 9: 'Gateway', 1: 'Endpoint'}
+    gs_colors = {'Customer Terminal': 'blue', 'Gateway': 'green', 'Endpoint': 'orange'}
+    gs_marker = {'Customer Terminal': 'D', 'Gateway': '^', 'Endpoint': 's'}
+    gs_marker_size = {'Customer Terminal': 5, 'Gateway': 4, 'Endpoint': 3}
+    plot_edges = False
+    for ground_station in ground_stations:
+        x, y = m(float(ground_station["longitude_degrees_str"]), float(ground_station["latitude_degrees_str"]))
+        station_type = gs_types[ground_station["type"]]
+        m.plot(x, y, marker=gs_marker[station_type], markersize=gs_marker_size[station_type], color = gs_colors[station_type], latlon=True, alpha=0.5)#, label=station_type)#markersize=10)
+    
+    for key in t2t_dict.keys():
+        #if type(t2t_dict[key]) is not dict or "gid" not in t2t_dict[key]:
+        #    continue
+        if "type" in t2t_dict[key] and t2t_dict[key]["type"] == "endpoint":
+            coordinates = t2t_dict[key]["coordinates"]
+            #print(f"Endpoint {t2t_dict[key]['name']} at coordinates {coordinates}")
+            x, y = m(coordinates[1], coordinates[0])
+            station_type = 'Endpoint'
+            m.plot(x, y, marker=gs_marker[station_type], markersize=gs_marker_size[station_type], color = gs_colors[station_type], latlon=True, alpha=0.5)#, label=station_type)
+    if plot_edges:
+        pass
+    # Plot information
+    title_string = f"{operator_name} Ground Station Topology at {time_stamp}"
+    plt.title(title_string)
+    plt.xlabel("Longitude")
+    plt.ylabel("Latitude")
+    # Plot legend
+    for gs_type in gs_types:
+        station_type = gs_types[gs_type]
+        plt.plot([], [], marker=gs_marker[station_type], markersize=gs_marker_size[station_type], color = gs_colors[station_type], label=station_type, linewidth=0)
+    plt.legend(loc='lower left', title='Ground Station Types')
+    plt.show()
 
 if __name__ == '__main__':
     azure_data_center_dict_with_latencies = load_azure_data_center_dict(azure_latency_json_filename = azure_latency_json_filename, azure_url = url, csv_filename = azure_csv_filename)
