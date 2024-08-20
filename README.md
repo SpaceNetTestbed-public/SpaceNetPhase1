@@ -91,3 +91,19 @@ For open source projects, say how it is licensed.
 
 ## Project status
 If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+## T2T Links
+For t2t links to work, you need to have the following configurations in the main_mn_config.yaml file:
+Use_t2t: set to 'True'
+t2t_gateway_kmz_type: set to 'local' if using a KMZ/KML file that contains all the data; use 'link' if KMZ data has URL to pull data from the Internet
+t2t_gateway_kmz_path: the location of the KMZ file for the script to retrieve the Gateway data (download from Unofficial Starlink Gateway map)
+t2t_dict_output_file: location to save the Gateway dictionary after the data has been pulled from the KMZ file
+
+t2t_use_azure: set to 'True' to use Azure data center data for Endpoints
+t2t_azure_endpoint_location_file: location of csv file that provides location data for each data center
+t2t_azure_endpoint_latency_url: URL to use to scrape latency data
+t2t_azure_dict_output_file: location to save the Endpoint dictionary after the data has been scraped and compiled
+
+t2t_use_wonderproxy: set to 'True' to use WonderProxy server data for Endpoints
+t2t_wonderproxy_endpoint_location_file: location of csv file that provides location data for WonderProxy servers
+t2t_wonderproxy_endpoint_latency_file: location of csv file that provides latency data
+t2t_wonderproxy_dict_output_file: location to save the Endpoint dictionary after the data has been scraped and compiled
