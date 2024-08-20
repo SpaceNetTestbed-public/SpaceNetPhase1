@@ -15,12 +15,16 @@ from utils.utils import *
 from library import spacenet_yaml_config
 
 from utils.gateway_utils import *
+from concurrent.futures import ProcessPoolExecutor as ProcessExecutor
 
 # =================================================================================== #
 # ---------------------------------- INPUT VARS ------------------------------------- #
 # =================================================================================== #
 
 find_optimal_routes         = True
+use_multiprocessing         = True
+global_arranged_sats        = None
+global_satellites_by_name   = None
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -29,6 +33,75 @@ find_optimal_routes         = True
 config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
 sat_config_sub_path         = "sat_config_files/"
+
+def topology_generation(inc, sat_config, 
+                        ts, epoch_start, 
+                        num_of_satellites, 
+                        num_of_ground_stations, 
+                        ground_stations, 
+                        operator_name, 
+                        main_config, 
+                        t2t_dict, 
+                        connectivity_matrix_path, 
+                        routing_file_path, 
+                        time_hist_initial, 
+                        optimal_file_path):
+        # Update the time
+        #indx += 1
+        num_of_ground_stations = len(ground_stations)
+        arranged_sats = global_arranged_sats
+        satellites_by_index = arranged_sats["satellites by index"]
+        satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
+        satellites_by_name = global_satellites_by_name
+
+        # Get the source and destination nodes
+        source_node         = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
+        destination_node    = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
+        optimal_path_nodes  = [source_node, destination_node]
+
+        # Convert the updated time to UTC and Unix timestamp
+        time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
+        y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
+
+        # Update the size of the connectivity matrix
+        conn_mat_size = num_of_satellites + num_of_ground_stations
+
+        # Initialize the connectivity matrix
+        connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
+
+        # Add ISLs to the connectivity matrix
+        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
+
+        # Add GSLs to the connectivity matrix
+        connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
+
+        # Calculate the link characteristics for GSLs and ISLs
+        links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
+
+        # Add t2t links to the connectivity matrix, if enabled
+        if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
+            connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
+
+        # Save the topology
+        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
+
+        # Pre-compute the routing tables
+        if find_optimal_routes:
+            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes)
+        else:
+            all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None)
+
+        # Save the routes
+        if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
+
+        # Save the optimal routes between provided src/dest
+        if inc == time_hist_initial and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
+        save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
 # =================================================================================== #
 # -------------------------------- MAIN FUNCTION ------------------------------------ #
@@ -140,61 +213,84 @@ def main():
             if user_response.lower() == 'n':
                 return
             else: print("\033[94m", end="")
-                  
-    # Loop over the time history, update the topology and save it in a file
-    for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
-        
-        # Update the time
-        indx += 1
 
-        # Get the source and destination nodes
-        source_node         = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
-        destination_node    = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
-        optimal_path_nodes  = [source_node, destination_node]
+    
 
-        # Convert the updated time to UTC and Unix timestamp
-        time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
-        y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
+    if use_multiprocessing:
+        global global_arranged_sats, global_satellites_by_name
+        global_arranged_sats = arranged_sats
+        global_satellites_by_name = satellites_by_name
+        with ProcessExecutor() as executor:
+            results = list(tqdm(executor.map(topology_generation,
+                                             time_hist,
+                                             [sat_config]*len(time_hist),
+                                             [ts]*len(time_hist),
+                                             [epoch_start]*len(time_hist),
+                                             [num_of_satellites]*len(time_hist),
+                                             [num_of_ground_stations]*len(time_hist),
+                                             [ground_stations]*len(time_hist),
+                                             [operator_name]*len(time_hist),
+                                             [main_config]*len(time_hist),
+                                             [t2t_dict]*len(time_hist),                                                                                    
+                                             [connectivity_matrix_path]*len(time_hist),
+                                             [routing_file_path]*len(time_hist),
+                                             [time_hist[0]]*len(time_hist),
+                                             [optimal_file_path]*len(time_hist)),
+                                total=len(time_hist), desc=r'.......... Computing network'))
+    else:
+        # Loop over the time history, update the topology and save it in a file
+        for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
+            # Update the time
+            indx += 1
 
-        # Update the size of the connectivity matrix
-        conn_mat_size = num_of_satellites + num_of_ground_stations
+            # Get the source and destination nodes
+            source_node         = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
+            destination_node    = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
+            optimal_path_nodes  = [source_node, destination_node]
 
-        # Initialize the connectivity matrix
-        connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
+            # Convert the updated time to UTC and Unix timestamp
+            time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
+            y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
 
-        # Add ISLs to the connectivity matrix
-        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
+            # Update the size of the connectivity matrix
+            conn_mat_size = num_of_satellites + num_of_ground_stations
 
-        # Add GSLs to the connectivity matrix
-        connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
+            # Initialize the connectivity matrix
+            connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
 
-        # Calculate the link characteristics for GSLs and ISLs
-        links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
+            # Add ISLs to the connectivity matrix
+            connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
-        # Add t2t links to the connectivity matrix, if enabled
-        if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
-            connectivity_matrix, links_characteristics, t2t_dict = mininet_add_t2t_links(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
+            # Add GSLs to the connectivity matrix
+            connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
 
-        # Save the topology
-        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
+            # Calculate the link characteristics for GSLs and ISLs
+            links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
 
-        # Pre-compute the routing tables
-        if find_optimal_routes:
-            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes)
-        else:
-            all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None)
+            # Add t2t links to the connectivity matrix, if enabled
+            if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
+                connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
 
-        # Save the routes
-        if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
+            # Save the topology
+            if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+                os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+            save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
 
-        # Save the optimal routes between provided src/dest
-        if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
-        save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
+            # Pre-compute the routing tables
+            if find_optimal_routes:
+                all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes)
+            else:
+                all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None)
+
+            # Save the routes
+            if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+                os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+            save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
+
+            # Save the optimal routes between provided src/dest
+            if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
+                os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
+            save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
 

@@ -332,7 +332,7 @@ def save_node_index(
 
     # Iterate over ground station list
     for gs in ground_stations:
-        if ground_stations[gs]['type'] == 9: # 9 indicates a gateway ground station
+        if gs['type'] == 9: # 9 indicates a gateway ground station
             alias_prefix = "GW-"
         else:
             alias_prefix = "GS-"

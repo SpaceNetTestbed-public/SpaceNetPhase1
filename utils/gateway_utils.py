@@ -401,6 +401,23 @@ def load_gateways_from_local_kml(kmz_file):
     return ground_station_dict
 
 def genT2tDict(gateway_dict, endpoint_dict_with_latency_list, t2t_dict_output_filename = None):
+    """
+    Generates dictionary of nodes with the following format:
+    source_id:
+        {'type': 'endpoint' or 'gateway',
+        'name': source_endpoint,
+        'coordinates': (latitude, longitude),
+        'friendly_name': friendly_name, (optional)
+        'data_source': data_source,
+        'wp_index': wp_index, (optional)
+        dest_id: latency,
+        dest_id2: latency2,
+        ...}
+    Later, the dictionary can be augmented with the following keys:
+    'conn_mat_index_to_t2t_index': {conn_mat_index: t2t_index, ...}
+    't2t_gw_to_ep_link_list': [(t2t_index, t2t_index), ...]
+    
+    """
     t2t_dict = {} # build dictionary as 2D array of latencies between each pair of endpoints
     aggr_endpoint_dict = {} # build dictionary of all endpoints from all dictionaries
     for endpoint_dict in endpoint_dict_with_latency_list:
@@ -623,7 +640,7 @@ def get_t2t_settings(main_config, output_filepath):
         t2t_settings['use_wonderproxy'] = False
     return t2t_settings
 
-def mininet_add_t2t_links(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict):
+def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_station_dict_list, t2t_dict):
     # Expand the size of the connectivity matrix to include Endpoint nodes (gateways are already included)
     # Since links between gateways and endpoints are not time dependent, calculate only once
     # Find the number of entries in t2t_dict that have a 'type' of 'endpoint'
@@ -666,29 +683,58 @@ def mininet_add_t2t_links(connectivity_matrix, links_characteristics, satellites
         # Find next available GID along with number of gateways
         num_gateways = 0
         highest_gid = 0
-        for gs in ground_stations.keys():
-            if ground_stations[gs]['gid'] > highest_gid:
-                    highest_gid = ground_stations[gs]['gid']
-            if ground_stations[gs]['type'] == 9:
+        #gid_list = [] # TESTING:  Ensure assigned GID values are unique and incrementing sequentially
+        for gs in ground_station_dict_list:
+            #gid_list.append(int(gs['gid']))
+            if gs['gid'] > highest_gid:
+                    highest_gid = gs['gid']
+            if gs['type'] == 9:
                 num_gateways += 1
-
         next_gid = highest_gid + 1
+        #gid_list.sort()
+        #missing_gid = False
+        #for i in range(len(gid_list)):
+            #if gid_list[i] != i:
+                #print(f"Missing GID value: {i}")
+                #missing_gid = True
+        #if not missing_gid:
+            #print(f"Assigned GID values are unique and incrementing sequentially with max value of {highest_gid}.")
         # Loop through all Gateways and identify links to Endpoints; add these links to the connectivity matrix
-        for source_id, value in t2t_dict.items():
-            if value['type'] == 'gateway':
-                gid = value['gid']
-                for dest_id, latency in value.items():
+        #for source_id, value in t2t_dict.items():
+        for key in t2t_dict.keys():
+            if type(t2t_dict[key]) is not dict or 'type' not in t2t_dict[key]: # Skip non-node entries
+                continue
+            source_id = key
+            node_dict = t2t_dict[source_id]
+            if node_dict['type'] == 'gateway':
+                gateway_gid = node_dict['gid']
+                for dest_id, _ in node_dict.items():
                     if dest_id in t2t_dict and t2t_dict[dest_id]['type'] == 'endpoint': # Verify destination entry is a node and that node is an endpoint
-                        x = num_satellites + gid
-                        y = num_satellites + next_gid
+                        # Check if Endpoint has a GID; assign one if not
+                        if 'gid' in t2t_dict[dest_id]:
+                            endpoint_gid = t2t_dict[dest_id]['gid']
+                        else:
+                            t2t_dict[dest_id]['gid'] = next_gid
+                            endpoint_gid = next_gid
+                            next_gid += 1
+                        x = num_satellites + gateway_gid
+                        y = num_satellites + endpoint_gid
                         # Update matrices
+                        if x >= new_conn_mat_size or y >= new_conn_mat_size:
+                            print(f"Error: x or y value exceeds size of matrices: {x}, {y}")
+                            print(f"  Old matrix size: {current_conn_mat_size} x {current_conn_mat_size}")
+                            print(f"  New matrix size: {new_conn_mat_size} x {new_conn_mat_size}")
+                            print(f"  Number of satellites: {len(satellites_by_index)}, number of existing ground stations: {len(ground_station_dict_list)}, number of Endpoints being added: {num_endpoints}")
+                            print(f"  Highest GID value: {highest_gid}, GID value trying to be used: {endpoint_gid}")
+                            print(f"  Number of Endpoints added: {len(t2t_dict['t2t_gw_to_ep_link_list'])}")
+                            exit()
                         connectivity_matrix[x][y] = 1 # Add bi-directional link to connectivity matrix
                         connectivity_matrix[y][x] = 1
                         latency_matrix[x][y] = t2t_dict[source_id][dest_id] # Add latency value to latency matrix
-                        throughput_matrix[x][y] = terrestrial_link_bandwidth # Add throughput value to throughput matrix
-                        # Record gid value for this gateway
-                        t2t_dict[dest_id]['gid'] = next_gid
-                        next_gid += 1
+                        latency_matrix[y][x] = t2t_dict[source_id][dest_id]
+                        throughput_matrix[x][y] = terrestrial_link_bandwidth # Add throughput value to throughput matrix (currently a fixed value)
+                        throughput_matrix[y][x] = terrestrial_link_bandwidth
+
                         # Record link in t2t_dict for reference in future time increments
                         t2t_dict['t2t_gw_to_ep_link_list'].append((x, y))
                         # Record index mappings for future reference
