@@ -217,9 +217,20 @@ def main():
     
 
     if use_multiprocessing:
+        print(f"Using multi-process execution for topology generation.\n.......... Operation started {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         global global_arranged_sats, global_satellites_by_name
         global_arranged_sats = arranged_sats
         global_satellites_by_name = satellites_by_name
+        # Before starting concurrent execution, get weather conditions for all ground stations to avoid excessive/unnecesary API calls
+        print(".......... Preemptively getting weather data for all ground stations")
+        from link.link_utils import get_weather_data
+        for ground_station in ground_stations:
+            gs_lat = float(ground_station["latitude_degrees_str"])
+            gs_lon = float(ground_station["longitude_degrees_str"])
+            weather_data = get_weather_data(gs_lat, gs_lon)
+            ground_station["weather_data"] = weather_data
+            # Wait 1 second to avoid API rate limit
+            time.sleep(1)
         with ProcessExecutor() as executor:
             results = list(tqdm(executor.map(topology_generation,
                                              time_hist,

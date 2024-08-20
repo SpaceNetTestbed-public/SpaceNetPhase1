@@ -94,7 +94,7 @@ def update_GSL_thread(sat_id, change, constellation_routes, links_updated, list_
 # ================================================================================================
 # FLOYD-WARSHALL ALG. IMPLEMENTATION (INITIAL ROUTING)
 # ================================================================================================
-def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency, distance, source_dest_nodes):
+def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency, distance, source_dest_nodes, route_to_gs = False):
     """
     Perform initial routing for a constellation network using Floyd-Warshall algorithm.
 
@@ -128,10 +128,14 @@ def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency
         src, dest = source_dest_nodes
         optimal_output = nx.reconstruct_path(src, dest, pred)
 
-    # Iterate over results and only look at satellite nodes for the routing
+    if route_to_gs:
+        max_iter_value = len(connectivity_matrix) # Iterate over results for all nodes
+    else:
+        max_iter_value = len(satellites) # Iterate over results and only look at satellite nodes for the routing
+        
     static_routes = {}
-    for i in range(len(satellites)):  # Iterate only over satellite nodes as sources
-        for j in range(len(satellites)):
+    for i in range(max_iter_value):  # Iterate only over satellite nodes as sources
+        for j in range(max_iter_value):
             if i != j:
                 static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 

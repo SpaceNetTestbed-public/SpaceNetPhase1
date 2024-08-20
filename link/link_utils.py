@@ -51,7 +51,8 @@ ground_station_transmit_attenna_gain    = 34.6      # dBi -- https://apps.fcc.go
 # =================================================================================== #
 def get_weather_info(
                         lat : float, 
-                        lon : float
+                        lon : float,
+                        wait_on_rate_limit=False
                     ) -> dict:
     """
     Retrieve weather information using OpenWeatherMap API based on latitude and longitude.
@@ -69,7 +70,14 @@ def get_weather_info(
     
     # Send a GET request to the API
     response = requests.get(url)
-
+    if response.status_code == 429: # Too many requests
+        if not wait_on_rate_limit:
+            return ""
+        retry_after = int(response.headers.get("Retry-After", 10))
+        print(f"Rate limit exceeded. Waiting for {retry_after} seconds...")
+        import time
+        time.sleep(retry_after)
+        return get_weather_info(lat, lon, wait_on_rate_limit=True)
     # Parse the JSON response
     data = response.json()
 
@@ -82,15 +90,20 @@ def get_weather_info(
     # Check if the response contains weather information
     if data != "":
 
-        # Extract weather description
-        da = data["weather"]
-        description =  da[0]["description"]
+        try:
+            # Extract weather description
+            da = data["weather"]
+            description =  da[0]["description"]
 
-        # Extract general weather data
-        general = data["main"]
-        temp  = general["temp"]
-        humidity = general["humidity"]
-        pressure = general["pressure"]
+            # Extract general weather data
+            general = data["main"]
+            temp  = general["temp"]
+            humidity = general["humidity"]
+            pressure = general["pressure"]
+        except KeyError:
+            #print("Error: Unable to extract weather data - skipping...")
+            return ""
+
 
     # Return a dictionary containing weather information
     return {"temp": temp,
@@ -205,10 +218,14 @@ def calc_gsl_snr(
 
         # Downlink attenuation without weather 
         weather_attenuation_dl = itur.atmospheric_attenuation_slant_path(lat_gs, lon_gs, f_dl, el, p, D, return_contributions=True)
+        if type(weather_attenuation_dl) == tuple:
+            weather_attenuation_dl = weather_attenuation_dl[4] # 4th index is the total attenuation
         weather_attenuation_dl = weather_attenuation_dl.value
 
         # Uplink attenuation without weather
         weather_attenuation_ul = itur.atmospheric_attenuation_slant_path(lat_gs, lon_gs, f_ul, el, p, D, return_contributions=True)
+        if type(weather_attenuation_ul) == tuple:
+            weather_attenuation_ul = weather_attenuation_ul[4] # 4th index is the total attenuation
         weather_attenuation_ul = weather_attenuation_ul.value
 
 
