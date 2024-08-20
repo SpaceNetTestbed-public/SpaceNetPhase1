@@ -114,35 +114,39 @@ def basic_generate_fake_TLE(
 
 if __name__ == "__main__":
 
+    # Number of orbital planes and number of satellites per plane
+    num_planes    = 12
+    sat_per_plane = 8
+
     # Date/Time input
-    datetime    = (2024, 7, 21, 17, 0, 0) # year, month, day, hour, minute, second
-    datetime_s  = calendar.timegm(datetime)
-    year_start  = (datetime[0], 1, 1, 0, 0, 0)
+    datetime      = (2024, 7, 21, 18, 0, 0) # year, month, day, hour, minute, second
+    datetime_s    = calendar.timegm(datetime)
+    year_start    = (datetime[0], 1, 1, 0, 0, 0)
     
     # File name
-    filename    = "starlink_" + str(datetime_s)
+    filename      = "starlink_" + str(datetime_s)
 
     # Epoch Year / Fractional Day
-    epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
+    epoch         = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
 
     # Orbital Elements (a-km, e, i-deg, w-deg, raan-deg, TA-deg)
-    oe          = [6678, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
+    oe            = [7878, 0.00000, 50.000000, 0.000000, 0.000000, 0.0000000]
 
     # Range of Inc
-    inc_range   = None
+    inc_range     = None
 
     # Range of RAAN (third input is the number of orbital planes)
-    raan_range = np.linspace(0, 360, 24)
+    raan_range    = np.linspace(0, 360*(1-1/num_planes), num_planes)
 
     # Range of TA (third input is the number of satellites per orbital plane)
-    ta_range    = np.linspace(0, 360, 60)
+    ta_range      = np.linspace(0, 360*(1-1/sat_per_plane), sat_per_plane)
 
     # Total Number of Satellites
-    num_sats = len(ta_range)*len(raan_range)
+    num_sats      = num_planes*sat_per_plane
 
     # Inter Plane Phase Increment/Angle
     ipp_increment = 1 # set to zero for no IPP Angle, otherwise set to a positive integer
-    ipp_angle = ipp_increment*360/num_sats
+    ipp_angle     = ipp_increment*360/num_sats
         # Inter Plane Phase Increment pulled from Walker constellation pattern notation, I:T/P/F
             # I: orbital inclination
             # T: Total number of satellites (must be divisible by F)
@@ -155,7 +159,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Generate TLE sweep
 
-    TLE_sweep = basic_generate_fake_TLE(epoch=epoch, oe=oe, ta_range=ta_range, inc_range=inc_range, raan_range=raan_range, ipp_angle=ipp_angle)
+    TLE_sweep     = basic_generate_fake_TLE(epoch=epoch, oe=oe, ta_range=ta_range, inc_range=inc_range, raan_range=raan_range, ipp_angle=ipp_angle)
 
     # -------------------------------------------------------------------------------
 
