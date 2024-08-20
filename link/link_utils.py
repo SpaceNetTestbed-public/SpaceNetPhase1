@@ -159,7 +159,10 @@ def calc_gsl_snr(
     p       = 0.01
 
     # Get weather information for the ground station
-    weather_data = get_weather_info(lat_gs, lon_gs)
+    if 'weather_data' in ground_station: # data already queried
+        weather_data = ground_station['weather_data']
+    else:
+        weather_data = get_weather_info(lat_gs, lon_gs)
 
     # Check if weather data isn't empty
     if weather_data != "":
@@ -214,7 +217,7 @@ def calc_gsl_snr(
 
     else:
 
-        print("no weather data -- ")
+        #print("no weather data -- ")
 
         # Downlink attenuation without weather 
         weather_attenuation_dl = itur.atmospheric_attenuation_slant_path(lat_gs, lon_gs, f_dl, el, p, D, return_contributions=True)
