@@ -320,14 +320,15 @@ def update_node_index(t2t_dict, node_index_file_path, timestamp, operator_name):
         next_index += 1
     nodeindex_log_a.close() # Close file to minimize memory leaks
 """
-def save_node_index(
-                        satellites_by_index     : dict, 
-                        ground_stations         : list, 
-                        node_index_file_path    : str,
-                        timestamp               : int,
-                        operator_name           : str,
-                        t2t_dict                : dict = None
-                   ):
+def save_node_index_and_terrestrial_info(
+                                            satellites_by_index     : dict, 
+                                            ground_stations         : list, 
+                                            node_index_file_path    : str,
+                                            terrestrial_file_path   : str,
+                                            timestamp               : int,
+                                            operator_name           : str,
+                                            t2t_dict                : dict = None
+                                        ):
     """
     Saves the matching node indices and their corresponding aliases.
 
@@ -336,23 +337,32 @@ def save_node_index(
                                         satellite/ground nodes
         ground_stations (list):         List of supplied ground stations
         node_index_file_path (str):     Path to output the node index matching file
+        terrestrial_file_path (str):    Path to output the terrestrial node info file
         timestamp (int):                Unix time
         operator_name (str):            Constellation/operator name
+        t2t_dict (dict):                Dictionary of terrestrial-to-terrestrial connectio
 
     Returns:
-        Saves the node indices as a .txt file.
+        Saves the node indices and terrestrial information as .txt files.
     """
 
-    # Generate a new file
+    # Generate a new file for node indices
     file_path = node_index_file_path+operator_name+"/"
     check_create_path(file_path)
     file_name = "nodeindex_"+timestamp+".txt"
-    #nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
     nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
-    # Append to file
+    # Generate a new file for terrestrial information
+    file_path2 = terrestrial_file_path+"/"
+    check_create_path(file_path2)
+    file_name2 = "terrestrial_"+timestamp+".txt"
+    terrestrial_log_write = open(file_path2 + file_name2, "w")
+    terrestrial_log_write.close()
+
+    # Append to files
     nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
+    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+timestamp+".txt", "a")
 
     # Iterate over the satellites_by_index
     for sat_indx, sat_alias in satellites_by_index.items():
@@ -365,16 +375,63 @@ def save_node_index(
         else:
             alias_prefix = "CT-"  # all else are designated as customer terminals (ct)
         nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
+        terrestrial_log.write(
+                                str(1+sat_indx+gs['gid']) +
+                                ":"+alias_prefix+str(gs['gid']) +
+                                ":"+str(gs['name']) +
+                                ":"+str(gs['latitude_degrees_str']) +
+                                ":"+str(gs['longitude_degrees_str']) +
+                                "\n"
+                             )
 
     # If t2t_dict is included, iterate over the dictionary and append endpoint aliases to the file
     if t2t_dict is not None:
         alias_prefix = "IE-" # IE indicates an internet endpoint
         for id in t2t_dict.keys():
             if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
+                gs_coord = t2t_dict[id]['coordinates']
+                gs_name = str(t2t_dict[id]['friendly_name']) if 'friendly_name' in t2t_dict.keys() else str(t2t_dict[id]['name'])
                 nodeindex_log.write(str(1+sat_indx+t2t_dict[id]['gid'])+":"+alias_prefix+str(t2t_dict[id]['gid'])+"\n")
-
+                terrestrial_log.write(
+                                        str(1+sat_indx+t2t_dict[id]['gid']) +
+                                        ":"+alias_prefix+str(t2t_dict[id]['gid']) +
+                                        ":"+gs_name +
+                                        ":"+str(gs_coord[0]) +
+                                        ":"+str(gs_coord[1]) +
+                                        "\n"
+                                     )
     # Close file to minimize memory leaks
     nodeindex_log.close()
+    terrestrial_log.close()
+
+def save_cpu_time(
+                    cpu_runtime     : float, 
+                    timestamp       : int,
+                    operator_name   : str, 
+                    cpu_time_path   : str
+                 ):
+    """
+    Saves the matching node indices and their corresponding aliases.
+
+    Args:
+        cpu_runtime (float):            CPU clock runtime, in seconds
+        timestamp (list):               Unix time as a list
+        operator_name (str):            Constellation/operator name
+        cpu_time_path (str):            Path to output CPU clock runtime file  
+
+    Returns:
+        Saves the CPU clock runtime as a .txt file.
+    """
+
+    # Generate a new file
+    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
+    
+    # Iterate over the optimal path list
+    if cpu_runtime != None:
+        cpu_clock_log.write(str(cpu_runtime)+"\n")
+
+    # Close file to minimize memory leaks
+    cpu_clock_log.close()
 
 
 # =================================================================================== #

@@ -1,12 +1,12 @@
 # Template for constellation configurations
 # Constellation naming convention: <constellation_name><sat_count>_<interval_duration>_<interval_count>.yaml
 # Configuration for <Constellation_name>
-TotalSatCnt: 400
+TotalSatCnt: 100
 TotalGSCnt: 24
-ConnectivityMatrixPath: /home/barbourbruce/dynamic-topology-generator/output/connectivity/
-RoutingFilePath: /home/barbourbruce/dynamic-topology-generator/output/routing/
+ConnectivityMatrixPath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/connectivity/
+RoutingFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/routing/
 EpochIntervalDuration: 120
-EpochIntervalCount: 5
+EpochIntervalCount: 10
 EpochStartYear: 2024
 EpochStartMonth: 07
 EpochStartDay: 09
@@ -20,13 +20,11 @@ AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
 TopologyISL: grid
 shell1:
     name: shell1
-    orbits: 20
-    sat_per_orbit: 20
+    orbits: 10
+    sat_per_orbit: 10
     altitude: 500
     elevation_angle: 25
     inclination: 50
 Source: gs5
 Destination: gs12
-GroundStationFile: /home/barbourbruce/dynamic-topology-generator/utils/gs_files/gs_default.txt
-OutputFilePath: /home/barbourbruce/dynamic-topology-generator/output/
-TLEFilePath: /home/barbourbruce/dynamic-topology-generator/utils/
+GroundStationFile: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_default.txt

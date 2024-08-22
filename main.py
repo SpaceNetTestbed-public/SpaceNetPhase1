@@ -45,13 +45,14 @@ def topology_generation(inc, sat_config,
                         main_config, 
                         t2t_dict, 
                         connectivity_matrix_path, 
-                        routing_file_path, 
-                        time_hist_initial, 
+                        routing_file_path,  
                         optimal_file_path,
-                        node_index_file_path,
-                        tle_timestamp):
+                        cpu_time_path):
+        
+        # Start CPU timer
+        t0_it = time.perf_counter_ns()
+
         # Update the time
-        #indx += 1
         num_of_ground_stations = len(ground_stations)
         arranged_sats = global_arranged_sats
         satellites_by_index = arranged_sats["satellites by index"]
@@ -87,16 +88,20 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
             #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
                 #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
-        # Save the topology
-        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
-
+        
         # Pre-compute the routing tables
         if find_optimal_routes:
             all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes, route_to_gs)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None, route_to_gs)
+
+        # Stop CPU timer
+        dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
+
+        # Save the topology
+        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
 
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
@@ -104,15 +109,19 @@ def topology_generation(inc, sat_config,
         save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
 
         # Save the optimal routes between provided src/dest
-        if inc == time_hist_initial and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
+
+        # Save CPU clock runtime
+        save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
 # =================================================================================== #
 # -------------------------------- MAIN FUNCTION ------------------------------------ #
 # =================================================================================== #
 
 def main():
+
+    # Start CPU clock timer
+    cpu_clock_tot_t0 = time.perf_counter_ns()
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
@@ -128,24 +137,25 @@ def main():
     routing_file_path           = output_filepath+"/routing/"
     sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
     node_index_file_path        = output_filepath+"/node_indices/"
+    terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
-    
+    cpu_time_path               = output_filepath+"/cpu_time/"
+
     # Load the timescale and initialize variables
     ts = load.timescale()
     inc = 0
-    indx = 1
     time_resolution_in_seconds = sat_config["EpochIntervalDuration"]
-    simulation_length = sat_config["EpochIntervalDuration"] * sat_config["EpochIntervalCount"]
+    simulation_length = time_resolution_in_seconds * sat_config["EpochIntervalCount"]
 
     # Split the start time from the configurations into individual components
     epoch_start = (
-    sat_config["EpochStartYear"],
-    sat_config["EpochStartMonth"],
-    sat_config["EpochStartDay"],
-    sat_config["EpochStartHour"],
-    sat_config["EpochStartMinute"],
-    sat_config["EpochStartSecond"]
-    )
+                    sat_config["EpochStartYear"],
+                    sat_config["EpochStartMonth"],
+                    sat_config["EpochStartDay"],
+                    sat_config["EpochStartHour"],
+                    sat_config["EpochStartMinute"],
+                    sat_config["EpochStartSecond"]
+                  )
 
     # Convert the start time to UTC and Unix timestamp
     time_utc = ts.utc(*map(int, epoch_start))
@@ -200,9 +210,6 @@ def main():
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
-    # Save satellite and ground station indices
-    save_node_index(satellites_by_index, ground_stations, node_index_file_path, tle_timestamp, operator_name, t2t_dict)
-
     # Get the total number of satellites and ground stations
     num_of_satellites = len(orbital_data)
     num_of_ground_stations = len(ground_stations)
@@ -232,7 +239,16 @@ def main():
                 return
             else: print("\033[94m", end="")
 
+    # Save satellite and ground station indices
+    save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, tle_timestamp, operator_name, t2t_dict)
+
+    # Remove any existing files
+    if os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
+        os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
+    if os.path.exists(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
+        os.remove(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt")
     
+    # Start main simulation process
     global global_arranged_sats, global_satellites_by_name # Make these global for multiprocessing, but being used regardless
     global_arranged_sats = arranged_sats
     global_satellites_by_name = satellites_by_name
@@ -252,7 +268,8 @@ def main():
                     ground_station["weather_data"] = weather_data
                     recv_cnt += 1
                     # Wait 1 second to avoid API rate limit
-                    time.sleep(1)
+                    if recv_cnt % 25 == 0:
+                        time.sleep(1)
                 else:
                     recving_weather_data = False # Stop trying to get weather data
                     ground_station["weather_data"] = ""
@@ -273,15 +290,17 @@ def main():
                                              [t2t_dict]*len(time_hist),                                                                                    
                                              [connectivity_matrix_path]*len(time_hist),
                                              [routing_file_path]*len(time_hist),
-                                             [time_hist[0]]*len(time_hist),
                                              [optimal_file_path]*len(time_hist),
-                                             [node_index_file_path]*len(time_hist),
-                                             [tle_timestamp]*len(time_hist)),
+                                             [cpu_time_path]*len(time_hist)),
                                 total=len(time_hist), desc=r'.......... Computing network'))
     else:
+        
         # Loop over the time history, update the topology and save it in a file
         for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
-            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, time_hist[0], optimal_file_path)
+            
+            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, cpu_time_path)
+            
+            
             """
             # Update the time
             indx += 1
@@ -340,6 +359,12 @@ def main():
                 os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
             save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
             """
+    
+    # Stop CPU clock timer and save total time
+    cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
+    save_cpu_time("TOT:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+
+    # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
 
 

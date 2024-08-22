@@ -16,10 +16,10 @@ from mpl_toolkits.basemap import Basemap
 # ================================================================================================
 time_index = 0
 plot_only_optimal = False
-gs_filepath = open('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_default.txt', 'r')
-tle_file = open('C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/starlink_tles/starlink_1719866022', 'r')
-optimal_route_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/optimal_routes/starlink/1511/best_path_minlat_2024_07_01.txt'
-node_indices_filepath = 'C:/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/node_indices/starlink/1511/nodeindex_1719866022.txt'
+gs_filepath = open('/home/barbourbruce/dynamic-topology-generator/utils/gs_files/gs_default.txt', 'r')
+tle_file = open('/home/barbourbruce/dynamic-topology-generator/utils/starlink_tles/starlink_1720559136', 'r')
+optimal_route_filepath = '/home/barbourbruce/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_09.txt'
+node_indices_filepath = '/home/barbourbruce/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1720559136.txt'
 
 
 
@@ -48,6 +48,7 @@ node_index_to_alias_topology_dict   = {}
 node_info_topology_at_t             = {}
 optimal_routes                      = []
 dt_hist                             = []
+gs_alias_list                       = ["CT", "GS", "GW", "IE"]
 total_num_sat                       = 0
 total_num_gs                        = 0
 
@@ -129,8 +130,8 @@ t_current   = ts.from_datetime(dt_hist[time_index])
 for topology_node_alias, topology_node_index in node_alias_to_index_topology_dict.items():
 
     # Check that it's a satellite
-    if not "GS" in topology_node_alias:
-    
+    if not any(gs_type in topology_node_alias for gs_type in gs_alias_list):
+
         # Extract satellite object based on node alias
         sat_node            = sats_from_tle_dict[topology_node_alias]
 
@@ -198,4 +199,5 @@ plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_
 plt.legend(loc='upper left')
 plt.xlabel('Longitude')
 plt.ylabel('Latitude')
-plt.show()
+# plt.show()
+plt.savefig('/home/barbourbruce/dynamic-topology-generator/test_plot.pdf')
