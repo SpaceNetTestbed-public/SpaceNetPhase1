@@ -292,13 +292,41 @@ def save_optimal_path(
     # Close file to minimize memory leaks
     optimal_log.close()
 
-
+"""
+def update_node_index(t2t_dict, node_index_file_path, timestamp, operator_name):
+    # Open existing file for appending
+    file_path = node_index_file_path+operator_name+"/"
+    file_name = "nodeindex_"+timestamp+".txt"
+    # Open existing file and find the highest used index value
+    nodeindex_log_r = open(file_path + file_name, "r")
+    max_index = 0
+    for line in nodeindex_log_r:
+        index = int(line.split(":")[0])
+        if index > max_index:
+            max_index = index
+    nodeindex_log_r.close()
+    next_index = max_index + 1
+    endpoint_gid_list = []
+    nodeindex_log_a = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
+    for key in t2t_dict.keys():
+        if 'type' in t2t_dict[key] and t2t_dict[key]['type'] == 'endpoint' and 'gid' in t2t_dict[key]:
+            endpoint_gid_list.append(t2t_dict[key]['gid'])
+            
+    endpoint_gid_list = list(set(endpoint_gid_list)) # Ensure no duplicates
+    endpoint_gid_list.sort() # Sort the list so that the alias is consistent
+    for endpoint_gid in endpoint_gid_list:
+        alias_prefix = "IE-"
+        nodeindex_log_a.write(str(next_index)+":"+alias_prefix+str(endpoint_gid)+"\n")
+        next_index += 1
+    nodeindex_log_a.close() # Close file to minimize memory leaks
+"""
 def save_node_index(
                         satellites_by_index     : dict, 
                         ground_stations         : list, 
                         node_index_file_path    : str,
                         timestamp               : int,
-                        operator_name           : str
+                        operator_name           : str,
+                        t2t_dict                : dict = None
                    ):
     """
     Saves the matching node indices and their corresponding aliases.
@@ -320,7 +348,7 @@ def save_node_index(
     check_create_path(file_path)
     file_name = "nodeindex_"+timestamp+".txt"
     #nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
-    nodeindex_log_write = open(file_path + file_name, "a")
+    nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
     # Append to file
@@ -335,8 +363,15 @@ def save_node_index(
         if gs['type'] == 9: # 9 indicates a gateway ground station
             alias_prefix = "GW-"
         else:
-            alias_prefix = "GS-"
+            alias_prefix = "CT-"  # all else are designated as customer terminals (ct)
         nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
+
+    # If t2t_dict is included, iterate over the dictionary and append endpoint aliases to the file
+    if t2t_dict is not None:
+        alias_prefix = "IE-" # IE indicates an internet endpoint
+        for id in t2t_dict.keys():
+            if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
+                nodeindex_log.write(str(1+sat_indx+t2t_dict[id]['gid'])+":"+alias_prefix+str(t2t_dict[id]['gid'])+"\n")
 
     # Close file to minimize memory leaks
     nodeindex_log.close()

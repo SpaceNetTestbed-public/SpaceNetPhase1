@@ -69,7 +69,11 @@ def get_weather_info(
     url = "https://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&appid=%s&units=standard" % (str(lat), str(lon), api_key)
     
     # Send a GET request to the API
-    response = requests.get(url)
+    try:
+        response = requests.get(url)
+    except requests.exceptions.RequestException as e:
+        print("Error: Unable to connect to the weather API - skipping...")
+        return ""
     if response.status_code == 429: # Too many requests
         if not wait_on_rate_limit:
             return ""

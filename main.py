@@ -47,7 +47,9 @@ def topology_generation(inc, sat_config,
                         connectivity_matrix_path, 
                         routing_file_path, 
                         time_hist_initial, 
-                        optimal_file_path):
+                        optimal_file_path,
+                        node_index_file_path,
+                        tle_timestamp):
         # Update the time
         #indx += 1
         num_of_ground_stations = len(ground_stations)
@@ -83,7 +85,8 @@ def topology_generation(inc, sat_config,
         # Add t2t links to the connectivity matrix, if enabled
         if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
-
+            #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
+                #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
         # Save the topology
         if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
@@ -186,7 +189,7 @@ def main():
                     num_endpoints += 1
         # Add gateways to ground station list
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.")
-        ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways)
+        ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         # Set global flag to include ground_stations in route calculations (necessary for t2t links)
         global route_to_gs
         route_to_gs = True
@@ -198,7 +201,7 @@ def main():
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
     # Save satellite and ground station indices
-    save_node_index(satellites_by_index, ground_stations, node_index_file_path, tle_timestamp, operator_name)
+    save_node_index(satellites_by_index, ground_stations, node_index_file_path, tle_timestamp, operator_name, t2t_dict)
 
     # Get the total number of satellites and ground stations
     num_of_satellites = len(orbital_data)
@@ -224,7 +227,7 @@ def main():
     if  os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt") \
         or os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt") \
         or os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
-            user_response = input(f"\033[91m.......... Files for this simulation already exists. Do you want to overwrite them?\033[0m (y/n): ")
+            user_response = input(f"\033[91m.......... Files for this simulation already exists. Do you want to overwrite them?\033[0m (y/[n]): ") or 'n'
             if user_response.lower() == 'n':
                 return
             else: print("\033[94m", end="")
@@ -271,7 +274,9 @@ def main():
                                              [connectivity_matrix_path]*len(time_hist),
                                              [routing_file_path]*len(time_hist),
                                              [time_hist[0]]*len(time_hist),
-                                             [optimal_file_path]*len(time_hist)),
+                                             [optimal_file_path]*len(time_hist),
+                                             [node_index_file_path]*len(time_hist),
+                                             [tle_timestamp]*len(time_hist)),
                                 total=len(time_hist), desc=r'.......... Computing network'))
     else:
         # Loop over the time history, update the topology and save it in a file

@@ -554,8 +554,8 @@ def add_gateway_gs(ground_station_dict_list, t2t_dict):
                 "name": t2t_dict[id]['name'],
                 "latitude_degrees_str": str(t2t_dict[id]['coordinates'][0]),
                 "longitude_degrees_str": str(t2t_dict[id]['coordinates'][1]),
-                "elevation_m_float": 0.0,
-                "cartesian_x": 0.0,
+                "elevation_m_float": 0.0, # Does not appear to be used at this time
+                "cartesian_x": 0.0, # cartesian coordinates do not appear to be used at this time
                 "cartesian_y": 0.0,
                 "cartesian_z": 0.0,
                 "type": 9, # Using value of 9 to indicate gateway
@@ -565,6 +565,11 @@ def add_gateway_gs(ground_station_dict_list, t2t_dict):
             ground_station_dict_list.append(ground_station_entry_dict)
             # Now add GID to t2t_dict entry for this Gateway
             t2t_dict[id]['gid'] = gateway_gid
+    # After assigning GID's to all Gateways, add GID's to all Endpoints
+    for id in t2t_dict.keys():
+        if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
+            t2t_dict[id]['gid'] = next_gid 
+            next_gid += 1
     return ground_station_dict_list, t2t_dict
 
 def load_t2t_dict(t2t_settings):
@@ -757,15 +762,26 @@ def plot_nodes_links_ground_stations(satellites_by_index, ground_stations, conne
     m.drawcoastlines()
     m.drawcountries()
     m.fillcontinents(color='lightgray')
-    gs_types = {0 : 'Customer Terminal', 9: 'Gateway', 1: 'Endpoint'}
-    gs_colors = {'Customer Terminal': 'blue', 'Gateway': 'green', 'Endpoint': 'orange'}
-    gs_marker = {'Customer Terminal': 'D', 'Gateway': '^', 'Endpoint': 's'}
-    gs_marker_size = {'Customer Terminal': 5, 'Gateway': 4, 'Endpoint': 3}
+    gs_types = {0 : 'Customer Terminal', 9: 'Gateway', 1: 'Internet Endpoint'}
+    gs_colors = {'Customer Terminal': 'blue', 'Gateway': 'green', 'Internet Endpoint': 'orange'}
+    gs_marker = {'Customer Terminal': 'D', 'Gateway': '^', 'Internet Endpoint': 's'}
+    gs_marker_size = {'Customer Terminal': 5, 'Gateway': 4, 'Internet Endpoint': 3}
+    gs_alias_prefix = {'Customer Terminal': 'CT-', 'Gateway': 'GW-', 'Internet Endpoint': 'IE-'}
     plot_edges = False
     for ground_station in ground_stations:
         x, y = m(float(ground_station["longitude_degrees_str"]), float(ground_station["latitude_degrees_str"]))
         station_type = gs_types[ground_station["type"]]
-        m.plot(x, y, marker=gs_marker[station_type], markersize=gs_marker_size[station_type], color = gs_colors[station_type], latlon=True, alpha=0.5)#, label=station_type)#markersize=10)
+        m.plot(x, y, marker=gs_marker[station_type], 
+               markersize=gs_marker_size[station_type], 
+               color = gs_colors[station_type], 
+               latlon=True, alpha=0.5)#, label=station_type)#markersize=10)
+        plt.annotate(gs_alias_prefix[station_type]+str(ground_station['gid']), 
+                     xy=(x, y), 
+                     textcoords="offset points", 
+                     fontsize=5,
+                     alpha=0.5,
+                     xytext=(5,5), 
+                     ha='center')
     
     for key in t2t_dict.keys():
         #if type(t2t_dict[key]) is not dict or "gid" not in t2t_dict[key]:
@@ -774,12 +790,26 @@ def plot_nodes_links_ground_stations(satellites_by_index, ground_stations, conne
             coordinates = t2t_dict[key]["coordinates"]
             #print(f"Endpoint {t2t_dict[key]['name']} at coordinates {coordinates}")
             x, y = m(coordinates[1], coordinates[0])
-            station_type = 'Endpoint'
-            m.plot(x, y, marker=gs_marker[station_type], markersize=gs_marker_size[station_type], color = gs_colors[station_type], latlon=True, alpha=0.5)#, label=station_type)
+            station_type = 'Internet Endpoint'
+            m.plot(x, y, marker=gs_marker[station_type], 
+                   markersize=gs_marker_size[station_type], 
+                   color = gs_colors[station_type], 
+                   latlon=True, 
+                   alpha=0.5)#, label=station_type)
+            plt.annotate(gs_alias_prefix[station_type]+str(t2t_dict[key]['gid']), 
+                         xy=(x, y), 
+                         textcoords="offset points",
+                         fontsize=5,
+                         alpha=0.5, 
+                         xytext=(5,5), 
+                         ha='center')
     if plot_edges:
         pass
     # Plot information
-    title_string = f"{operator_name} Ground Station Topology at {time_stamp}"
+    if time_stamp is None:
+        title_string = f"{operator_name.capitalize()} Ground Station Topology"
+    else:
+        title_string = f"{operator_name.capitalize()} Ground Station Topology at {time_stamp}"
     plt.title(title_string)
     plt.xlabel("Longitude")
     plt.ylabel("Latitude")
