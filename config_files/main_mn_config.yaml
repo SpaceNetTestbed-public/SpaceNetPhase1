@@ -15,9 +15,9 @@ CLIIntervalCount: 0
 
 
 # Phase I Settings
-RouteWeight: latency  # latency, distance, capacity, hops
 # Configuration for terrestrial-to-terrestrial (t2t) links
-TopoCrit: 2
+RouteWeight: hops  # 'latency', 'distance', 'capacity', 'hops' (default='hops')
+TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
 t2t_gateway_kmz_type: local # Options- local, link
 t2t_gateway_kmz_path: /home/barbourbruce/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
 t2t_dict_output_file: /home/barbourbruce/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json

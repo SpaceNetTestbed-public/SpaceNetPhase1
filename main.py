@@ -29,7 +29,7 @@ use_multiprocessing         = True
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
-run_resource_logger         = True
+run_resource_logger         = False
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -63,8 +63,8 @@ def topology_generation(inc, sat_config,
         satellites_by_name = global_satellites_by_name
 
         # Get the source and destination nodes
-        source_node         = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
-        destination_node    = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
+        source_node         = int(sat_config["Source"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
+        destination_node    = int(sat_config["Destination"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
         optimal_path_nodes  = [source_node, destination_node]
 
         # Convert the updated time to UTC and Unix timestamp
@@ -138,7 +138,7 @@ def main():
 
     # Set global variable
     global criterion
-    criterion = 0 # default
+    criterion = 2 # default
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
@@ -219,7 +219,7 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
-
+ 
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
     arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path)
