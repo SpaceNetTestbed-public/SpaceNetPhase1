@@ -26,7 +26,7 @@ shell1:
     elevation_angle: 25
     inclination: 50
 Source: 425
-Destination: 660
+Destination: 661
 GroundStationFile: /home/barbourbruce/dynamic-topology-generator/utils/gs_files/gs_default.txt
 OutputFilePath: /home/barbourbruce/dynamic-topology-generator/output/
 TLEFilePath: /home/barbourbruce/dynamic-topology-generator/utils/

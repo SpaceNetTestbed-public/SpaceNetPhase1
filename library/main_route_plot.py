@@ -12,10 +12,13 @@ from mpl_toolkits.basemap import Basemap
 
 
 
-
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
 # ================================================================================================
-# SCRIPT CONTROL
+# >>> SCRIPT CONTROL - EDIT HERE <<<
 # ================================================================================================
 time_index              = 3
 plot_only_optimal       = False
@@ -27,19 +30,10 @@ tle_file                = open('/home/barbourbruce/dynamic-topology-generator/ut
 optimal_route_filepath  = '/home/barbourbruce/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_09.txt'
 node_indices_filepath   = '/home/barbourbruce/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1720559136.txt'
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+# ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
 # ================================================================================================
 # INITIALIZER
@@ -159,7 +153,7 @@ for topology_node_alias, topology_node_index in node_alias_to_index_topology_dic
 # ================================================================================================
 # PLOTTING
 # ================================================================================================
-plt.figure(figsize=(10, 5))
+fig = plt.figure()
 
 # PLOT BASEMAP
 if not plot_in_3D:
@@ -169,7 +163,8 @@ else:
     m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=0., llcrnry=0., urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
 m.drawcoastlines()
 m.drawcountries()
-m.fillcontinents(color='lightgray')
+m.fillcontinents(color='lightgray', lake_color='white')
+m.drawmapboundary(fill_color='white')
 
 # PLOT ALL SATELLITE NODES IN TOPOLOGY
 if not plot_only_optimal:
@@ -183,7 +178,7 @@ if not plot_only_optimal:
         if not any(gs_type in node_alias for gs_type in gs_alias_list):
             x, y = m(node_lon, node_lat)
             plt.scatter(x, y, s=10, marker="*", facecolors='none', edgecolors='black', zorder=20)
-            #plt.text(node_lon, node_lat-0.5, node_assigned_alias, fontsize=7, zorder=100)
+            #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
     
 # PLOT ALL GROUND STATIONS
 optimal_route_at_t          = optimal_routes[time_index]
@@ -194,15 +189,15 @@ x1, y1 = m(gs0[1], gs0[2])
 x2, y2 = m(gs1[1], gs1[2])
 plt.scatter(x1, y1, s=100, marker='x', linewidth=2, c='g', zorder=1000, label="Source ("+gs0[0]+")")
 plt.scatter(x2, y2, s=100, marker='x', linewidth=2, c='b', zorder=1000, label="Destination ("+gs1[0]+")")
-# plt.text(gs0[1], gs0[2]-0.5, gs0[0], fontsize=7, zorder=100)
-# plt.text(gs1[1], gs1[2]-0.5, gs1[0], fontsize=7, zorder=100)
+# plt.text(x1, y1-0.5, gs0[0], fontsize=7, zorder=100)
+# plt.text(x2, y2-0.5, gs1[0], fontsize=7, zorder=100)
 for node_alias, node_info in node_info_topology_at_t.items():
     if any(gs_type in node_alias for gs_type in gs_alias_list) and node_alias not in optimal_endpoints: # Rest of ground stations
         node_assigned_alias = node_info[0]
         node_lon, node_lat = node_info[1:]
         x, y = m(node_lon, node_lat)
         plt.scatter(x, y, s=10, marker='x', c='orange', zorder=20)
-        #plt.text(node_lon, node_lat-0.15, node_assigned_alias, fontsize=4, zorder=75)
+        #plt.text(x, y-0.15, node_assigned_alias, fontsize=4, zorder=75)
 
 # PLOT OPTIMAL ROUTE
 optimal_lon = np.array([0., ] * len(optimal_route_at_t))
