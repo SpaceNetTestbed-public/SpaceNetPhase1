@@ -13,9 +13,12 @@ from routing.routing_utils import *
 from routing.constellation_routing import *
 from utils.utils import *
 from library import spacenet_yaml_config
-
 from utils.gateway_utils import *
 from concurrent.futures import ProcessPoolExecutor as ProcessExecutor
+from resource_monitor.top_logger import TOP_LOGGER
+import multiprocessing
+import signal
+import atexit
 
 # =================================================================================== #
 # ---------------------------------- INPUT VARS ------------------------------------- #
@@ -25,8 +28,8 @@ find_optimal_routes         = True
 use_multiprocessing         = True
 global_arranged_sats        = None
 global_satellites_by_name   = None
-route_to_gs = False
-plot_ground_stations = False
+plot_ground_stations        = False
+run_resource_logger         = True
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -84,16 +87,29 @@ def topology_generation(inc, sat_config,
         links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
 
         # Add t2t links to the connectivity matrix, if enabled
-        if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
+        if "TopoCrit" in main_config and int(main_config["TopoCrit"]) > 0:
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
             #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
                 #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
+
+        # Assign the metrics for routing
+        metric_type = None # default (hops)
+        if "RouteWeight" in main_config and str(main_config["RouteWeight"]):
+            metric_type = str(main_config["RouteWeight"])
+            if metric_type == "latency":
+                metrics = links_characteristics["latency_matrix"]
+            elif metric_type == "capacity":
+                metrics = links_characteristics["throughput_matrix"]
+            elif metric_type == "distance":
+                metrics = links_characteristics["distance_matrix"]
+            elif metric_type == "hops":
+                metrics = None
         
         # Pre-compute the routing tables
         if find_optimal_routes:
-            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes, route_to_gs)
+            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
-            all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None, route_to_gs)
+            all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
 
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
@@ -120,8 +136,9 @@ def topology_generation(inc, sat_config,
 
 def main():
 
-    # Start CPU clock timer
-    cpu_clock_tot_t0 = time.perf_counter_ns()
+    # Set global variable
+    global criterion
+    criterion = 0 # default
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
@@ -140,6 +157,7 @@ def main():
     terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
     cpu_time_path               = output_filepath+"/cpu_time/"
+    resource_path               = output_filepath+"/resource/"
 
     # Load the timescale and initialize variables
     ts = load.timescale()
@@ -184,7 +202,7 @@ def main():
     ground_stations = read_gs(gs_file_path)
 
     # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
-    if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
+    if "TopoCrit" in main_config and int(main_config["TopoCrit"]) > 0:
         print(".......... Using T2T links. Collecting settings")
         t2t_settings = get_t2t_settings(main_config, output_filepath)
         print(".......... T2T settings collected. Loading T2T dictionary")
@@ -198,11 +216,9 @@ def main():
                 if t2t_dict[key]['type'] == 'endpoint':
                     num_endpoints += 1
         # Add gateways to ground station list
-        print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.")
+        print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
-        # Set global flag to include ground_stations in route calculations (necessary for t2t links)
-        global route_to_gs
-        route_to_gs = True
+        criterion = int(main_config["TopoCrit"])
 
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
@@ -213,11 +229,16 @@ def main():
     # Get the total number of satellites and ground stations
     num_of_satellites = len(orbital_data)
     num_of_ground_stations = len(ground_stations)
+    num_of_terrestrials = num_of_ground_stations
+    if t2t_dict:
+        num_of_terrestrials = len(t2t_dict)
 
     # Print debug information if enabled in the configurations
     if sat_config["Debug"] == 1:
         print(".......... Total number of satellites = ", num_of_satellites)
-        print(".......... Total number of ground_stations = ", num_of_ground_stations)
+        print(".......... Total number of ground stations = ", num_of_ground_stations)
+        print(".......... Total number of terrestrial nodes = ", num_of_terrestrials)
+        print(".......... Total number of network nodes = ", num_of_satellites+num_of_terrestrials)
         print(".......... Phase-1 complete.\n")
 
     # Instantiate simulation time history
@@ -239,6 +260,15 @@ def main():
                 return
             else: print("\033[94m", end="")
 
+    # Start the subprocess for resource logging
+    if run_resource_logger:
+        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(2, 10, resource_path, tle_timestamp))
+        resource_log_process.start()
+        atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
+
+    # Start CPU clock timer
+    cpu_clock_tot_t0 = time.perf_counter_ns()
+
     # Save satellite and ground station indices
     save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, tle_timestamp, operator_name, t2t_dict)
 
@@ -253,7 +283,7 @@ def main():
     global_arranged_sats = arranged_sats
     global_satellites_by_name = satellites_by_name
     if use_multiprocessing:
-        print(f"Using multi-process execution for topology generation.\n.......... Operation started {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f".......... Using multi-process execution for topology generation.\n.......... Operation started {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         # Before starting concurrent execution, get weather conditions for all ground stations to avoid excessive/unnecesary API calls
         print(".......... Preemptively getting weather data for all ground stations")
         from link.link_utils import get_weather_info
@@ -268,7 +298,7 @@ def main():
                     ground_station["weather_data"] = weather_data
                     recv_cnt += 1
                     # Wait 1 second to avoid API rate limit
-                    if recv_cnt % 25 == 0:
+                    if recv_cnt % 10 == 0:
                         time.sleep(1)
                 else:
                     recving_weather_data = False # Stop trying to get weather data
@@ -366,6 +396,10 @@ def main():
 
     # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
+
+    # Kill resource logger process
+    if run_resource_logger:
+        os.kill(resource_log_process.pid, signal.SIGTERM)
 
 
 if __name__ == '__main__':

@@ -758,6 +758,8 @@ def arrange_satellites(
     check_create_path(file_path)
     file_name = "sorted_satellites_within_orbit_"+tle_timestamp+".txt"
     #f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
+    f0 = open(file_path + file_name, "w")
+    f0.close()
     f = open(file_path + file_name, "a")
     
     # Debugging purposes

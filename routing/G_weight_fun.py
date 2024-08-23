@@ -77,7 +77,7 @@ def topology_G(
                 satellites              : list,
                 source_dest_nodes       : tuple,
                 connectivity_matrix     : np.ndarray,
-                metrics                 : np.ndarray,
+                metrics                 : np.ndarray = None,
                 criterion               : int = 2
               ) -> nx.Graph:
     """
@@ -87,11 +87,11 @@ def topology_G(
         satellites (list):                  List of satellite nodes
         source_dest_nodes (tuple):          Source and destination endpoint nodes
         connectivity_matrix (np.ndarray):   Matrix representing the connectivity between nodes
-        metrics (np.ndarray):               Matrix of point-to-point metric values to be used in graph weighing
+        metrics (np.ndarray):               Matrix of point-to-point metric values to be used in graph weighing (default=None)
         criterion (int):                    Routing criterion for corresponding edge weight assignment
-                                            - 0 for terrestrial-only intermediate hops
-                                            - 1 for satellite-only intermediate hops
-                                            - 2 for integrated network (default)
+                                            (0) ISL only
+                                            (1) Terrestrial only
+                                            (2) Integrated satellite/terrestrial (default)
     
     Returns:
         nx.Graph:                           Weighted, biased NetworkX graph
@@ -103,16 +103,23 @@ def topology_G(
     # Determine number of satellite nodes
     num_sat = len(satellites)
 
+    # Determine number of nodes
+    num_nodes = len(connectivity_matrix)
+
+    # Check if metrics is None, then default to hops
+    if not metrics:
+        metrics = np.ones((num_nodes, num_nodes))
+
     # TERRESTRIAL ONLY =======================================================================================
     if criterion == 1:
 
         # Assign nodes to graph
-        for n in range(len(connectivity_matrix) - num_sat):
+        for n in range(num_nodes - num_sat):
             topology_G.add_node(n + num_sat)
 
         # Compute the edge weights
-        for i in range(len(connectivity_matrix) - num_sat):
-            for j in range(len(connectivity_matrix[i]) - num_sat):
+        for i in range(num_nodes - num_sat):
+            for j in range(num_nodes - num_sat):
                 adj_i += num_sat
                 adj_j += num_sat
                 if connectivity_matrix[adj_i][adj_j] == 1:
@@ -122,7 +129,7 @@ def topology_G(
     elif criterion == 0 or 2:
         
         # Assign nodes to graph
-        for n in range(len(connectivity_matrix)):
+        for n in range(num_nodes):
             topology_G.add_node(n)
 
         # Compute the edge weights
@@ -130,7 +137,7 @@ def topology_G(
             topology_G = G_purely_ISLs(G=topology_G, num_sat=num_sat, source_dest_nodes=source_dest_nodes,
                                        connectivity_matrix=connectivity_matrix, metrics=metrics)
         else:
-            for i in range(len(connectivity_matrix)):
+            for i in range(num_nodes):
                 for j in range(len(connectivity_matrix[i])):
                     if connectivity_matrix[i][j] == 1:
                         topology_G.add_edge(i, j, weight=int(metrics[i][j]*1e3))

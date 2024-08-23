@@ -579,14 +579,14 @@ def load_t2t_dict(t2t_settings):
     if t2t_settings['t2t_dict_output_file'] != None and os.path.exists(t2t_settings['t2t_dict_output_file']): 
         t2t_dict = read_json_file(t2t_settings['t2t_dict_output_file'])
         if t2t_dict != None:
-            print("(load_t2t_dict) Loaded t2t_dict from file.")
+            print("..........(load_t2t_dict) Loaded t2t_dict from file.")
             return t2t_dict
     # No pre-existing dictionary; Generate t2t dictionary
-    print("(load_t2t_dict) Generating t2t_dict...")
+    print("..........(load_t2t_dict) Generating t2t_dict...")
     endpoint_dict_list = []
     # Generate endpoint dictionary
     if t2t_settings['use_azure']:
-        print("(load_t2t_dict) Loading Azure data center dictionary...")
+        print("..........(load_t2t_dict) Loading Azure data center dictionary...")
         azure_latency_url = t2t_settings['azure_endpoint_latency_url']
         azure_location_file = t2t_settings['azure_endpoint_location_file']
         azure_dict_output_file = t2t_settings['azure_dict_output_file']
@@ -595,17 +595,17 @@ def load_t2t_dict(t2t_settings):
         endpoint_dict_list.append(azure_data_center_dict)
     # Generate endpoint dictionary
     if t2t_settings['use_wonderproxy']:
-        print("(load_t2t_dict) Loading WonderProxy server dictionary...")
+        print("..........(load_t2t_dict) Loading WonderProxy server dictionary...")
         wonderproxy_endpoint_location_file = t2t_settings['wonderproxy_endpoint_location_file']
         wonderproxy_endpoint_latency_file = t2t_settings['wonderproxy_endpoint_latency_file']
         wonderproxy_dict_output_file = t2t_settings['wonderproxy_dict_output_file']
         wonderproxy_dict = load_wonderproxy_server_dict(wonderproxy_server_csv_filename=wonderproxy_endpoint_location_file, wonderproxy_latency_csv_filename=wonderproxy_endpoint_latency_file, wonderproxy_dict_filename=wonderproxy_dict_output_file)
         endpoint_dict_list.append(wonderproxy_dict)
     # Generate gateway dictionary
-    print("(load_t2t_dict) Loading gateway dictionary...")
+    print("..........(load_t2t_dict) Loading gateway dictionary...")
     gateway_dict = load_gateways_from_local_kml(t2t_settings['gateway_kmz_path'])
     # Generate t2t dictionary from endpoint and gateway dictionaries
-    print("(load_t2t_dict) Generating t2t_dict from endpoint and gateway dictionaries...")
+    print("..........(load_t2t_dict) Generating t2t_dict from endpoint and gateway dictionaries...")
     t2t_dict = genT2tDict(gateway_dict, endpoint_dict_list, t2t_settings['t2t_dict_output_file'])
 
     return t2t_dict
