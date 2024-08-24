@@ -25,6 +25,7 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
+use_weather_data            = False 
 use_multiprocessing         = True
 global_arranged_sats        = None
 global_satellites_by_name   = None
@@ -43,7 +44,8 @@ def topology_generation(inc, sat_config,
                         ts, epoch_start, 
                         num_of_satellites, 
                         num_of_ground_stations, 
-                        ground_stations, 
+                        ground_stations,
+                        optimal_path_nodes, 
                         operator_name, 
                         main_config, 
                         t2t_dict, 
@@ -61,11 +63,6 @@ def topology_generation(inc, sat_config,
         satellites_by_index = arranged_sats["satellites by index"]
         satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
         satellites_by_name = global_satellites_by_name
-
-        # Get the source and destination nodes
-        source_node         = int(sat_config["Source"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
-        destination_node    = int(sat_config["Destination"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
-        optimal_path_nodes  = [source_node, destination_node]
 
         # Convert the updated time to UTC and Unix timestamp
         time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
@@ -159,6 +156,11 @@ def main():
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
+    # Get the source and destination nodes
+    source_node         = int(main_config["SourceDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
+    destination_node    = int(main_config["DestDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
+    optimal_path_nodes  = [source_node, destination_node]
+
     # Load the timescale and initialize variables
     ts = load.timescale()
     inc = 0
@@ -200,6 +202,7 @@ def main():
 
     # Read the ground stations from the file specified in the configurations
     ground_stations = read_gs(gs_file_path)
+    num_assigned_gs = len(ground_stations)
 
     # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
     if "TopoCrit" in main_config and int(main_config["TopoCrit"]) > 0:
@@ -231,7 +234,7 @@ def main():
     num_of_ground_stations = len(ground_stations)
     num_of_terrestrials = num_of_ground_stations
     if t2t_dict:
-        num_of_terrestrials = len(t2t_dict)
+        num_of_terrestrials = len(t2t_dict) + num_assigned_gs
 
     # Print debug information if enabled in the configurations
     if sat_config["Debug"] == 1:
@@ -290,7 +293,7 @@ def main():
         recv_cnt = 0
         recving_weather_data = True
         for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
-            if recving_weather_data:
+            if recving_weather_data and use_weather_data:
                 gs_lat = float(ground_station["latitude_degrees_str"])
                 gs_lon = float(ground_station["longitude_degrees_str"])
                 weather_data = get_weather_info(gs_lat, gs_lon)
@@ -298,14 +301,19 @@ def main():
                     ground_station["weather_data"] = weather_data
                     recv_cnt += 1
                     # Wait 1 second to avoid API rate limit
-                    if recv_cnt % 10 == 0:
+                    if recv_cnt % 25 == 0:
                         time.sleep(1)
                 else:
                     recving_weather_data = False # Stop trying to get weather data
                     ground_station["weather_data"] = ""
             else:
                 ground_station["weather_data"] = ""
-        print(f".......... Weather data received for {recv_cnt} ground stations")
+        if not use_weather_data:
+            print(".......... User decided not to use weather data for simulation.")
+        else:
+            print(f".......... Weather data received for {recv_cnt} ground stations")
+        
+        # Execute simulation process
         with ProcessExecutor() as executor:
             results = list(tqdm(executor.map(topology_generation,
                                              time_hist,
@@ -315,6 +323,7 @@ def main():
                                              [num_of_satellites]*len(time_hist),
                                              [num_of_ground_stations]*len(time_hist),
                                              [ground_stations]*len(time_hist),
+                                             [optimal_path_nodes]*len(time_hist),
                                              [operator_name]*len(time_hist),
                                              [main_config]*len(time_hist),
                                              [t2t_dict]*len(time_hist),                                                                                    
@@ -328,7 +337,7 @@ def main():
         # Loop over the time history, update the topology and save it in a file
         for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
             
-            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, cpu_time_path)
+            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, cpu_time_path)
             
             
             """

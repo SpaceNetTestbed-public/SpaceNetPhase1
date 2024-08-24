@@ -1,6 +1,7 @@
 import matplotlib
-matplotlib.use('tkagg')
+#matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
+import matplotlib.lines as mlines
 from skyfield.api import load, EarthSatellite
 import re
 import numpy as np
@@ -20,15 +21,15 @@ from mpl_toolkits.basemap import Basemap
 # ================================================================================================
 # >>> SCRIPT CONTROL - EDIT HERE <<<
 # ================================================================================================
-time_index              = 3
+time_index              = 0
 plot_only_optimal       = False
-plot_in_3D              = True
+plot_in_3D              = False
 lon0_3d                 = -60
 lat0_3d                 = 10
-gs_filepath             = open('/home/barbourbruce/dynamic-topology-generator/output/terrestrial_info/terrestrial_1720559136.txt', 'r')
-tle_file                = open('/home/barbourbruce/dynamic-topology-generator/utils/starlink_tles/starlink_1720559136', 'r')
-optimal_route_filepath  = '/home/barbourbruce/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_09.txt'
-node_indices_filepath   = '/home/barbourbruce/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1720559136.txt'
+gs_filepath             = open('/home/spacenet/simulator/dynamic-topology-generator/output/terrestrial_info/terrestrial_1720288988.txt', 'r')
+tle_file                = open('/home/spacenet/simulator/dynamic-topology-generator/utils/starlink_tles/starlink_1720288988', 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_06.txt'
+node_indices_filepath   = '/home/spacenet/simulator/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1720288988.txt'
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -142,7 +143,7 @@ for topology_node_alias, topology_node_index in node_alias_to_index_topology_dic
         lon_at_t, lat_at_t  = sat_node_at_t.subpoint().longitude.degrees, sat_node_at_t.subpoint().latitude.degrees
         
         # Add to dictionary
-        node_info_topology_at_t[sat_node.name] = (node_alias_to_index_topology_dict[sat_node.name], lon_at_t, lat_at_t)
+        node_info_topology_at_t[sat_node.name] = (topology_node_alias, lon_at_t, lat_at_t)
 
     # And if it's a ground station
     else:
@@ -154,6 +155,9 @@ for topology_node_alias, topology_node_index in node_alias_to_index_topology_dic
 # PLOTTING
 # ================================================================================================
 fig = plt.figure()
+font = {'family' : 'monospace', 
+        'size' : 12}
+plt.rc('font', **font)
 
 # PLOT BASEMAP
 if not plot_in_3D:
@@ -177,7 +181,7 @@ if not plot_only_optimal:
         # Plot satellite node as a regular scatter point with label
         if not any(gs_type in node_alias for gs_type in gs_alias_list):
             x, y = m(node_lon, node_lat)
-            plt.scatter(x, y, s=10, marker="*", facecolors='none', edgecolors='black', zorder=20)
+            plt.scatter(x, y, s=30, marker="o", facecolors='none', edgecolors='black', zorder=20)
             #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
     
 # PLOT ALL GROUND STATIONS
@@ -187,8 +191,8 @@ gs1                         = node_info_topology_at_t[optimal_route_at_t[-1]]
 optimal_endpoints           = [gs0, gs1]
 x1, y1 = m(gs0[1], gs0[2])
 x2, y2 = m(gs1[1], gs1[2])
-plt.scatter(x1, y1, s=100, marker='x', linewidth=2, c='g', zorder=1000, label="Source ("+gs0[0]+")")
-plt.scatter(x2, y2, s=100, marker='x', linewidth=2, c='b', zorder=1000, label="Destination ("+gs1[0]+")")
+plt.scatter(x1, y1, s=100, marker='^', linewidth=1.5, edgecolors='k', facecolors='none', zorder=3, label="Source ("+gs0[0]+")")
+plt.scatter(x2, y2, s=100, marker='s', linewidth=1.5, edgecolors='k', facecolors='none', zorder=3, label="Destination ("+gs1[0]+")")
 # plt.text(x1, y1-0.5, gs0[0], fontsize=7, zorder=100)
 # plt.text(x2, y2-0.5, gs1[0], fontsize=7, zorder=100)
 for node_alias, node_info in node_info_topology_at_t.items():
@@ -196,8 +200,11 @@ for node_alias, node_info in node_info_topology_at_t.items():
         node_assigned_alias = node_info[0]
         node_lon, node_lat = node_info[1:]
         x, y = m(node_lon, node_lat)
-        plt.scatter(x, y, s=10, marker='x', c='orange', zorder=20)
+        plt.scatter(x, y, s=20, marker='p', facecolors='none', edgecolors='purple', zorder=2)
         #plt.text(x, y-0.15, node_assigned_alias, fontsize=4, zorder=75)
+handles, labels = plt.gca().get_legend_handles_labels()
+sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
+gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
 
 # PLOT OPTIMAL ROUTE
 optimal_lon = np.array([0., ] * len(optimal_route_at_t))
@@ -207,15 +214,45 @@ for indx, optimal_node in enumerate(optimal_route_at_t):
     optimal_lon[indx]   = optimal_node_info[1]
     optimal_lat[indx]   = optimal_node_info[2]
     x, y = m(optimal_lon[indx], optimal_lat[indx])
-    plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=100)
-x, y = m(optimal_lon, optimal_lat)
-plt.plot(x, y, '--*', linewidth=1.5, c='r', zorder=200)
+    #plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=4)
+
+# Define colors for different types of connections
+colors = {'sat-sat': 'blue', 'sat-gs': 'green', 'gs-gs': 'red'}
+blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
+green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
+red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
+handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
+labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+
+# Iterate over pairs of nodes in the optimal route
+for i in range(len(optimal_route_at_t) - 1):
+    
+    # Assign node for comparison
+    node1 = optimal_route_at_t[i]
+    node2 = optimal_route_at_t[i+1]
+
+    # Check if nodes are terrestrial nodes
+    node1_gs = any(gs_type in node1 for gs_type in gs_alias_list)
+    node2_gs = any(gs_type in node2 for gs_type in gs_alias_list)
+
+    # Determine the type of connection
+    if node1_gs and node2_gs:
+        color = colors['gs-gs']
+    elif node1_gs or node2_gs:
+        color = colors['sat-gs']
+    else:
+        color = colors['sat-sat']
+
+    # Plot the line with the chosen color
+    x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
+    plt.plot(x, y, '--', linewidth=1.5, c=color, zorder=1)
 
 # PLOT INFORMATION
-plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-plt.legend(loc='upper left')
+#plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
+print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
 plt.xlabel('Longitude')
 plt.ylabel('Latitude')
-#plt.tight_layout()
+plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
+plt.tight_layout()
 plt.show()
 # plt.savefig('/home/barbourbruce/dynamic-topology-generator/test_plot.pdf')

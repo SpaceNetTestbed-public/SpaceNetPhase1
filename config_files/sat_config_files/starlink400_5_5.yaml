@@ -2,10 +2,10 @@
 # Constellation naming convention: <constellation_name><sat_count>_<interval_duration>_<interval_count>.yaml
 # Configuration for <Constellation_name>
 TotalSatCnt: 400
-TotalGSCnt: 24
-ConnectivityMatrixPath: /home/barbourbruce/dynamic-topology-generator/output/connectivity/
-RoutingFilePath: /home/barbourbruce/dynamic-topology-generator/output/routing/
-EpochIntervalDuration: 120
+TotalGSCnt: 497
+ConnectivityMatrixPath: /home/spacenet/simulator/dynamic-topology-generator/output/connectivity_matrix/
+RoutingFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/routing/
+EpochIntervalDuration: 5
 EpochIntervalCount: 5
 EpochStartYear: 2024
 EpochStartMonth: 07
@@ -27,6 +27,6 @@ shell1:
     inclination: 50
 Source: 425
 Destination: 661
-GroundStationFile: /home/barbourbruce/dynamic-topology-generator/utils/gs_files/gs_default.txt
-OutputFilePath: /home/barbourbruce/dynamic-topology-generator/output/
-TLEFilePath: /home/barbourbruce/dynamic-topology-generator/utils/
+GroundStationFile: /home/spacenet/simulator/dynamic-topology-generator/utils/gs_files/gs_default.txt
+OutputFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/
+TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/

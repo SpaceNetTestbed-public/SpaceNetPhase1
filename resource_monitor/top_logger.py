@@ -57,3 +57,6 @@ def TOP_LOGGER(interval, num_top_proc, path, timestamp):
         log_totals(cpu_total, mem_total, path, timestamp, ttime)
         time.sleep(interval)
         ttime += interval
+
+if __name__ == "__main__":
+    TOP_LOGGER(2, 5, "output/", 10000)
