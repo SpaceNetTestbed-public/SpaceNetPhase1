@@ -25,12 +25,12 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
-use_weather_data            = False 
+use_weather_data            = True
 use_multiprocessing         = True
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
-run_resource_logger         = False
+run_resource_logger         = True
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -156,6 +156,13 @@ def main():
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
+    # Start the subprocess for resource logging
+    if run_resource_logger:
+        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, 2000_20_30))
+        resource_log_process.start()
+        atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
+    time.sleep(10)
+
     # Get the source and destination nodes
     source_node         = int(main_config["SourceDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
     destination_node    = int(main_config["DestDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
@@ -205,6 +212,7 @@ def main():
     num_assigned_gs = len(ground_stations)
 
     # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
+    t2t_dict = None
     if "TopoCrit" in main_config and int(main_config["TopoCrit"]) > 0:
         print(".......... Using T2T links. Collecting settings")
         t2t_settings = get_t2t_settings(main_config, output_filepath)
@@ -262,12 +270,6 @@ def main():
             if user_response.lower() == 'n':
                 return
             else: print("\033[94m", end="")
-
-    # Start the subprocess for resource logging
-    if run_resource_logger:
-        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(2, 10, resource_path, tle_timestamp))
-        resource_log_process.start()
-        atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
 
     # Start CPU clock timer
     cpu_clock_tot_t0 = time.perf_counter_ns()

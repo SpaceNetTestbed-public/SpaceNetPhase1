@@ -133,7 +133,10 @@ def initial_routing_fw(satellites, connectivity_matrix, metric, source_dest_node
     optimal_output = None
     if source_dest_nodes:   # Check if source exists
         src, dest = source_dest_nodes
-        optimal_output = nx.reconstruct_path(src, dest, pred)
+        try:
+            optimal_output = nx.reconstruct_path(src, dest, pred)
+        except KeyError:
+            optimal_output = None
 
     if criterion > 0:
         max_iter_value = len(connectivity_matrix) # Iterate over results for all nodes
@@ -143,7 +146,7 @@ def initial_routing_fw(satellites, connectivity_matrix, metric, source_dest_node
     static_routes = {}
     for i in range(max_iter_value):  # Iterate only over satellite nodes as sources
         for j in range(max_iter_value):
-            if i != j:
+            if i != j and (i in pred and j in pred[i]):
                 static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 
     if source_dest_nodes:

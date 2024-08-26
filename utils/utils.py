@@ -284,7 +284,7 @@ def save_optimal_path(
     optimal_log = open(file_path + file_name, "a")
     
     # Iterate over the optimal path list
-    if optimal_path != None:
+    if optimal_path:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_path)[1:-1] + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
