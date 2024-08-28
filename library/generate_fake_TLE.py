@@ -111,7 +111,7 @@ def generate_virtual_TLE(
     
     # Compute mean motion in rev/day
     earth_mu        = 398600.435507     # Earth's gravitational parameter, km2s-2
-    nbar            = np.sqrt(earth_mu/oe[0]**3) * (86400/(2*np.pi))    # rev/day
+    nbar            = np.sqrt(earth_mu/oe[0]**3) * (86400./(2*np.pi))    # rev/day
 
     # Compute mean anomaly in deg
     TA              = np.deg2rad(oe[5])

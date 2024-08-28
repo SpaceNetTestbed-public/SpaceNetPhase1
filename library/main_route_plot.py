@@ -23,13 +23,13 @@ from mpl_toolkits.basemap import Basemap
 # ================================================================================================
 time_index              = 0
 plot_only_optimal       = False
-plot_in_3D              = False
-lon0_3d                 = -60
-lat0_3d                 = 10
-gs_filepath             = open('/home/spacenet/simulator/dynamic-topology-generator/output/terrestrial_info/terrestrial_1720288988.txt', 'r')
-tle_file                = open('/home/spacenet/simulator/dynamic-topology-generator/utils/starlink_tles/starlink_1720288988', 'r')
-optimal_route_filepath  = '/home/spacenet/simulator/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_06.txt'
-node_indices_filepath   = '/home/spacenet/simulator/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1720288988.txt'
+plot_in_3D              = True
+lon0_3d                 = -90
+lat0_3d                 = -20
+gs_filepath             = open('/home/spacenet/simulator/dynamic-topology-generator/output/terrestrial_info/terrestrial_1724155200.txt', 'r')
+tle_file                = open('/home/spacenet/simulator/dynamic-topology-generator/utils/starlink_tles/starlink_1724155200', 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_08_20.txt'
+node_indices_filepath   = '/home/spacenet/simulator/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1724155200.txt'
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||

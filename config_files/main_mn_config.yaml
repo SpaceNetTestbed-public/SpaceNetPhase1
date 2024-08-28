@@ -1,14 +1,16 @@
 # Main configuration script for the SpaceNet Mininet Simulator
-ConstellationName: starlink2000_5_12 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink1584_20_5 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 OutputFilePath: /home/spacenet/simulator/dynamic-topology-generator/output
 DeleteAppResults: False
 Verbose: True
+UseWeatherData: True
+MonitorResource: True
 # App configurations
 AppName: Ping # Options- Ping, iPerf, CLI
 # For Ping and iPerf
 # Useable keywords- firstGS, lastGS, firstSat, lastSat
-SourceDeviceName: 2001 # 101, 501, 1001, 2001
-DestDeviceName: 2000 # 100, 500, 1000, 2000
+SourceDeviceName: 1609 # 101, 501, 1001, 2001
+DestDeviceName: 1585 # 100, 500, 1000, 2000
 # For CLI
 CLIStartInterval: 0
 CLIIntervalCount: 0
@@ -17,7 +19,7 @@ CLIIntervalCount: 0
 # Phase I Settings
 # Configuration for terrestrial-to-terrestrial (t2t) links
 RouteWeight: latency  # 'latency', 'distance', 'capacity', 'hops' (default='hops')
-TopoCrit: 0           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
+TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
 t2t_gateway_kmz_type: local # Options- local, link
 t2t_gateway_kmz_path: /home/spacenet/simulator/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
 t2t_dict_output_file: /home/spacenet/simulator/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json

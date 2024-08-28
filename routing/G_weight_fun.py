@@ -118,10 +118,12 @@ def topology_G(
             topology_G.add_node(n + num_sat)
 
         # Compute the edge weights
+        adj_i = 0
+        adj_j = 0
         for i in range(num_nodes - num_sat):
             for j in range(num_nodes - num_sat):
-                adj_i += num_sat
-                adj_j += num_sat
+                adj_i = i + num_sat
+                adj_j = j + num_sat
                 if connectivity_matrix[adj_i][adj_j] == 1:
                     topology_G.add_edge(adj_i, adj_j, weight=int(metrics[adj_i][adj_j]*1e3))
 
