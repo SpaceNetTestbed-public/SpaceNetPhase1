@@ -219,6 +219,30 @@ def save_topology(
     f.close()
 
 
+
+def extract_connectivity(  
+                            topology_path               : str, 
+                            conn_mat_size               : int  
+                        ):
+    # Extracting connectivity matrix from topology files already generated
+    connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
+    latency_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    throughput_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    with open(topology_path, 'r') as links:
+        for link_data in links:
+            data  = link_data.split(",")
+            d = data[3].split("\n")
+            data[3] = d[0]
+            connectivity_matrix[int(data[0])][int(data[1])] = 1
+            latency_matrix[int(data[0])][int(data[1])] = float(data[2])
+            throughput_matrix[int(data[0])][int(data[1])] = data[3]
+
+    link_characteristics = {"latency_matrix": latency_matrix, "throughput_matrix": throughput_matrix}
+
+    return connectivity_matrix, link_characteristics
+            
+
+
 def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
@@ -279,7 +303,7 @@ def save_optimal_path(
     # Generate a new file
     file_path = optimal_file_path+operator_name+"/"
     check_create_path(file_path)
-    file_name = "best_path_"+("_".join(timestamp[:3]))+".txt"
+    file_name = "best_path_"+("_".join(timestamp))+".txt"
     #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
     optimal_log = open(file_path + file_name, "a")
     

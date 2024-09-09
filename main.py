@@ -73,7 +73,7 @@ def topology_generation(inc, sat_config,
 
         # Initialize the connectivity matrix
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
-
+        """
         # Add ISLs to the connectivity matrix
         connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
@@ -88,6 +88,13 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
             #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
                 #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
+        """
+        topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
+        if t2t_dict == None:
+            connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
+        else:
+            connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
+        print(topfile_path)
 
         # Assign the metrics for routing
         metric_type = None # default (hops)
@@ -107,25 +114,25 @@ def topology_generation(inc, sat_config,
             all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
-
+        """
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
-
+        
         # Save the topology
         if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
         save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
-
+        """
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
         save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
-
+        
         # Save the optimal routes between provided src/dest
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
-
+        
         # Save CPU clock runtime
-        save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+        #save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
 # =================================================================================== #
 # -------------------------------- MAIN FUNCTION ------------------------------------ #
@@ -316,7 +323,7 @@ def main():
             print(f".......... Weather data received for {recv_cnt} ground stations")
         
         # Execute simulation process
-        with ProcessExecutor() as executor:
+        with ProcessExecutor(max_workers=2) as executor:
             results = list(tqdm(executor.map(topology_generation,
                                              time_hist,
                                              [sat_config]*len(time_hist),

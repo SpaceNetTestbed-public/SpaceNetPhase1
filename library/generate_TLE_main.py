@@ -116,17 +116,17 @@ if __name__ == "__main__":
 
 
     # Constellation setup
-    tot_num_sats    = 2000
-    num_planes      = 80
+    tot_num_sats    = 1584
+    num_planes      = 72
     sat_per_orbit   = int(tot_num_sats/num_planes)
 
     # Date/Time input
-    datetime    = (2024, 8, 7, 12, 0, 0) # year, month, day, hour, minute, second
+    datetime    = (2024, 7, 17, 22, 41, 51) # year, month, day, hour, minute, second
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
     # File name
-    filename    = "starlink_" + str(datetime_s)
+    filename    = "fake_starlink_" + str(datetime_s)
 
     # Epoch Year / Fractional Day
     epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("/home/spacenet/simulator/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a') as file:
+    with open("/home/spacenet/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))

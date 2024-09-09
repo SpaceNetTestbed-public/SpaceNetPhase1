@@ -24,12 +24,12 @@ from mpl_toolkits.basemap import Basemap
 time_index              = 0
 plot_only_optimal       = False
 plot_in_3D              = True
-lon0_3d                 = -20
+lon0_3d                 = -40
 lat0_3d                 = 0
-gs_filepath             = open('/home/spacenet/t2t-plotting/dynamic-topology-generator/output/terrestrial_info/terrestrial_1721256111.txt', 'r')
+gs_filepath             = open('/home/spacenet/t2t-plotting/dynamic-topology-generator/output/real/NYC_LA/terrestrial_info/terrestrial_1721256111.txt', 'r')
 tle_file                = open('/home/spacenet/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1721256111', 'r')
-optimal_route_filepath  = '/home/spacenet/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/best_path_2024_07_17_22_42_41.0.txt'
-node_indices_filepath   = '/home/spacenet/t2t-plotting/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1721256111.txt'
+optimal_route_filepath  = '/home/spacenet/t2t-plotting/dynamic-topology-generator/output/real/NYC_LA/optimal_routes/starlink/best_path_2024_07_17_22_41_51.0.txt'
+node_indices_filepath   = '/home/spacenet/t2t-plotting/dynamic-topology-generator/output/real/NYC_LA/node_indices/starlink/nodeindex_1721256111.txt'
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -161,11 +161,11 @@ plt.rc('font', **font)
 
 # PLOT BASEMAP
 if not plot_in_3D:
-    #m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='c')
-    m = Basemap(projection='cyl', llcrnrlat=20, urcrnrlat=60, llcrnrlon=-130, urcrnrlon=10, resolution='c')
+    m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='c')
 else:
     m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-    m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+    m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+    #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
 m.drawcoastlines()
 m.drawcountries()
 m.fillcontinents(color='lightgray', lake_color='white')
@@ -182,7 +182,7 @@ if not plot_only_optimal:
         # Plot satellite node as a regular scatter point with label
         if not any(gs_type in node_alias for gs_type in gs_alias_list):
             x, y = m(node_lon, node_lat)
-            plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
+            #plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
             #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
     
 # PLOT ALL GROUND STATIONS
@@ -192,17 +192,22 @@ gs1                         = node_info_topology_at_t[optimal_route_at_t[-1]]
 optimal_endpoints           = [gs0, gs1]
 x1, y1 = m(gs0[1], gs0[2])
 x2, y2 = m(gs1[1], gs1[2])
-plt.scatter(x1, y1, s=100, marker='^', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Source ("+gs0[0]+")")
-plt.scatter(x2, y2, s=100, marker='s', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Destination ("+gs1[0]+")")
+#plt.scatter(x1, y1, s=100, marker='^', linewidth=1.5, edgecolors='k', facecolors='none', zorder=3, label="Source ("+gs0[0]+")")
+#plt.scatter(x2, y2, s=100, marker='s', linewidth=1.5, edgecolors='k', facecolors='none', zorder=3, label="Destination ("+gs1[0]+")")
 # plt.text(x1, y1-0.5, gs0[0], fontsize=7, zorder=100)
 # plt.text(x2, y2-0.5, gs1[0], fontsize=7, zorder=100)
 for node_alias, node_info in node_info_topology_at_t.items():
     if any(gs_type in node_alias for gs_type in gs_alias_list) and node_alias not in optimal_endpoints: # Rest of ground stations
         node_assigned_alias = node_info[0]
-        node_lon, node_lat = node_info[1:]
-        x, y = m(node_lon, node_lat)
-        plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
-        #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
+        if node_assigned_alias == 'London' or node_assigned_alias == 'Union-WVa' or node_assigned_alias == 'Sao Paulo':
+            node_lon, node_lat = node_info[1:]
+            x, y = m(node_lon, node_lat)
+            plt.scatter(x, y, s=80, marker='s', facecolors='None', edgecolors='red', zorder=4, linewidth=2)
+            if node_assigned_alias == 'London':
+                x_text = x-2000000
+            else:
+                x_text = x
+            plt.text(x_text, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
 handles, labels = plt.gca().get_legend_handles_labels()
 sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
 gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
@@ -246,13 +251,13 @@ for i in range(len(optimal_route_at_t) - 1):
 
     # Plot the line with the chosen color
     x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
-    plt.plot(x, y, '--', linewidth=2.5, c=color, zorder=1)
+    #plt.plot(x, y, '--', linewidth=1.5, c=color, zorder=1)
 
 # PLOT INFORMATION
 #plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
 print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-plt.xlabel('Longitude')
-plt.ylabel('Latitude')
+# plt.xlabel('Longitude')
+# plt.ylabel('Latitude')
 #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
 plt.tight_layout()
 plt.show()

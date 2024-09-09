@@ -1,0 +1,30 @@
+# Template for constellation configurations
+# Constellation naming convention: <constellation_name><sat_count>_<interval_duration>_<interval_count>.yaml
+# Configuration for <Constellation_name>
+TotalSatCnt: 1584
+TotalGSCnt: 25
+ConnectivityMatrixPath: /home/spacenet/t2t-plotting/dynamic-topology-generator/output/connectivity/
+RoutingFilePath: /home/spacenet/t2t-plotting/dynamic-topology-generator/output/routing/
+EpochIntervalDuration: 10
+EpochIntervalCount: 6
+EpochStartYear: 2024
+EpochStartMonth: 07
+EpochStartDay: 17
+EpochStartHour: 22
+EpochStartMinute: 41
+EpochStartSecond: 51
+
+# Additional information to be edited for topology gen. (Phase 1), some of these are set as default
+Debug: 1
+AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
+TopologyISL: grid
+shell1:
+    name: shell1
+    orbits: 72
+    sat_per_orbit: 22
+    altitude: 500  #Originally calulated at 500 for real
+    elevation_angle: 25
+    inclination: 53
+GroundStationFile: /home/spacenet/t2t-plotting/dynamic-topology-generator/utils/gs_files/gs_default.txt
+OutputFilePath: /home/spacenet/t2t-plotting/dynamic-topology-generator/output/
+TLEFilePath: /home/spacenet/t2t-plotting/dynamic-topology-generator/utils/
