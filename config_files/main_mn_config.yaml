@@ -7,8 +7,8 @@ Verbose: True
 AppName: Ping # Options- Ping, iPerf, CLI
 # For Ping and iPerf
 # Useable keywords- firstGS, lastGS, firstSat, lastSat
-SourceDeviceName: 1598 # 101, 501, 1001, 2001  # Chicago
-DestDeviceName: 1591 # 100, 500, 1000, 2000  # Lagos, Africa
+SourceDeviceName: 1589 # 101, 501, 1001, 2001  # New York
+DestDeviceName: 1594 # 100, 500, 1000, 2000  # Paris
 # For CLI
 CLIStartInterval: 0
 CLIIntervalCount: 0
@@ -16,8 +16,8 @@ CLIIntervalCount: 0
 
 # Phase I Settings
 # Configuration for terrestrial-to-terrestrial (t2t) links
-RouteWeight: latency  # 'latency', 'distance', 'capacity', 'hops' (default='hops')
-TopoCrit: 0           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
+RouteWeight: distance  # 'latency', 'distance', 'capacity', 'hops' (default='hops')
+TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
 t2t_gateway_kmz_type: local # Options- local, link
 t2t_gateway_kmz_path: /home/spacenet/t2t-plotting/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
 t2t_dict_output_file: /home/spacenet/t2t-plotting/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json

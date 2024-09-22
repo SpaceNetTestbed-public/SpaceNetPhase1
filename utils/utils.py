@@ -212,6 +212,7 @@ def save_topology(
             if connectivity_matrix[i][j] == 1:
                 if i!=j and (i, j) not in existing_links:
                    write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+"\n"
+                   #write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["distance_matrix"][i][j],2))+"\n"
                    f.write(write_this)
                    existing_links.append((i, j))
     
@@ -228,6 +229,7 @@ def extract_connectivity(
     connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
     latency_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
     throughput_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    distance_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
     with open(topology_path, 'r') as links:
         for link_data in links:
             data  = link_data.split(",")
@@ -236,8 +238,10 @@ def extract_connectivity(
             connectivity_matrix[int(data[0])][int(data[1])] = 1
             latency_matrix[int(data[0])][int(data[1])] = float(data[2])
             throughput_matrix[int(data[0])][int(data[1])] = data[3]
+            if data[4]:
+                distance_matrix[int(data[0])][int(data[1])] = data[4]
 
-    link_characteristics = {"latency_matrix": latency_matrix, "throughput_matrix": throughput_matrix}
+    link_characteristics = {"latency_matrix": latency_matrix, "throughput_matrix": throughput_matrix, "distance_matrix": distance_matrix}
 
     return connectivity_matrix, link_characteristics
             

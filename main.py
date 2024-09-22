@@ -73,7 +73,7 @@ def topology_generation(inc, sat_config,
 
         # Initialize the connectivity matrix
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
-        """
+        
         # Add ISLs to the connectivity matrix
         connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
@@ -95,7 +95,6 @@ def topology_generation(inc, sat_config,
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
         print(topfile_path)
-
         # Assign the metrics for routing
         metric_type = None # default (hops)
         if "RouteWeight" in main_config and str(main_config["RouteWeight"]):
@@ -130,7 +129,7 @@ def topology_generation(inc, sat_config,
         
         # Save the optimal routes between provided src/dest
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
-        
+        """
         # Save CPU clock runtime
         #save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
