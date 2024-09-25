@@ -6,6 +6,11 @@ output/optimal_routes/starlink/*
 output/routing/starlink/*
 output/satellites_orbits/starlink/*
 output/suryansh_files/*
+routing/__pycache__/*
+mobility/__pycache__/*
+library/__pycache__/*
+
+
 # utils/starlink_tles/*
 .vscode/
 

@@ -998,8 +998,14 @@ def convert_time_utc_to_unix(
     # Convert string to 'datetime' object
     time_datetime = datetime.strptime(time_utc_string, "%Y-%m-%d %H:%M:%S %Z")
 
-    # Convert the 'datetime' object to a float
+    # Convert the 'datetime' object to a float in local time
     time_timestamp = time.mktime(time_datetime.timetuple())
+
+    # Convert the float back to UTC from local time
+    datetime.now().isoformat()
+    datetime.utcnow().isoformat()
+    time.altzone
+    time_timestamp = time_timestamp - time.altzone
 
     # Return conversion to unix time
     return time_timestamp
