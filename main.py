@@ -160,7 +160,7 @@ def main():
     # Start the subprocess for resource logging
     if run_resource_logger:
         print("\n.......... Initiating resource logger")
-        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, '1511_20_5'))
+        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, '1584_10_10'))
         resource_log_process.start()
         atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
         time.sleep(10)
@@ -406,7 +406,7 @@ def main():
     # Stop CPU clock timer and save total time
     executor.shutdown()
     cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
-    save_cpu_time("TOT:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+    save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
     # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")

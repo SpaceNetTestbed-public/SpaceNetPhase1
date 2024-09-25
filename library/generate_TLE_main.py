@@ -127,14 +127,14 @@ if __name__ == "__main__":
 
 
     # Settings
-    altitude            = 530.
-    inclination         = 53.
-    tot_num_sats        = 1584
-    num_orbits          = 72
+    altitude            = 1500.
+    inclination         = 50.
+    tot_num_sats        = 96
+    num_orbits          = 12
     num_sat_per_orbit   = int(tot_num_sats/num_orbits)
 
     # Date/Time input
-    datetime    = (2024, 8, 20, 12, 0, 0) # year, month, day, hour, minute, second
+    datetime    = (2024, 7, 21, 19, 0, 0) # year, month, day, hour, minute, second
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
@@ -158,12 +158,9 @@ if __name__ == "__main__":
     # raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
     raan_range  = np.linspace(0, 360*(1-1/num_orbits), num_orbits)
 
-    # Total Number of Satellites
-    num_sats = len(ta_range)*len(raan_range)
-
     # Inter Plane Phase Increment/Angle
     ipp_increment = 1 # set to zero for no IPP Angle, otherwise set to a positive integer
-    ipp_angle = ipp_increment*360/(num_orbits*num_sat_per_orbit)
+    ipp_angle = ipp_increment*360/(tot_num_sats)
         # Inter Plane Phase Increment pulled from Walker constellation pattern notation, I:T/P/F
             # I: orbital inclination
             # T: Total number of satellites (must be divisible by F)
