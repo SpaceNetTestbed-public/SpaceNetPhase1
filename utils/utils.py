@@ -212,11 +212,41 @@ def save_topology(
             if connectivity_matrix[i][j] == 1:
                 if i!=j and (i, j) not in existing_links:
                    write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+"\n"
+                   #write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["distance_matrix"][i][j],2))+"\n"
                    f.write(write_this)
                    existing_links.append((i, j))
     
     # Close file to minimize memory leaks
     f.close()
+
+
+
+def extract_connectivity(  
+                            topology_path               : str, 
+                            conn_mat_size               : int  
+                        ):
+    # Extracting connectivity matrix from topology files already generated
+    connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
+    latency_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    throughput_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    distance_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    with open(topology_path, 'r') as links:
+        for link_data in links:
+            data  = link_data.split(",")
+            d = data[3].split("\n")
+            data[3] = d[0]
+            connectivity_matrix[int(data[0])][int(data[1])] = 1
+            latency_matrix[int(data[0])][int(data[1])] = float(data[2])
+            throughput_matrix[int(data[0])][int(data[1])] = data[3]
+            try:
+                distance_matrix[int(data[0])][int(data[1])] = data[4]
+            except:
+                pass
+
+    link_characteristics = {"latency_matrix": latency_matrix, "throughput_matrix": throughput_matrix, "distance_matrix": distance_matrix}
+
+    return connectivity_matrix, link_characteristics
+            
 
 
 def save_routes(
@@ -279,13 +309,36 @@ def save_optimal_path(
     # Generate a new file
     file_path = optimal_file_path+operator_name+"/"
     check_create_path(file_path)
-    file_name = "best_path_"+("_".join(timestamp[:3]))+".txt"
+    file_name = "best_path_"+("_".join(timestamp))+".txt"
     #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
     optimal_log = open(file_path + file_name, "a")
     
     # Iterate over the optimal path list
     if optimal_path:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_path)[1:-1] + "\n")
+    else:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
+
+    # Close file to minimize memory leaks
+    optimal_log.close()
+
+def save_optimal_weights(
+                        optimal_weights            : list, 
+                        timestamp               : int,
+                        operator_name           : str, 
+                        optimal_w_path          : str
+                     ):
+    
+    # Generate a new file
+    file_path = optimal_w_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "optimal_weights_"+("_".join(timestamp[0:3]))+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
+    
+    # Iterate over the optimal path list
+    if optimal_weights:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_weights) + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
 
@@ -424,7 +477,7 @@ def save_cpu_time(
     """
 
     # Generate a new file
-    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
+    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "w")
     
     # Iterate over the optimal path list
     if cpu_runtime != None:

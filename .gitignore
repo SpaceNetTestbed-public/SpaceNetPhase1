@@ -15,6 +15,8 @@ library/__pycache__/*
 config_files/sat_config_files/starlink*
 
 
+output/fake/*
+output/real/*
 # utils/starlink_tles/*
 .vscode/
 

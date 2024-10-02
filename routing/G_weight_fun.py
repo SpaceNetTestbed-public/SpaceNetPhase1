@@ -139,6 +139,7 @@ def topology_G(
             topology_G = G_purely_ISLs(G=topology_G, num_sat=num_sat, source_dest_nodes=source_dest_nodes,
                                        connectivity_matrix=connectivity_matrix, metrics=metrics)
         else:
+            # Mixed (ISL + Ground links)
             for i in range(num_nodes):
                 for j in range(len(connectivity_matrix[i])):
                     if connectivity_matrix[i][j] == 1:
