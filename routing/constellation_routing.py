@@ -150,7 +150,7 @@ def initial_routing_fw(satellites, connectivity_matrix, metric, source_dest_node
                 static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 
     if source_dest_nodes:
-        return (static_routes, optimal_output)
+        return (static_routes, optimal_output, nx.path_weight(mega_constellation_graph, optimal_output, weight="weight"))
     else:
         return static_routes
 

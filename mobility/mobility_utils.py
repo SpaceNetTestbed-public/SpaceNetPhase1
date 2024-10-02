@@ -217,7 +217,7 @@ def mininet_add_ISLs(
     Returns:
         connectivity_matrix (list): updated connectivity matrix, now including ISLs
     """
-    
+
     # Get the number of orbits
     n_orbits = len(satellites_sorted_in_orbits)
 
@@ -241,12 +241,12 @@ def mininet_add_ISLs(
                 current_sat_name = satellites_by_index[sat]
                 current_sat = satellites_by_name[current_sat_name]
 
-                # Determine the index of next satellite
+                # Determine the index of next satellite in same orbit
                 sat_same_orbit = total_sat_now + ((j + 1) % n_sats_per_orbit)
                 current_sat_same_orbit_name = satellites_by_index[sat_same_orbit]
                 current_sat_same_orbit = satellites_by_name[current_sat_same_orbit_name]
 
-                # Intra-orbit connection
+                # Intra-orbit connection (Connection to all same orbit sats within threshold)
                 if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 5016000:
                     connectivity_matrix[sat][sat_same_orbit] = 1
                     connectivity_matrix[sat_same_orbit][sat] = 1
@@ -576,38 +576,59 @@ def M_gs_sat_association_criteria_BasedOnDistance(
     # ######################################
     for gid in range(len(ground_stations)):
         chosen_sid = -1
+        chosen_sid_list = []
         best_distance_m = 1000000000000000
+        sat_wth_distance = {}
         for (distance_m, sid, gr_id) in ground_station_satellites_in_range:
             # print t.utc_strftime(), az, distance_m, alt, sid, gr_id
             if gid == gr_id:
+
+                #$ Add top 4 closes sat-links for each GS
+                sat_wth_distance[sid] = distance_m
+
                 # if gid != 1: # USE CASE 1 -- REMOVE for general run
-                if distance_m < best_distance_m:
-                    chosen_sid = sid
-                    best_distance_m = distance_m
+                # if distance_m < best_distance_m:
+                #     chosen_sid = sid
+                #     best_distance_m = distance_m
                 # USE CASE 1 -- REMOVE for general run
                 # if gid == 1:
                 #     if sid == chosen_sid_forAlan:
                 #         chosen_sid = sid
                 #         best_distance_m = distance_m
                 ######################################
-        if chosen_sid != -1:
-            # USE CASE 1 -- REMOVE for general run
-            #if gid == 0:
-            #    chosen_sid_forAlan = chosen_sid
-            ######################################
+        sat_wth_distance = dict(sorted(sat_wth_distance.items(),key=lambda x:x[1]))
+        try:
+            chosen_sid_list = list(sat_wth_distance.keys())[:4]   # Taking top 4 shortest sat-links to GS
+        except:
+            chosen_sid_list = list(sat_wth_distance.keys())       # Taking all sat-links to GS
 
-            connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
-            connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
-            # print chosen_sid, gid, best_distance_m
-            # if gid == 1:
-            #     chosen_sid = chosen_sid_forAlan
-            #     connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
-            #     connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
 
-            #print "best distance ",gid, chosen_sid, best_distance_m
-            gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
-            gsl_latency[gid] = best_distance_m/299792458            #speed of light
-            # print "best distance ",gid, chosen_sid, best_distance_m, gsl_latency[gid]
+        if chosen_sid_list:
+            for sid_id in chosen_sid_list:
+                connectivity_matrix[sid_id][num_of_satellites+gid] = 1
+                connectivity_matrix[num_of_satellites+gid][sid_id] = 1
+
+                gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
+                gsl_latency[gid] = best_distance_m/299792458            #speed of light
+
+        # if chosen_sid != -1:
+        #     # USE CASE 1 -- REMOVE for general run
+        #     #if gid == 0:
+        #     #    chosen_sid_forAlan = chosen_sid
+        #     ######################################
+
+        #     connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
+        #     connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
+        #     # print chosen_sid, gid, best_distance_m
+        #     # if gid == 1:
+        #     #     chosen_sid = chosen_sid_forAlan
+        #     #     connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
+        #     #     connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
+
+        #     #print "best distance ",gid, chosen_sid, best_distance_m
+        #     gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
+        #     gsl_latency[gid] = best_distance_m/299792458            #speed of light
+        #     # print "best distance ",gid, chosen_sid, best_distance_m, gsl_latency[gid]
 
     return connectivity_matrix
 
@@ -655,21 +676,21 @@ def calculate_link_characteristics_for_gsls_isls(
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light  (Units in ms)
                 throughput_matrix[i][j]     = 500            #20Gbps
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] == 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
                 snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                 channel_width               = channel_bandwidth_downlink
                 throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
                 if throughput_matrix[i][j] > 500:
                     throughput_matrix[i][j] = 500
 
-                # Additional check for specific conditions (further clarification?)
+                # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
                     snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                     channel_width               = channel_bandwidth_downlink

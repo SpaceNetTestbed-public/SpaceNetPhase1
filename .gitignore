@@ -6,6 +6,8 @@ output/optimal_routes/starlink/*
 output/routing/starlink/*
 output/satellites_orbits/starlink/*
 output/suryansh_files/*
+output/fake/*
+output/real/*
 # utils/starlink_tles/*
 .vscode/
 

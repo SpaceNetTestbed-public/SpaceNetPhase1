@@ -52,6 +52,7 @@ def topology_generation(inc, sat_config,
                         connectivity_matrix_path, 
                         routing_file_path,  
                         optimal_file_path,
+                        optimal_weight_path,
                         cpu_time_path):
         
         # Start CPU timer
@@ -63,6 +64,8 @@ def topology_generation(inc, sat_config,
         satellites_by_index = arranged_sats["satellites by index"]
         satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
         satellites_by_name = global_satellites_by_name
+        # sat1 = satellites_by_name[satellites_by_index[22]]
+        # sat2 = satellites_by_name[satellites_by_index[23]]
 
         # Convert the updated time to UTC and Unix timestamp
         time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
@@ -88,13 +91,15 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
             #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
                 #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
+        
         """
         topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
         if t2t_dict == None:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
-        print(topfile_path)
+        #print(topfile_path)
+        """
         # Assign the metrics for routing
         metric_type = None # default (hops)
         if "RouteWeight" in main_config and str(main_config["RouteWeight"]):
@@ -110,10 +115,10 @@ def topology_generation(inc, sat_config,
         
         # Pre-compute the routing tables
         if find_optimal_routes:
-            all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
+            all_possible_routes, optimal_route, net_optimal_weight = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
-        """
+        print(net_optimal_weight)
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
         
@@ -121,7 +126,7 @@ def topology_generation(inc, sat_config,
         if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
         save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
-        """
+        
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
@@ -129,7 +134,9 @@ def topology_generation(inc, sat_config,
         
         # Save the optimal routes between provided src/dest
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
-        """
+
+        save_optimal_weights(net_optimal_weight, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_weight_path)
+        
         # Save CPU clock runtime
         #save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
@@ -159,6 +166,7 @@ def main():
     node_index_file_path        = output_filepath+"/node_indices/"
     terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
+    optimal_weight_path           = output_filepath+"/optimal_weights/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -236,7 +244,9 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
- 
+    else:
+        criterion = 0
+        
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
     arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path)
@@ -338,6 +348,7 @@ def main():
                                              [connectivity_matrix_path]*len(time_hist),
                                              [routing_file_path]*len(time_hist),
                                              [optimal_file_path]*len(time_hist),
+                                             [optimal_weight_path]*len(time_hist),
                                              [cpu_time_path]*len(time_hist)),
                                 total=len(time_hist), desc=r'.......... Computing network'))
     else:
@@ -345,7 +356,7 @@ def main():
         # Loop over the time history, update the topology and save it in a file
         for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
             
-            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, cpu_time_path)
+            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, cpu_time_path)
             
             
             """

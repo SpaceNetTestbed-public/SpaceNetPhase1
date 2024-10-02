@@ -121,7 +121,7 @@ if __name__ == "__main__":
     sat_per_orbit   = int(tot_num_sats/num_planes)
 
     # Date/Time input
-    datetime    = (2024, 7, 17, 22, 41, 51) # year, month, day, hour, minute, second
+    datetime    = (2024, 9, 27, 22, 15, 6) # year, month, day, hour, minute, second
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
@@ -132,7 +132,7 @@ if __name__ == "__main__":
     epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
 
     # Orbital Elements (a-km, e, i-deg, w-deg, raan-deg, TA-deg)
-    oe          = [6908, 0.00000, 53.000000, 0.000000, 0.000000, 0.0000000]
+    oe          = [6918, 0.00000, 53.000000, 0.000000, 0.000000, 0.0000000]  # semi-major 540
 
     # Range of TA
     # ta_range    = np.array(range(0, 360, 18)) # number of satellites per orbit = 360/range_stepsize
@@ -170,7 +170,7 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("/home/spacenet/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a') as file:
+    with open("/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a+') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))

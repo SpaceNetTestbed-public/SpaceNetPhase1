@@ -238,8 +238,10 @@ def extract_connectivity(
             connectivity_matrix[int(data[0])][int(data[1])] = 1
             latency_matrix[int(data[0])][int(data[1])] = float(data[2])
             throughput_matrix[int(data[0])][int(data[1])] = data[3]
-            if data[4]:
+            try:
                 distance_matrix[int(data[0])][int(data[1])] = data[4]
+            except:
+                pass
 
     link_characteristics = {"latency_matrix": latency_matrix, "throughput_matrix": throughput_matrix, "distance_matrix": distance_matrix}
 
@@ -314,6 +316,29 @@ def save_optimal_path(
     # Iterate over the optimal path list
     if optimal_path:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_path)[1:-1] + "\n")
+    else:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
+
+    # Close file to minimize memory leaks
+    optimal_log.close()
+
+def save_optimal_weights(
+                        optimal_weights            : list, 
+                        timestamp               : int,
+                        operator_name           : str, 
+                        optimal_w_path          : str
+                     ):
+    
+    # Generate a new file
+    file_path = optimal_w_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "optimal_weights_"+("_".join(timestamp[0:3]))+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
+    
+    # Iterate over the optimal path list
+    if optimal_weights:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_weights) + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
 
@@ -452,7 +477,7 @@ def save_cpu_time(
     """
 
     # Generate a new file
-    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
+    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "w")
     
     # Iterate over the optimal path list
     if cpu_runtime != None:

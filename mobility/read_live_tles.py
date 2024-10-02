@@ -80,7 +80,7 @@ def get_orbital_planes_classifications(
         # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
         #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
 
-        if tle_a < (orbits_altitude + 5) and tle_a >= (orbits_altitude - 5):
+        if tle_a < (orbits_altitude + 7.1549) and tle_a >= (orbits_altitude - 7.1549):    # tle : (1727475306, 1727718467)  threshold : (7.1549, 7.0330)     
 
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])
@@ -143,13 +143,16 @@ def get_orbital_planes_classifications(
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
 
-        # print()"Num of Sats ----------------", count_sats_per_orbit)
+        # print("Num of Sats ----------------", count_sats_per_orbit)
                     
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
 
     # Print total satellites for checking before completing sim
-    # print(".......... No. of Sat Nodes: ", totalsatellites)
+    print(".......... No. of Sat Nodes: ", totalsatellites)
+    # import matplotlib.pyplot as plt
+    # plt.hist(dump_orbital_data["Inclination"], bins=[1,2,3,4,5,6,7,8,9,10])
+    # plt.show()
 
     # Return the collected orbital information separated by orbit
     return data_orbits
