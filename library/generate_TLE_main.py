@@ -127,14 +127,14 @@ if __name__ == "__main__":
 
 
     # Settings
-    altitude            = 1500.
+    altitude            = 500.
     inclination         = 50.
-    tot_num_sats        = 96
-    num_orbits          = 12
+    tot_num_sats        = 720
+    num_orbits          = 36
     num_sat_per_orbit   = int(tot_num_sats/num_orbits)
 
     # Date/Time input
-    datetime    = (2024, 7, 21, 19, 0, 0) # year, month, day, hour, minute, second
+    datetime    = (2024, 7, 21, 9, 0, 0) # year, month, day, hour, minute, second
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
@@ -153,9 +153,6 @@ if __name__ == "__main__":
 
     # Range of Inc
     inc_range     = None
-
-    # Range of RAAN (third input is the number of orbital planes)
-    raan_range    = np.linspace(0, 360*(1-1/num_planes), num_planes)
 
     # Range of RAAN
     # raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize

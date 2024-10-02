@@ -141,13 +141,13 @@ def main():
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
 
     # Path configuration
-    output_filepath             = main_config["OutputFilePath"]
+    output_filepath             = sat_config["OutputFilePath"]
     use_weather_data            = bool(main_config["UseWeatherData"]) if "UseWeatherData" in main_config else True
     run_resource_logger         = bool(main_config["MonitorResource"]) if "MonitorResource" in main_config else False
     if output_filepath[-1] == "/":
         output_filepath = output_filepath[:-1] # Remove the last slash if it exists
     gs_file_path                = sat_config["GroundStationFile"]
-    tle_file_path               = main_config["TLEFilePath"]
+    tle_file_path               = sat_config["TLEFilePath"]
     connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
     routing_file_path           = output_filepath+"/routing/"
     sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
@@ -193,6 +193,7 @@ def main():
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
+    print(tle_timestamp)
     print("\n\n..... Phase-0: Configuration Set-up:")
     print(".......... Operator Name: \t\t", operator_name)
     print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(tle_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
