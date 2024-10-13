@@ -52,7 +52,7 @@ def get_orbital_planes_classifications(
         dict:                               Dictionary containing arranged orbital information
                                             Key: Satellite name, Value: Tuple (Orbital number, Epoch, Inclination, RAAN, Eccentricity, Argument of Perigee, Mean Anomaly, Mean Motion)
     """
-
+    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1720288988"
     # Initialize dictionaries as empty
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
@@ -73,14 +73,13 @@ def get_orbital_planes_classifications(
         tle_second_line = list([_f for _f in Lines[i+2].strip("\n").split(" ") if _f])
 
         # Compute orbiting altitude
-        tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400
-        tle_a           = (398600.4418 / (tle_n ** 2)) ** (1. / 3.) - 6378.135
+        tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400            # rad/s
+        tle_a           = (398600.435507 / (tle_n ** 2)) ** (1. / 3.) - 6378.137     # (altitude in km)
 
         # Inclination of constellation shell
         # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
         #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
-
-        if tle_a < (orbits_altitude + 7.1549) and tle_a >= (orbits_altitude - 7.1549):    # tle : (1727475306, 1727718467)  threshold : (7.1549, 7.0330)     
+        if tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 7.1524):    # tle : (1727475306, 1727718467)  threshold : (7.1524, 7.0330)     
 
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])
@@ -151,7 +150,8 @@ def get_orbital_planes_classifications(
     # Print total satellites for checking before completing sim
     print(".......... No. of Sat Nodes: ", totalsatellites)
     # import matplotlib.pyplot as plt
-    # plt.hist(dump_orbital_data["Inclination"], bins=[1,2,3,4,5,6,7,8,9,10])
+    # plt.hist(dump_orbital_data["Inclination"], bins=[1,2])
+    # plt.title("Number of satellites from tle: " + str(totalsatellites))
     # plt.show()
 
     # Return the collected orbital information separated by orbit

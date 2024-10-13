@@ -7,8 +7,8 @@ Verbose: True
 AppName: Ping # Options- Ping, iPerf, CLI
 # For Ping and iPerf
 # Useable keywords- firstGS, lastGS, firstSat, lastSat
-SourceDeviceName: 1609 # 101, 501, 1001, 2001  # WVA
-DestDeviceName: 1591 # 100, 500, 1000, 2000  # Lagos
+SourceDeviceName: 1589 # 101, 501, 1001, 2001  # NYC
+DestDeviceName: 1605 # 100, 500, 1000, 2000  # Singapore
 # For CLI
 CLIStartInterval: 0
 CLIIntervalCount: 0
