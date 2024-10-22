@@ -1,0 +1,30 @@
+# Template for constellation configurations
+# Constellation naming convention: <constellation_name><sat_count>_<interval_duration>_<interval_count>.yaml
+# Configuration for <Constellation_name>
+TotalSatCnt: <sat_count>
+TotalGSCnt: <gs_count>
+ConnectivityMatrixPath: /home/spacenet/simulator/dynamic-topology-generator/output/connectivity_matrix/<constellation_path>/
+RoutingFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/routing/<constellation_path>/
+EpochIntervalDuration: <interval_duration>
+EpochIntervalCount: <interval_count>
+EpochStartYear: <TLE_start_year>
+EpochStartMonth: <TLE_start_month>
+EpochStartDay: <TLE_start_day>
+EpochStartHour: <TLE_start_hour>
+EpochStartMinute: <TLE_start_minute>
+EpochStartSecond: <TLE_start_second>
+
+# Additional information to be edited for topology gen. (Phase 1), some of these are set as default
+Debug: <debug output messages, 0=false or 1=true>
+AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
+TopologyISL: grid
+shell1:
+    name: shell1
+    orbits: <number_of_orbits>
+    sat_per_orbit: <number_of_sats_per_orbit>
+    altitude: <operating geodetic altitude>
+    elevation_angle: <ground-to-sat line of sight>
+    inclination: <inclination of shell>
+GroundStationFile: /home/spacenet/Desktop/spacenet_files/input/gs_files/<ground_station_filename>
+OutputFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/
+TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
