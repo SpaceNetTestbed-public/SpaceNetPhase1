@@ -129,8 +129,8 @@ if __name__ == "__main__":
     # Settings
     altitude            = 500.
     inclination         = 50.
-    tot_num_sats        = 720
-    num_orbits          = 36
+    tot_num_sats        = 880
+    num_orbits          = 44
     num_sat_per_orbit   = int(tot_num_sats/num_orbits)
 
     # Date/Time input

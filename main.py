@@ -247,8 +247,6 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
-    else:
-        criterion = 0
         
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
