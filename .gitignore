@@ -8,6 +8,8 @@ output/satellites_orbits/orbits_satellites.txt
 output/satellites_orbits/starlink/*
 output/terrestrial_info/*
 output/suryansh_files/*
+output/fake/*
+output/real/*
 output/cpu_time/starlink/*
 output/optimal_weights/starlink/*
 routing/__pycache__/*

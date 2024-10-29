@@ -311,7 +311,7 @@ def save_optimal_path(
     check_create_path(file_path)
     file_name = "best_path_"+("_".join(timestamp))+".txt"
     #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
-    optimal_log = open(file_path + file_name, "a")
+    optimal_log = open(file_path + file_name, "w")
     
     # Iterate over the optimal path list
     if optimal_path:
