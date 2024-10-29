@@ -1,5 +1,3 @@
-import matplotlib
-#matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from skyfield.api import load, EarthSatellite
@@ -30,18 +28,18 @@ plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal 
 lon0_3d                 = 0  #-35
 lat0_3d                 = -40
 timestamp               = "2024_07_21_09_00_0"
-gs_filepath             = open('/home/spacenet/simulator/dynamic-topology-generator/output/terrestrial_info/terrestrial_1721552400.txt', 'r')
-tle_file                = open('/home/spacenet/Desktop/jacktles/alt500km/inc50/starlink_tles/starlink_1721552400', 'r')
-optimal_route_filepath  = '/home/spacenet/simulator/dynamic-topology-generator/output/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/spacenet/simulator/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/spacenet/simulator/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1721552400.txt'
-orb_sat_txt             = '/home/spacenet/simulator/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
-optimal_weight = 24349
-number_of_orbits = 72  #$
+gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/terrestrial_info/terrestrial_1721552400.txt', 'r')
+tle_file                = open('/home/spacenet/Desktop/jacktles/alt500km/inc75/starlink_tles/starlink_1721552400', 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1721552400.txt'
+orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
+optimal_weight = 21636
+number_of_orbits = 42  #$
 num_plotorbit = range(1)  #$ Number of orbits to plot
 gs0 = (-74.003663, 40.717042) # NYC
-gs1 = (103.850070, 1.289670) # Singapore
-ref = 558  # index of satellite to be debugged for ISLs 
+gs1 = (51.508530,-0.125740) # London
+ref = 0  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -394,4 +392,4 @@ plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_a
 #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
 plt.tight_layout()
 plt.show()
-# plt.savefig('/home/barbourbruce/dynamic-topology-generator/test_plot.pdf')
+# plt.savefig('/home/spacenet/Desktop/jack_results/plots/plot1.png')
