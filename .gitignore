@@ -1,4 +1,5 @@
 *.pyc
+output/*
 output/connectivity_matrix/starlink/*
 output/Figures/*
 output/node_indices/starlink/*

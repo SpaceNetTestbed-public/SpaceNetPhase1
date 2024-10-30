@@ -1,7 +1,5 @@
 import os
-import matplotlib
 import gif_utils
-#matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 from skyfield.api import load, EarthSatellite
@@ -45,11 +43,7 @@ conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generat
 opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/'
 gif_path                = '/home/suryaryan/GIFS/'
 #######################################################
-optimal_weight = 24349
 number_of_orbits = 72  #$
-num_plotorbit = range(1)  #$ Number of orbits to plot
-gs0 = (-74.003663, 40.717042) # NYC
-gs1 = (103.850070, 1.289670) # Singapore
 ref = 880  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
