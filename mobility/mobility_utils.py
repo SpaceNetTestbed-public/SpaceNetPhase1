@@ -257,6 +257,17 @@ def find_adjacent_orbit_sat(
     return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None
 
 
+def get_current_isl_to_sats(
+                            connectivity_matrix_row
+                            ):
+    
+    satidx_list = []
+    for idx, link in connectivity_matrix_row:
+        if link==1:
+            satidx_list.append(idx) 
+    return satidx_list
+
+
 def mininet_add_ISLs(
                         connectivity_matrix, 
                         satellites_sorted_in_orbits, 
@@ -338,6 +349,7 @@ def mininet_add_ISLs(
         max_isl_conn = 80
         
         # Iterate through each orbit
+        # sat_count = 0
         for i in range(n_orbits):
             ######################## FINDING NEARBY SATS BASED ON THREADING INDIVIDUALLY FOR EACH ORBIT #############################
             # Get sats and the number of satellites in the current orbit
@@ -346,7 +358,7 @@ def mininet_add_ISLs(
             n_sats_per_orbit = len(same_orbit_sat_list)
 
              # Setting maximum ISL length
-            max_isl_search_length = int(5016000/1.5)
+            max_isl_search_length = int(5016000/2)
                 
             # Calculate number of pools and ground stations per thread pool (for parallel execution)
             ####### (VERY IMPORTANT: FOR REAL TLES THIS SECTION WOULD CREATE ALOT OF PROBLEMS, SINCE EACH ORBIT HAS DIFFERENT NUMER OF SATS)
@@ -410,8 +422,6 @@ def mininet_add_ISLs(
                 for sat_data in current_sat_satellites_in_range_flatten:
                     if sat_data:
                         if sat_data[2] == curr_sid_name:
-                            # if sat==738:
-                            #     print(sat_data)
                             temp_isl_list.append([sat_data[0],sat_data[1],sat])  # Taking all the isl connections generated from the thread for the current sat in the orbit (distance, neighbour_sat_id, current_sat_id)
                 temp_isl_list = sorted(temp_isl_list, key=lambda x:x[0])  # sort from smallest to largest distance ISL
                 #temp_isl_list = temp_isl_list[:max_isl_conn]
@@ -455,7 +465,9 @@ def mininet_add_ISLs(
                             non_adj_counter += 1
                             store_orbits.append(neighbour_sat_orbit_id)
 
-                    if same_counter==2 and adj_flag1 and adj_flag2 and non_adj_counter==2:
+                    if same_counter==2 and adj_flag1 and adj_flag2 and non_adj_counter==1:
+                        # sat_count += 1
+                        # print(sat_count, " Reached!")
                         break
 
                 #print("same counter --> " + str(same_counter) + "  flag 1 --> " + str(adj_flag1) + "  flag 2 --> " + str(adj_flag2))

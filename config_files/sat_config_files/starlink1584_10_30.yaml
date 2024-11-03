@@ -5,7 +5,7 @@ TotalSatCnt: 1584
 TotalGSCnt: 25
 ConnectivityMatrixPath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity/
 RoutingFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/routing/
-EpochIntervalDuration: 10
+EpochIntervalDuration: 1
 EpochIntervalCount: 10
 EpochStartYear: 2024
 EpochStartMonth: 09    #09         #07

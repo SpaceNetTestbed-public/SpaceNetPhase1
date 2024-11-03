@@ -9,7 +9,7 @@ EDITOR:         Bruce Barbour
                 Virginia Tech
 
 DESCRIPTION:    This Python script supplies the utility functions for extracting and sorting constellation information, including info on its orbits and sorting of satellites 
-                in their particular orbits.
+                in their particular orbits. (FUTURE INTENTIONS - Identifying different shells of a constellation and sort within each shell)
 
 
 CONTENTS:       TLE CONSTELLATION FUNCTIONS/ (STARTS AT 45)
@@ -52,7 +52,7 @@ def get_orbital_planes_classifications(
         dict:                               Dictionary containing arranged orbital information
                                             Key: Satellite name, Value: Tuple (Orbital number, Epoch, Inclination, RAAN, Eccentricity, Argument of Perigee, Mean Anomaly, Mean Motion)
     """
-    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1720288988"
+    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727718467"
     # Initialize dictionaries as empty
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
@@ -78,14 +78,14 @@ def get_orbital_planes_classifications(
 
         # Inclination of constellation shell
         # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
-        #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
-        if tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 7.1524):    # tle : (1727475306, 1727718467)  threshold : (7.1524, 7.0330)     
+        #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1): 
+        if (tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 7.1524)):    # tle : (1727475306, 1727718467)  threshold : (7.1524, 7.0330)     
 
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])
             dump_orbital_data["Satellites"].append(Lines[i].strip())
             dump_orbital_data["Inclination"].append(tle_second_line[2])
-            dump_orbital_data["RAAN"].append(tle_second_line[3])
+            dump_orbital_data["RAAN"].append(float(tle_second_line[3]))
             dump_orbital_data["ecc"].append(tle_second_line[4])
             dump_orbital_data["aop"].append(tle_second_line[5])
             dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
@@ -147,12 +147,39 @@ def get_orbital_planes_classifications(
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
 
-    # Print total satellites for checking before completing sim
-    print(".......... No. of Sat Nodes: ", totalsatellites)
+    """Debugging Zone"""
+
+    # # Print total satellites for checking before completing sim
+    # #ggs = [((398600.435507 / ((float(dump_orbital_data["Mean motion"][i]) * 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - 6378.137) for i, data in enumerate(dump_orbital_data["Inclination"]) if float(data) > 40 and float(data) < 45 and ((398600.435507 / ((float(dump_orbital_data["Mean motion"][i]) * 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - 6378.137)>0]
+    # ggs = [float(data) for i, data in enumerate(dump_orbital_data["Inclination"]) if float(data) > 40 and float(data) < 45 and ((398600.435507 / ((float(dump_orbital_data["Mean motion"][i]) * 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - 6378.137)>0]
+    # print(".......... No. of Sat Nodes: ", totalsatellites, "  Total number of sats in desired inclination: ", len(ggs))
+    
+    # raan_mean = range(0,360,5)
+    # RAAN_sats = {i:[] for i in raan_mean}
+    # anom_sats = {i:[] for i in raan_mean}
+    # for raan in raan_mean:
+    #     anomalies = []
+    #     for k, data in enumerate(dump_orbital_data["RAAN"]):
+    #         if float(data) > raan-1.7 and float(data) < raan+1.7:
+    #             RAAN_sats[raan].append(float(data))
+    #             anomalies.append(float(dump_orbital_data["Mean anomaly"][k]))
+
+    #     sat_list = sorted(anomalies)
+    #     anom_mean = range(int(sat_list[0]),360+int(sat_list[0]),20)
+    #     for anom_data in anom_mean:
+    #         for sat_anoms in sat_list:
+    #             if float(sat_anoms) > anom_data-4.5 and float(sat_anoms) < anom_data+4.5:
+    #                 anom_sats[raan].append(float(sat_anoms))
+
+    # print(".......... No. of Sat Nodes: ", totalsatellites, "  Total number of sats after anomaly filter: ", sum([len(R_sats) for R_sats in RAAN_sats.values()]))
+    # print(anom_sats[raan_mean[0]])
+
     # import matplotlib.pyplot as plt
-    # plt.hist(dump_orbital_data["Inclination"], bins=[1,2])
+    # plt.hist(ggs)
     # plt.title("Number of satellites from tle: " + str(totalsatellites))
     # plt.show()
+
+    """Debugging Zone Ends!"""
 
     # Return the collected orbital information separated by orbit
     return data_orbits

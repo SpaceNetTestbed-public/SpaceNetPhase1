@@ -26,11 +26,11 @@ from mpl_toolkits.basemap import Basemap
 time_index              = 0
 plot_GSs                = False
 plot_only_optimal       = False
-plot_in_3D              = False
+plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -180  #-35 
+lon0_3d                 = -25  #-35 
 lat0_3d                 = 0
 timestamp               = "2024_09_27_22_15_6"
 gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/terrestrial_info/terrestrial_1727475306.txt', 'r')
@@ -39,17 +39,16 @@ optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generat
 conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
 node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1727475306.txt'
 orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'NYC_Singapore_fake_newgrid'
+gif_name                = 'NYC_London_real_newgrid_1sec_3D'
 ################### Folder Paths ######################
 conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/'
 opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/'
 gif_path                = '/home/suryaryan/GIFS/'
 #######################################################
-optimal_weight = 24349
 number_of_orbits = 72  #$
-num_plotorbit = range(1)  #$ Number of orbits to plot
-gs0 = (-74.003663, 40.717042) # NYC
-gs1 = (103.850070, 1.289670) # Singapore
+# num_plotorbit = range(1)  #$ Number of orbits to plot
+# gs0 = (-74.003663, 40.717042) # NYC
+# gs1 = (103.850070, 1.289670) # Singapore
 ref = 880  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -99,6 +98,7 @@ for i in range(0, len(gs_lines), 1):
 # ================================================================================================
 # FILE PARSING - NODE INDEXING DICT
 # ================================================================================================
+# (node_alias_to_index_topology_dict{} & node_alias_to_index_topology_dict{} contains satellite and GS indices and alias)
 with open(node_indices_filepath, 'r') as node_indices_file:
     for node_assignment in node_indices_file:
         node_index, node_alias  = node_assignment.split(":")
@@ -282,7 +282,7 @@ if not make_gif:
                 if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                     plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
                     plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>11:
+                elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
                     plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                     plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                 else:
@@ -423,10 +423,18 @@ else:    ## (MAKING GIF)
     num_links_global = {}  # Only exists if make_gif exists
     conn_sorted_path = sorted(os.listdir(conn_folder))
     ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
-    conn_sorted_path.insert(0, conn_sorted_path[5])
-    conn_sorted_path.pop(6)
-    conn_sorted_path.insert(6, conn_sorted_path[9])
+    temp = conn_sorted_path[6:9]
+    temp.extend(conn_sorted_path)
+    conn_sorted_path = temp
     conn_sorted_path.pop(-1)
+    conn_sorted_path.pop(-1)
+    conn_sorted_path.pop(-1)
+    conn_sorted_path.pop(-1)
+    # conn_sorted_path.insert(0, conn_sorted_path[5])
+    # conn_sorted_path.pop(6)
+    # conn_sorted_path.insert(6, conn_sorted_path[9])
+    # conn_sorted_path.pop(-1)
+
     # conn_sorted_path.insert(6, conn_sorted_path[11])
     # conn_sorted_path.pop(12)
     # conn_sorted_path.insert(12, conn_sorted_path[17])
@@ -470,10 +478,19 @@ else:    ## (MAKING GIF)
     node_info_topology_at_t_global = {}                             # Only exists if make_gif exists
     TIMESTAMPS = []
     ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
-    optroute_sorted_path.insert(0, optroute_sorted_path[5])
-    optroute_sorted_path.pop(6)
-    optroute_sorted_path.insert(6, optroute_sorted_path[9])
+    temp = optroute_sorted_path[6:9]
+    temp.extend(optroute_sorted_path)
+    optroute_sorted_path = temp
     optroute_sorted_path.pop(-1)
+    optroute_sorted_path.pop(-1)
+    optroute_sorted_path.pop(-1)
+    optroute_sorted_path.pop(-1)
+    
+    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    # optroute_sorted_path.pop(6)
+    # optroute_sorted_path.insert(6, optroute_sorted_path[9])
+    # optroute_sorted_path.pop(-1)
+
     # optroute_sorted_path.insert(6, optroute_sorted_path[11])
     # optroute_sorted_path.pop(12)
     # optroute_sorted_path.insert(12, optroute_sorted_path[17])
@@ -530,6 +547,7 @@ else:    ## (MAKING GIF)
         # ================================================================================================
         # CREATE DICTIONARY WITH SATELLITE GEODETIC POSITION
         # ================================================================================================
+        # (node_info_topology_at_t{} --> key: SAT NAME + GS NAME (GS, CT, IE, GW)  ||||  values: (NAME (SAT NAME + GS TRUE NAME (London, Tokyo etc..)), lat, long)   )
         for topology_node_alias, topology_node_index in node_alias_to_index_topology_dict.items():
 
             # Check that it's a satellite
@@ -595,13 +613,13 @@ else:    ## (MAKING GIF)
                 node_assigned_alias     = node_info[0]
                 node_lon, node_lat      = node_info[1:]
 
-                # Plot satellite node as a regular scatter point with label
+                # Plot ONLY satellite node as a regular scatter point with label
                 if not any(gs_type in node_alias for gs_type in gs_alias_list):
                     x, y = m(node_lon, node_lat)
                     if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                         plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
                         plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>6:
+                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
                         plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                         plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:

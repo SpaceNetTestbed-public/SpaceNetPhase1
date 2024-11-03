@@ -40,6 +40,8 @@ config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
 sat_config_sub_path         = "sat_config_files/"
 
+CONN_mat_store = {}
+
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
                         num_of_satellites, 
@@ -78,7 +80,7 @@ def topology_generation(inc, sat_config,
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
         
         # Add ISLs to the connectivity matrix
-        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "DISTANCE_BASED_SAME_AND_ACROSS_ORBITS", time_utc_inc)
+        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
         # Add GSLs to the connectivity matrix
         connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
@@ -100,6 +102,8 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
         #print(topfile_path)
         """
+        global CONN_mat_store
+        CONN_mat_store[inc] = connectivity_matrix
         # Assign the metrics for routing
         metric_type = None # default (hops)
         if "RouteWeight" in main_config and str(main_config["RouteWeight"]):
@@ -166,7 +170,7 @@ def main():
     node_index_file_path        = output_filepath+"/node_indices/"
     terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
-    optimal_weight_path           = output_filepath+"/optimal_weights/"
+    optimal_weight_path         = output_filepath+"/optimal_weights/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -298,6 +302,8 @@ def main():
         os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
     if os.path.exists(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
         os.remove(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt")
+    if os.path.exists(optimal_weight_path+operator_name+"optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
+        os.remove(optimal_weight_path+operator_name+"optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt")  
     
     # Start main simulation process
     global global_arranged_sats, global_satellites_by_name # Make these global for multiprocessing, but being used regardless
@@ -417,6 +423,16 @@ def main():
                 os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
             save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
             """
+    
+    """Checking Link changes between each interval (10sec)"""
+    global CONN_mat_store
+    DIFF = [] # Stores only the total number of link changes per timestep difference
+    for itr in range(len(CONN_mat_store)):
+        if itr>0:
+            diff = np.array(CONN_mat_store[time_hist[itr]]) - np.array(CONN_mat_store[time_hist[itr-1]])
+            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # WHile flattening stores only the links that are changed 
+            DIFF.append(len(diff_flatten))
+    print(DIFF)
     
     # Stop CPU clock timer and save total time
     cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
