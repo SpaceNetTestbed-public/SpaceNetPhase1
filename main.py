@@ -77,7 +77,7 @@ def topology_generation(inc, sat_config,
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
         
         # Add ISLs to the connectivity matrix
-        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "DISTANCE_BASED_SAME_AND_ACROSS_ORBITS", time_utc_inc)
+        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
         # Add GSLs to the connectivity matrix
         connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)

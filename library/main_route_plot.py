@@ -27,24 +27,25 @@ plot_only_optimal       = False
 plot_in_3D              = False
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
-make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
+make_gif                = True   # Makes gif of all the timestep plots in this file existing in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = -180  #-35 
 lat0_3d                 = 0
-timestamp               = "2024_09_27_22_15_6"
-gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/terrestrial_info/terrestrial_1727475306.txt', 'r')
-tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727475306', 'r')
-optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1727475306.txt'
-orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'NYC_Singapore_fake_newgrid'
+timestamp               = "2024_07_21_19_00_0"
+output_pathname         = "alt1500_inc50_7pm_rio"
+gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/terrestrial_info/terrestrial_1721552400.txt', 'r')
+tle_file                = open('/home/spacenet/Desktop/jacktles/alt1500km/starlink_tles/starlink_1721552400', 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/node_indices/starlink/nodeindex_1721552400.txt'
+orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
+gif_name                = 'gif_'+output_pathname
 ################### Folder Paths ######################
-conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/'
-opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/'
-gif_path                = '/home/suryaryan/GIFS/'
+conn_folder             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/connectivity_matrix/starlink/'
+opt_route_folder        = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/optimal_routes/starlink/'
+gif_path                = '/home/spacenet/Desktop/jack_results/gifs/gif_'+output_pathname+'/'
 #######################################################
-number_of_orbits = 72  #$
-ref = 880  # index of satellite to be debugged for ISLs 
+number_of_orbits = 15  #$
+ref = 0  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -417,10 +418,10 @@ else:    ## (MAKING GIF)
     num_links_global = {}  # Only exists if make_gif exists
     conn_sorted_path = sorted(os.listdir(conn_folder))
     ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
-    conn_sorted_path.insert(0, conn_sorted_path[5])
-    conn_sorted_path.pop(6)
-    conn_sorted_path.insert(6, conn_sorted_path[9])
-    conn_sorted_path.pop(-1)
+    # conn_sorted_path.insert(0, conn_sorted_path[5])
+    # conn_sorted_path.pop(6)
+    # conn_sorted_path.insert(6, conn_sorted_path[9])
+    # conn_sorted_path.pop(-1)
     # conn_sorted_path.insert(6, conn_sorted_path[11])
     # conn_sorted_path.pop(12)
     # conn_sorted_path.insert(12, conn_sorted_path[17])
@@ -464,10 +465,10 @@ else:    ## (MAKING GIF)
     node_info_topology_at_t_global = {}                             # Only exists if make_gif exists
     TIMESTAMPS = []
     ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
-    optroute_sorted_path.insert(0, optroute_sorted_path[5])
-    optroute_sorted_path.pop(6)
-    optroute_sorted_path.insert(6, optroute_sorted_path[9])
-    optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    # optroute_sorted_path.pop(6)
+    # optroute_sorted_path.insert(6, optroute_sorted_path[9])
+    # optroute_sorted_path.pop(-1)
     # optroute_sorted_path.insert(6, optroute_sorted_path[11])
     # optroute_sorted_path.pop(12)
     # optroute_sorted_path.insert(12, optroute_sorted_path[17])
