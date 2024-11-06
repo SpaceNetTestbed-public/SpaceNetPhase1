@@ -2,17 +2,17 @@
 # Constellation naming convention: <constellation_name><sat_count>_<interval_duration>_<interval_count>.yaml
 # Configuration for <Constellation_name>
 TotalSatCnt: 1584
-TotalGSCnt: 25
+TotalGSCnt: 28
 ConnectivityMatrixPath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity/
 RoutingFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/routing/
-EpochIntervalDuration: 1
+EpochIntervalDuration: 10
 EpochIntervalCount: 10
 EpochStartYear: 2024
-EpochStartMonth: 09    #09         #07
-EpochStartDay: 27      #27  #30    #17
-EpochStartHour: 22     #22  #17
-EpochStartMinute: 15   #15  #47    #41
-EpochStartSecond: 06   #06  #47    #51
+EpochStartMonth: 09    #09  #11         #07
+EpochStartDay: 27      #27  #05  #30    #17
+EpochStartHour: 12     #22  #21  #17
+EpochStartMinute: 30   #15  #00  #47    #41
+EpochStartSecond: 00   #06  #00  #47    #51
 
 # Additional information to be edited for topology gen. (Phase 1), some of these are set as default
 Debug: 1
@@ -23,8 +23,8 @@ shell1:
     orbits: 72
     sat_per_orbit: 22
     altitude: 540
-    elevation_angle: 25
-    inclination: 53
+    elevation_angle: 30
+    inclination: 53.2
 GroundStationFile: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/gs_files/gs_default.txt
 OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/
 TLEFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/

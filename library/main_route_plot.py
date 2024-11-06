@@ -30,7 +30,7 @@ plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -25  #-35 
+lon0_3d                 = -85  #-35 
 lat0_3d                 = 0
 timestamp               = "2024_09_27_22_15_6"
 gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/terrestrial_info/terrestrial_1727475306.txt', 'r')
@@ -39,7 +39,7 @@ optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generat
 conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
 node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1727475306.txt'
 orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'NYC_London_real_newgrid_1sec_3D'
+gif_name                = 'Orlando_Seattle_real_plusgrid_1sec_3D_1230pm'
 ################### Folder Paths ######################
 conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/'
 opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/'
@@ -423,13 +423,14 @@ else:    ## (MAKING GIF)
     num_links_global = {}  # Only exists if make_gif exists
     conn_sorted_path = sorted(os.listdir(conn_folder))
     ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
-    temp = conn_sorted_path[6:9]
-    temp.extend(conn_sorted_path)
-    conn_sorted_path = temp
-    conn_sorted_path.pop(-1)
-    conn_sorted_path.pop(-1)
-    conn_sorted_path.pop(-1)
-    conn_sorted_path.pop(-1)
+    # temp = conn_sorted_path[6:9]
+    # temp.extend(conn_sorted_path)
+    # conn_sorted_path = temp
+    # conn_sorted_path.pop(-1)
+    # conn_sorted_path.pop(-1)
+    # conn_sorted_path.pop(-1)
+    # conn_sorted_path.pop(-1)
+
     # conn_sorted_path.insert(0, conn_sorted_path[5])
     # conn_sorted_path.pop(6)
     # conn_sorted_path.insert(6, conn_sorted_path[9])
@@ -478,13 +479,13 @@ else:    ## (MAKING GIF)
     node_info_topology_at_t_global = {}                             # Only exists if make_gif exists
     TIMESTAMPS = []
     ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
-    temp = optroute_sorted_path[6:9]
-    temp.extend(optroute_sorted_path)
-    optroute_sorted_path = temp
-    optroute_sorted_path.pop(-1)
-    optroute_sorted_path.pop(-1)
-    optroute_sorted_path.pop(-1)
-    optroute_sorted_path.pop(-1)
+    # temp = optroute_sorted_path[6:9]
+    # temp.extend(optroute_sorted_path)
+    # optroute_sorted_path = temp
+    # optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.pop(-1)
     
     # optroute_sorted_path.insert(0, optroute_sorted_path[5])
     # optroute_sorted_path.pop(6)
@@ -741,7 +742,8 @@ else:    ## (MAKING GIF)
         print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[-1])+') (hops='+str(len(optimal_route_at_t)-1)+')')
         plt.xlabel('Longitude')
         plt.ylabel('Latitude')
-        plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
+        #plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
+        plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1))
         #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
         plt.tight_layout()
         #plt.show()

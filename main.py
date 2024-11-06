@@ -211,8 +211,8 @@ def main():
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
     print("\n\n..... Phase-0: Configuration Set-up:")
     print(".......... Operator Name: \t\t", operator_name)
-    print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(tle_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
-    print(".......... End Epoch: \t\t\t", datetime.fromtimestamp(int(tle_timestamp)+int(simulation_length)).strftime('%B %d, %Y %H:%M:%S UTC'))
+    print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(time_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
+    print(".......... End Epoch: \t\t\t", datetime.fromtimestamp(int(time_timestamp)+int(simulation_length)).strftime('%B %d, %Y %H:%M:%S UTC'))
     print(".......... Simulation Step-Size: \t", sat_config["EpochIntervalDuration"], "s")
     print(".......... Simulation Interval Count: \t", sat_config["EpochIntervalCount"])
     print(".......... Simulation Length: \t\t", simulation_length, "s") 
