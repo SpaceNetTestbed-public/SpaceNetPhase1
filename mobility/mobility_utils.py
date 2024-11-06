@@ -23,24 +23,25 @@ def calc_max_gsl_length(
     
     # Initialize return variable
     max_gsl_length_m = -1 
-
+    
     # Check for starlink operator
-    if operator_name == "starlink0":
+    # if operator_name == "starlink":
         # Set a specific value for max GSL length
-        max_gsl_length_m = 1089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
+        # max_gsl_length_m = 2089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
         # (additionally, the above value does not match the value one would get using the algorithm in the else case, but applied to a starlink case)
         
-        return max_gsl_length_m
-
+        # return max_gsl_length_m
+    
     # Max GSL length for non-starlink operators
-    else:
-        # Calculate satellite cone radius based on altitude and elevation angle
-        satellite_cone_radius = (sat_config["shell1"]["altitude"])/math.tan(math.radians(sat_config["shell1"]["elevation_angle"]))
-        
-        # Calculate max GSL length using cone radius and satellite altitude, convert to meters
-        max_gsl_length_m =  (math.sqrt(math.pow(satellite_cone_radius, 2) + math.pow(sat_config["shell1"]["altitude"], 2)))*1000
-        
-        return max_gsl_length_m
+    # else:
+
+    # Calculate satellite cone radius based on altitude and elevation angle
+    satellite_cone_radius = (sat_config["shell1"]["altitude"])/math.tan(math.radians(sat_config["shell1"]["elevation_angle"]))
+     
+    # Calculate max GSL length using cone radius and satellite altitude, convert to meters
+    max_gsl_length_m =  (math.sqrt(math.pow(satellite_cone_radius, 2) + math.pow(sat_config["shell1"]["altitude"], 2)))*1000
+    
+    return max_gsl_length_m
 
 # removed calc_distance_gs_sat_worker, as it was only used in mininet_add_GSLs (which has also been removed)
 
@@ -98,7 +99,7 @@ def calc_distance_gs_sat_thread(
                 # If in range, append a tuple to the result list
                 ground_station_satellites_in_range.append((distance_m, sid, gs["gid"]))
 
-     # Return the list of valid ground station-satellite pairs
+    # Return the list of valid ground station-satellite pairs
     return ground_station_satellites_in_range
 
 # removed calc_distance_gs_sat_worker_alan, as it was only used in mininet_add_GSLs (which has also been removed)

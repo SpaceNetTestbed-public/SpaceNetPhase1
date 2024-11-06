@@ -121,7 +121,6 @@ def topology_generation(inc, sat_config,
             all_possible_routes, optimal_route, net_optimal_weight = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
-        print(net_optimal_weight)
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
         
@@ -158,7 +157,7 @@ def main():
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
 
     # Path configuration
-    output_filepath             = main_config["OutputFilePath"]
+    output_filepath             = sat_config["OutputFilePath"]
     use_weather_data            = bool(main_config["UseWeatherData"]) if "UseWeatherData" in main_config else True
     run_resource_logger         = bool(main_config["MonitorResource"]) if "MonitorResource" in main_config else False
     if output_filepath[-1] == "/":
@@ -178,7 +177,7 @@ def main():
     # Start the subprocess for resource logging
     if run_resource_logger:
         print("\n.......... Initiating resource logger")
-        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, '1511_20_5'))
+        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, '1584_10_10'))
         resource_log_process.start()
         atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
         time.sleep(10)
@@ -211,6 +210,7 @@ def main():
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
+    print(tle_timestamp)
     print("\n\n..... Phase-0: Configuration Set-up:")
     print(".......... Operator Name: \t\t", operator_name)
     print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(time_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
@@ -250,8 +250,6 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
-    else:
-        criterion = 0
         
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
@@ -439,7 +437,7 @@ def main():
     # Stop CPU clock timer and save total time
     executor.shutdown()
     cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
-    save_cpu_time("TOT:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+    save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
     # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")

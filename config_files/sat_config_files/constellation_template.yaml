@@ -3,8 +3,8 @@
 # Configuration for <Constellation_name>
 TotalSatCnt: <sat_count>
 TotalGSCnt: <gs_count>
-ConnectivityMatrixPath: /home/spacenet/mininet_test/connectivity_matrix/<constellation_path>/
-RoutingFilePath: /home/spacenet/mininet_test/routing/<constellation_path>/
+ConnectivityMatrixPath: /home/spacenet/simulator/dynamic-topology-generator/output/connectivity_matrix/<constellation_path>/
+RoutingFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/routing/<constellation_path>/
 EpochIntervalDuration: <interval_duration>
 EpochIntervalCount: <interval_count>
 EpochStartYear: <TLE_start_year>
@@ -25,6 +25,6 @@ shell1:
     altitude: <operating geodetic altitude>
     elevation_angle: <ground-to-sat line of sight>
     inclination: <inclination of shell>
-Source: <source node for optimal routing, e.g. gs0>
-Destination: <destination node for optimal routing, e.g. gs0>
-GroundStationFile: /home/spacenet/Desktop/spacenet_files/input/gs_files/ground_stations_experiments.txt
+GroundStationFile: /home/spacenet/Desktop/spacenet_files/input/gs_files/<ground_station_filename>
+OutputFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/
+TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/

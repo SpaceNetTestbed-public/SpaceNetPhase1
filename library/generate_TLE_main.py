@@ -139,10 +139,10 @@ if __name__ == "__main__":
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
     # File name
-    filename    = "fake_starlink_" + str(datetime_s)
+    filename      = "starlink_" + str(datetime_s)
 
     # Epoch Year / Fractional Day
-    epoch       = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
+    epoch         = [(datetime[0]-2000), (datetime_s - calendar.timegm(year_start))/86400]
 
     # Orbital Elements (a-km, e, i-deg, w-deg, raan-deg, TA-deg)
     oe          = [6378+altitude, 0.00000, inclination, 0.000000, 0.000000, 0.0000000]
@@ -152,18 +152,15 @@ if __name__ == "__main__":
     ta_range    = np.linspace(0, 360*(1-1/num_sat_per_orbit), num_sat_per_orbit)
 
     # Range of Inc
-    inc_range   = None
+    inc_range     = None
 
     # Range of RAAN
     # raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
     raan_range  = np.linspace(0, 360*(1-1/num_orbits), num_orbits)
 
-    # Total Number of Satellites
-    num_sats = len(ta_range)*len(raan_range)
-
     # Inter Plane Phase Increment/Angle
     ipp_increment = 1 # set to zero for no IPP Angle, otherwise set to a positive integer
-    ipp_angle = ipp_increment*360/(num_orbits*num_sat_per_orbit)
+    ipp_angle = ipp_increment*360/(tot_num_sats)
         # Inter Plane Phase Increment pulled from Walker constellation pattern notation, I:T/P/F
             # I: orbital inclination
             # T: Total number of satellites (must be divisible by F)
@@ -176,14 +173,14 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Generate TLE sweep
 
-    TLE_sweep = basic_generate_fake_TLE(epoch=epoch, oe=oe, ta_range=ta_range, inc_range=inc_range, raan_range=raan_range, ipp_angle=ipp_angle)
+    TLE_sweep     = basic_generate_fake_TLE(epoch=epoch, oe=oe, ta_range=ta_range, inc_range=inc_range, raan_range=raan_range, ipp_angle=ipp_angle)
 
     # -------------------------------------------------------------------------------
 
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/"+filename, 'a+') as file:
+    with open("../utils/starlink_tles/"+filename, 'a') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))
