@@ -25,12 +25,11 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
-use_weather_data            = True
 use_multiprocessing         = True
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
-run_resource_logger         = True
+run_resource_logger         = False
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -160,6 +159,8 @@ def main():
 
     # Path configuration
     output_filepath             = main_config["OutputFilePath"]
+    use_weather_data            = bool(main_config["UseWeatherData"]) if "UseWeatherData" in main_config else True
+    run_resource_logger         = bool(main_config["MonitorResource"]) if "MonitorResource" in main_config else False
     if output_filepath[-1] == "/":
         output_filepath = output_filepath[:-1] # Remove the last slash if it exists
     gs_file_path                = sat_config["GroundStationFile"]
@@ -176,10 +177,11 @@ def main():
 
     # Start the subprocess for resource logging
     if run_resource_logger:
-        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, 2000_20_30))
+        print("\n.......... Initiating resource logger")
+        resource_log_process = multiprocessing.Process(target=TOP_LOGGER, args=(1, resource_path, '1511_20_5'))
         resource_log_process.start()
         atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
-    time.sleep(10)
+        time.sleep(10)
 
     # Get the source and destination nodes
     source_node         = int(main_config["SourceDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
@@ -333,7 +335,7 @@ def main():
             else:
                 ground_station["weather_data"] = ""
         if not use_weather_data:
-            print(".......... User decided not to use weather data for simulation.")
+            print(".......... User decided not to use weather data for simulation")
         else:
             print(f".......... Weather data received for {recv_cnt} ground stations")
         
@@ -435,6 +437,7 @@ def main():
     print(DIFF)
     
     # Stop CPU clock timer and save total time
+    executor.shutdown()
     cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
     save_cpu_time("TOT:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
