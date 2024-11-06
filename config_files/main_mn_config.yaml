@@ -8,8 +8,8 @@ MonitorResource: False
 AppName: Ping # Options- Ping, iPerf, CLI
 # For Ping and iPerf
 # Useable keywords- firstGS, lastGS, firstSat, lastSat
-SourceDeviceName: 1586 # 101, 501, 1001, 2001  # Orlando
-DestDeviceName: 1587 # 100, 500, 1000, 2000    # Seattle
+SourceDeviceName: 1610 # 101, 501, 1001, 2001  # Orlando
+DestDeviceName: 1611 # 100, 500, 1000, 2000  # Seattle
 # For CLI
 CLIStartInterval: 0
 CLIIntervalCount: 0
