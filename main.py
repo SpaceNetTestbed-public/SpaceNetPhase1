@@ -121,6 +121,7 @@ def topology_generation(inc, sat_config,
             all_possible_routes, optimal_route, net_optimal_weight = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
+        print(net_optimal_weight)
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
         
@@ -210,7 +211,6 @@ def main():
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
-    print(tle_timestamp)
     print("\n\n..... Phase-0: Configuration Set-up:")
     print(".......... Operator Name: \t\t", operator_name)
     print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(time_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
@@ -302,8 +302,8 @@ def main():
         os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
     if os.path.exists(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
         os.remove(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt")
-    if os.path.exists(optimal_weight_path+operator_name+"optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
-        os.remove(optimal_weight_path+operator_name+"optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt")  
+    if os.path.exists(optimal_weight_path+operator_name+"/optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
+        os.remove(optimal_weight_path+operator_name+"/optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt")  
     
     # Start main simulation process
     global global_arranged_sats, global_satellites_by_name # Make these global for multiprocessing, but being used regardless

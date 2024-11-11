@@ -1,5 +1,5 @@
 # Main configuration script for the SpaceNet Mininet Simulator
-ConstellationName: starlink1584_10_30  #starlink2000_5_12 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink1584_10_12  #starlink2000_5_12 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output
 DeleteAppResults: False
 Verbose: True
@@ -9,8 +9,8 @@ MonitorResource: False
 AppName: Ping # Options- Ping, iPerf, CLI
 # For Ping and iPerf
 # Useable keywords- firstGS, lastGS, firstSat, lastSat
-SourceDeviceName: 1610 # 101, 501, 1001, 2001  # Orlando
-DestDeviceName: 1611 # 100, 500, 1000, 2000  # Seattle
+SourceDeviceName: 1587 # 101, 501, 1001, 2001  # Orlando
+DestDeviceName: 1588 # 100, 500, 1000, 2000  # Seattle
 # For CLI
 CLIStartInterval: 0
 CLIIntervalCount: 0
