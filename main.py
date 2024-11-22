@@ -25,7 +25,7 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
-use_multiprocessing         = True
+use_multiprocessing         = False
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
@@ -39,7 +39,6 @@ config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
 sat_config_sub_path         = "sat_config_files/"
 
-CONN_mat_store = {}
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
@@ -95,14 +94,15 @@ def topology_generation(inc, sat_config,
         
         """
         topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
+        #print(topfile_path)
         if t2t_dict == None:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
-        #print(topfile_path)
+        
         """
         global CONN_mat_store
-        CONN_mat_store[inc] = connectivity_matrix
+        CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
         # Assign the metrics for routing
         metric_type = None # default (hops)
         if "RouteWeight" in main_config and str(main_config["RouteWeight"]):
@@ -121,7 +121,7 @@ def topology_generation(inc, sat_config,
             all_possible_routes, optimal_route, net_optimal_weight = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
-        print(net_optimal_weight)
+        # print(net_optimal_weight)
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
         
@@ -151,7 +151,9 @@ def main():
 
     # Set global variable
     global criterion
+    global CONN_mat_store
     criterion = 2 # default
+    CONN_mat_store = {}
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
@@ -172,6 +174,7 @@ def main():
     terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
     optimal_weight_path         = output_filepath+"/optimal_weights/"
+    link_change_path            = output_filepath+"/link_changes/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -425,17 +428,21 @@ def main():
             """
     
     """Checking Link changes between each interval (10sec)"""
-    global CONN_mat_store
+    #global CONN_mat_store
     DIFF = [] # Stores only the total number of link changes per timestep difference
     for itr in range(len(CONN_mat_store)):
         if itr>0:
             diff = np.array(CONN_mat_store[time_hist[itr]]) - np.array(CONN_mat_store[time_hist[itr-1]])
-            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # WHile flattening stores only the links that are changed 
+            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # While flattening stores only the links that are changed 
+            save_link_changes(len(diff_flatten), itr, str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
             DIFF.append(len(diff_flatten))
     print(DIFF)
     
     # Stop CPU clock timer and save total time
-    executor.shutdown()
+    try:
+        executor.shutdown()
+    except:
+        pass
     cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
     save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 

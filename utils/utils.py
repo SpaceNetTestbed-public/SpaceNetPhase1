@@ -323,7 +323,7 @@ def save_optimal_path(
     optimal_log.close()
 
 def save_optimal_weights(
-                        optimal_weights            : list, 
+                        optimal_weights         : list, 
                         timestamp               : int,
                         operator_name           : str, 
                         optimal_w_path          : str
@@ -337,10 +337,36 @@ def save_optimal_weights(
     optimal_log = open(file_path + file_name, "a")
     
     # Iterate over the optimal path list
-    if optimal_weights:
+    if len(optimal_weights)>1: # Path weight list
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + ", ".join(map(str, optimal_weights)) + "\n")
+    elif len(optimal_weights)==1:  # Total path weight
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_weights) + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
+
+    # Close file to minimize memory leaks
+    optimal_log.close()
+
+def save_link_changes(
+                        link_changes            : list, 
+                        itr                     : int,
+                        targetgs                : str,
+                        operator_name           : str, 
+                        link_changes_path          : str
+                     ):
+    
+    # Generate a new file
+    file_path = link_changes_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "link_changes_"+targetgs+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
+    
+    # Iterate over the optimal path list
+    if link_changes: # Path weight list
+        optimal_log.write("(" + (str(itr-1)+"_"+str(itr)) + "): " + str(link_changes) + "\n")
+    else:
+        optimal_log.write("(" + (str(itr-1)+"_"+str(itr)) + "): " + str(0) + "\n")
 
     # Close file to minimize memory leaks
     optimal_log.close()

@@ -60,6 +60,11 @@ def get_orbital_planes_classifications(
     # Open TLE file in read mode
     tle_file = open(tle_filename, 'r')
 
+    # Open Output TLE save file in write mode
+    path_segments = tle_filename.split('/')
+    tle_savefilename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/analysis/extracted_"+path_segments[-1]
+    tle_savefile = open(tle_savefilename, 'w')
+
     # Extract the contents of TLE file
     Lines = tle_file.readlines()
 
@@ -79,7 +84,7 @@ def get_orbital_planes_classifications(
         # Inclination of constellation shell
         if  float(tle_second_line[2]) < (orbits_inclination + 0.1) and float(tle_second_line[2]) >= (orbits_inclination - 0.9) \
             and tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 9.0524): 
-        # if (tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 7.1524)):    # tle : (1727475306, 1727718467, 1730840419)  threshold : (7.1524, 7.0330, 7.0080)  alt-540   
+        #if (tle_a > (orbits_altitude + 7.1524)) and float(tle_second_line[2]) < (orbits_inclination + 8):    # tle : (1727475306, 1727718467, 1730840419)  threshold : (7.1524, 7.0330, 7.0080)  alt-540            ":
 
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])
@@ -90,6 +95,9 @@ def get_orbital_planes_classifications(
             dump_orbital_data["aop"].append(tle_second_line[5])
             dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
             dump_orbital_data["Mean motion"].append(tle_second_line[7])
+
+            # Storing the TLEs of all the selected sats in a file
+            tle_savefile.writelines([Lines[i], Lines[i+1], Lines[i+2]]) 
 
     # Collect RAAN values in data dump
     list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
