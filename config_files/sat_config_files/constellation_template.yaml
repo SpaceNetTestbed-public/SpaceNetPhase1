@@ -17,7 +17,7 @@ EpochStartSecond: <TLE_start_second>
 # Additional information to be edited for topology gen. (Phase 1), some of these are set as default
 Debug: <debug output messages, 0=false or 1=true>
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
-TopologyISL: grid
+TopologyISL: SAME_ORBIT_AND_GRID_ACROSS_ORBITS
 shell1:
     name: shell1
     orbits: <number_of_orbits>

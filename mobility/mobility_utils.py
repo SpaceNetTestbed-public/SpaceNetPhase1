@@ -1,11 +1,11 @@
 from skyfield.api import wgs84, load
 import math
 import threading
-
+import numpy as np
 import sys
 sys.path.append("../")
 from link.link_utils import *
-
+from DoTD import DoTD_History
 
 def calc_max_gsl_length(
                         sat_config,
@@ -196,13 +196,73 @@ def find_adjacent_orbit_sat(
     return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None
 
 
+def find_n_all_connected_sats(origin_sat, satellites_sorted_in_orbits, t):
+
+    n_resp = 0
+    s_e = []
+
+    # Get the list of satellites in the specified adjacent plane
+    for adj_plane in range(len(satellites_sorted_in_orbits)):
+
+        adj_plane_sats = satellites_sorted_in_orbits[adj_plane]
+        
+        # Iterate through satellites in the adjacent plane
+        for i in range(len(adj_plane_sats)):
+            if origin_sat == adj_plane_sats[i]:
+                continue
+            # Calculate the distance between the original satellite and the current satellite in the adjacent plane
+            distance = distance_between_two_satellites(origin_sat, adj_plane_sats[i], t)
+
+
+            # Check if the calculated distance is smaller than both the current minimum distance and a threshold value
+            if distance < 5016000:
+                n_resp += 1
+                s_e.append((adj_plane, i, adj_plane_sats[i]))
+
+    return n_resp, s_e
+
+def motif_find_m_se_e(satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, t):
+    
+    min_connections_per_satellite = sys.maxsize
+    S_e = []
+    M = []
+    e = None
+    total_sat_now = 0
+    for i in range(len(satellites_sorted_in_orbits)):
+        
+        n_sats_per_orbit = len(satellites_sorted_in_orbits[i])
+        
+        for j in range(n_sats_per_orbit):
+            
+            # Get information about the current satellite
+            sat = total_sat_now + j
+            current_sat = satellites_by_index[sat]
+            current_sat = satellites_by_name[str(current_sat)]
+
+            n_adj, s_e = find_n_all_connected_sats(current_sat, satellites_sorted_in_orbits, t)
+
+            if n_adj < min_connections_per_satellite:
+                min_connections_per_satellite = n_adj
+                S_e = s_e
+                e = (i, j, current_sat)
+
+        total_sat_now += n_sats_per_orbit
+
+    M = list( itertools.combinations(S_e, 2) )
+
+    return M, e
+
 def mininet_add_ISLs(
                         connectivity_matrix, 
                         satellites_sorted_in_orbits, 
                         satellites_by_name, 
                         satellites_by_index, 
                         isl_config, 
-                        t
+                        t,
+                        M=None,
+                        e=None,
+                        n_seq=0,
+                        dotd:DoTD_History = None
                     ):
     """
     Adds Inter-Satellite Links (ISLs) to the connectivity matrix
@@ -270,8 +330,164 @@ def mininet_add_ISLs(
             # Update the current total number of satellites
             total_sat_now += n_sats_per_orbit
 
+    ###
+    elif isl_config == "DOTD":
+        M = len(satellites_by_index)
+        dotd.step()
+        link_characterstics = calculate_link_characteristics_for_gsls_isls(satellites_by_index, satellites_by_name, t)
+        latency_matrix    = np.array(link_characterstics["latency_matrix"])
+        throughput_matrix = np.array(link_characterstics["throughput_matrix"]) / 1000
+        distance_matrix   = latency_matrix / 1000 * 299792458.0
+        is_connectd_matrix = (distance_matrix <= 10000*1000)
+        latency_matrix = latency_matrix * is_connectd_matrix/1000
+        S_max_t = dotd.S_max[dotd.t - 1]
+        L_max_t = dotd.L_max[dotd.t - 1]
+        S_max_t = max( S_max_t, np.max(throughput_matrix.ravel()) )
+        L_max_t = max( L_max_t, np.max( latency_matrix.ravel() ) )
+        dotd.S_max[dotd.t] = S_max_t
+        dotd.L_max[dotd.t] = L_max_t
+
+
+        A_k_x_t = np.zeros((M, M))
+        for k in range(M):
+            S_bar_k_x_t     = is_connectd_matrix[k, :] * throughput_matrix[k, :] / S_max_t
+            L_bar_k_x_t     = is_connectd_matrix[k, :] * (1-latency_matrix[k, :]/L_max_t)
+            phi_bar_i_j_tm1 = is_connectd_matrix[k, :] * dotd.phi_i_j_t[k, :, dotd.t-1] / 4
+            A_k_x_t[k, :] = dotd.w1 * S_bar_k_x_t + dotd.w2*(L_bar_k_x_t) + dotd.w3*phi_bar_i_j_tm1 + is_connectd_matrix[k, :] * dotd.PI_i_t[:, dotd.t-1]
+
+        phi_star_i_j = np.zeros((M, M))
+        total_score = A_k_x_t * is_connectd_matrix
+        while(np.sum(np.sum(total_score)) != 0):
+
+            # Arg_value = np.max(total_score, 0)
+            # Arg_ID    = np.argmax(total_score, 0)
+            # sate_selection = np.argmax(Arg_value)
+            # satellite = Arg_ID(sate_selection)
+            sate_selection = np.argmax( np.max(total_score, 0) )
+            satellite = np.argmax(total_score, 0)[sate_selection]
+            if np.sum(phi_star_i_j[satellite,:]) < 4 and np.sum(phi_star_i_j[sate_selection,:]) < 4:
+                phi_star_i_j[satellite,sate_selection] = is_connectd_matrix[satellite,sate_selection]
+                phi_star_i_j[sate_selection,satellite] = is_connectd_matrix[sate_selection,satellite]
+
+            total_score[satellite,sate_selection] = 0
+            total_score[sate_selection,satellite] = 0
+    
+        for k in range(M):
+            Obj_cap = phi_star_i_j[k,:]*throughput_matrix[k,:]/S_max_t
+            Obj_Laten = phi_star_i_j[k,:]*(1-(latency_matrix[k,:]/L_max_t))
+            Obj_LChurn = phi_star_i_j[k,:]*dotd.phi_i_j_t[k,:, dotd.t-1]/4
+            dotd.PI_i_t[k, dotd.t] = np.sum(dotd.w1*Obj_cap+dotd.w2*Obj_Laten+dotd.w3*Obj_LChurn+phi_star_i_j[k,:]*dotd.PI_i_t[k, dotd.t-1])/4
+
+
+        dotd.phi_i_j_t[:,:, dotd.t] = phi_star_i_j
+
+        for i in range(M):
+            for j in range(M):
+                connectivity_matrix[i][j] = phi_star_i_j[i, j]
+
+    elif isl_config == "CROSS_GRID":
+        for i in range(len(satellites_sorted_in_orbits)):
+            # Get the number of satellites in the current orbit
+            n_sats_per_orbit = len(satellites_sorted_in_orbits[i])
+
+            # Iterate through each satellite in the current orbit
+            for j in range(n_sats_per_orbit):
+                # Determine the index of the current satellite
+                sat = total_sat_now + j
+                
+                # Get information about the current satellite
+                current_sat = satellites_by_index[sat]
+                current_sat = satellites_by_name[str(current_sat)]
+
+                # Find satellites in adjacent orbits
+                if not is_already_orbit_connected(sat, (i+1)%n_orbits, connectivity_matrix, satellites_sorted_in_orbits, satellites_by_index):
+                    sat_adjacent_orbit_1 = find_adjacent_orbit_sat(current_sat, (i+1)%n_orbits, satellites_sorted_in_orbits, t)
+                    sat_adjacent_orbit_1 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_1))]
+
+                if not is_already_orbit_connected(sat, (i-1)%n_orbits, connectivity_matrix, satellites_sorted_in_orbits, satellites_by_index):
+                    sat_adjacent_orbit_2 = find_adjacent_orbit_sat(current_sat, (i-1)%n_orbits, satellites_sorted_in_orbits, t)
+                    sat_adjacent_orbit_2 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_2))]
+
+                # Find satellites in adjacent orbits
+                if not is_already_orbit_connected(sat, (i+2)%n_orbits, connectivity_matrix, satellites_sorted_in_orbits, satellites_by_index):
+                    sat_adjacent_orbit_3 = find_adjacent_orbit_sat(current_sat, (i+2)%n_orbits, satellites_sorted_in_orbits, t)
+                    sat_adjacent_orbit_3 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_3))]
+
+                if not is_already_orbit_connected(sat, (i-2)%n_orbits, connectivity_matrix, satellites_sorted_in_orbits, satellites_by_index):
+                    sat_adjacent_orbit_4 = find_adjacent_orbit_sat(current_sat, (i-2)%n_orbits, satellites_sorted_in_orbits, t)
+                    sat_adjacent_orbit_4 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adjacent_orbit_4))]
+
+                # Establish ISLs with satellites in adjacent orbits
+                connectivity_matrix[sat][sat_adjacent_orbit_1] = 1
+                connectivity_matrix[sat_adjacent_orbit_1][sat] = 1
+                connectivity_matrix[sat][sat_adjacent_orbit_2] = 1
+                connectivity_matrix[sat_adjacent_orbit_2][sat] = 1
+
+                connectivity_matrix[sat][sat_adjacent_orbit_3] = 1
+                connectivity_matrix[sat_adjacent_orbit_3][sat] = 1
+                connectivity_matrix[sat][sat_adjacent_orbit_4] = 1
+                connectivity_matrix[sat_adjacent_orbit_4][sat] = 1
+
+            # Update the total number of satellites
+            total_sat_now += n_sats_per_orbit
+
+    elif isl_config == "MOTIF":
+        
+        M_seq = M[n_seq]
+        first_ = M_seq[0]
+        second_ = M_seq[1]
+        first_node_orbit_offset, first_node_sat_offset = first_[0] - e[0], first_[1] - e[1]
+        second_node_orbit_offset, second_node_sat_offset = second_[0] - e[0], second_[1] - e[1]
+
+        while (first_node_orbit_offset == 0 and second_node_orbit_offset == 0) or (first_node_sat_offset == 0 and second_node_sat_offset == 0):
+            n_seq += 1
+            M_seq = M[n_seq]
+            first_ = M_seq[0]
+            second_ = M_seq[1]
+            first_node_orbit_offset, first_node_sat_offset = first_[0] - e[0], first_[1] - e[1]
+            second_node_orbit_offset, second_node_sat_offset = second_[0] - e[0], second_[1] - e[1]
+        
+        total_sat_now = 0
+        for i in range(len(satellites_sorted_in_orbits)):
+
+            n_sats_per_orbit = len(satellites_sorted_in_orbits[i])
+            
+            for j in range(n_sats_per_orbit):
+            
+                sat = total_sat_now + j
+                current_sat = satellites_by_index[sat]
+                current_sat = satellites_by_name[str(current_sat)]
+
+                sat_adj_1_orbit = (i + first_node_orbit_offset) % n_orbits
+                sat_adj_1_sat   = (j + first_node_sat_offset) % len(satellites_sorted_in_orbits[sat_adj_1_orbit])
+                sat_adj_1 = satellites_sorted_in_orbits[sat_adj_1_orbit][sat_adj_1_sat]
+                sat_adj_1 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adj_1.name))]
+
+                sat_adj_2_orbit = (i + second_node_orbit_offset) % n_orbits
+                sat_adj_2_sat   = (j + second_node_sat_offset) % len(satellites_sorted_in_orbits[sat_adj_2_orbit])
+                sat_adj_2 = satellites_sorted_in_orbits[sat_adj_2_orbit][sat_adj_2_sat]
+                sat_adj_2 = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(str(sat_adj_2.name))]
+
+                connectivity_matrix[sat][sat_adj_1] = 1
+                connectivity_matrix[sat_adj_1][sat] = 1
+                connectivity_matrix[sat][sat_adj_2] = 1
+                connectivity_matrix[sat_adj_2][sat] = 1
+
+            total_sat_now += n_sats_per_orbit
+
     # Return the updated connectivity matrix
     return connectivity_matrix
+
+def is_already_orbit_connected(sat, dst_orbit, connectivity_matrix, satellites_sorted_in_orbits, satellites_by_index):
+
+    n_sats_in_orbit = len(satellites_sorted_in_orbits[dst_orbit])
+    for j in range(n_sats_in_orbit):
+        sat_x = satellites_sorted_in_orbits[dst_orbit][j]
+        sat_x = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(sat_x.name.split(' ')[0])]
+        if connectivity_matrix[sat][sat_x] == 1 or connectivity_matrix[sat_x][sat] == 1:
+            return True
+        
+    return False
 
 def retrieve_GS_by_type(ground_stations, gs_type):
     """

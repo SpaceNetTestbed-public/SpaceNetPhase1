@@ -52,7 +52,7 @@ def topology_generation(inc, sat_config,
                         routing_file_path,  
                         optimal_file_path,
                         optimal_weight_path,
-                        cpu_time_path):
+                        cpu_time_path, M=None, e=None, n_seq=0, dotd=None):
         
         # Start CPU timer
         t0_it = time.perf_counter_ns()
@@ -77,7 +77,7 @@ def topology_generation(inc, sat_config,
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
         
         # Add ISLs to the connectivity matrix
-        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
+        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, sat_config["TopologyISL"], time_utc_inc, M, e, n_seq, dotd=dotd)
 
         # Add GSLs to the connectivity matrix
         connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
@@ -272,6 +272,15 @@ def main():
     # Instantiate simulation time history
     time_hist = np.arange(0.0, simulation_length, time_resolution_in_seconds)
 
+    # Init motif, dotd
+    if sat_config["TopologyISL"] == "MOTIF":
+        M, e = motif_find_m_se_e(satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, time_utc)
+    else:
+        M = None
+        e = None
+    n_seq = 0
+    dotd = DoTD_History(num_of_satellites, len(time_hist))
+
     if plot_ground_stations:
         plot_nodes_links_ground_stations(None, ground_stations, None, operator_name, None, None, None, t2t_dict)
 
@@ -357,7 +366,7 @@ def main():
         # Loop over the time history, update the topology and save it in a file
         for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
             
-            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, cpu_time_path)
+            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, cpu_time_path, M, e, n_seq, dotd)
             
             
             """
