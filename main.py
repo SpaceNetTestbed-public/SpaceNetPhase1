@@ -201,9 +201,13 @@ def main():
     optimal_weight_path         = output_filepath+"/optimal_weights/"
     link_change_path            = output_filepath+"/link_changes/"
 <<<<<<< HEAD
+<<<<<<< HEAD
     weather_info_path           = output_filepath+"/weather_info/"
 =======
 >>>>>>> 592a1f5 (Added link_changes capability)
+=======
+    weather_info_path           = output_filepath+"/weather_info/"
+>>>>>>> 7bd2252 (resolved weather fetch)
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
