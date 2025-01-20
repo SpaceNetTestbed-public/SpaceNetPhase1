@@ -27,29 +27,29 @@ time_index              = 0
 plot_GSs                = False
 plot_only_optimal       = False
 plot_in_3D              = True
-plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
+plot_debug              = True   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
-make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
+make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = -90  #-35 
 lat0_3d                 = 20
 timestamp               = "2024_09_27_12_30_30"
-gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/terrestrial_info/terrestrial_1727475306.txt', 'r')
+gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/terrestrial_info/terrestrial_1727475306.txt', 'r')
 tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727475306', 'r')
-optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1727475306.txt'
-orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
+optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/node_indices/starlink/nodeindex_1727475306.txt'
+orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/satellites_orbits/orbits_satellites.txt'
 gif_name                = 'Orlando_Seattle_real_plusgrid_10sec_3D_1230pm'
 ################### Folder Paths ######################
-conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/'
-opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/'
+conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/connectivity_matrix/starlink/'
+opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/optimal_routes/starlink/'
 gif_path                = '/home/suryaryan/GIFS/'
 #######################################################
 number_of_orbits = 72  #$
 # num_plotorbit = range(1)  #$ Number of orbits to plot
 # gs0 = (-74.003663, 40.717042) # NYC
 # gs1 = (103.850070, 1.289670) # Singapore
-ref = 880  # index of satellite to be debugged for ISLs 
+ref = 1263  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -280,7 +280,7 @@ if not make_gif:
             if not any(gs_type in node_alias for gs_type in gs_alias_list):
                 x, y = m(node_lon, node_lat)
                 if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
-                    plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
+                    plt.scatter(x, y, s=50, marker="o", facecolors='red', edgecolors='red', zorder=20)
                     plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
                 elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
                     plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
@@ -329,10 +329,10 @@ if not make_gif:
             x, y = m(neighbour_lon, neighbour_lat)
             if sat_index_orbit[neighbours] == sat_index_orbit[ref]:
                 plt.scatter(x, y, s=30, marker="o", facecolors='green', edgecolors='green', zorder=20)
-                plt.text(x, y-0.5, neighbours, fontsize=15, zorder=100)
+                plt.text(x, y-0.5, neighbours, fontsize=15, color='green', zorder=100)
             else:
                 plt.scatter(x, y, s=30, marker="o", facecolors='blue', edgecolors='blue', zorder=20)
-                plt.text(x, y-0.5, neighbours, fontsize=15, zorder=100)
+                plt.text(x, y-0.5, neighbours, fontsize=15, color='blue', zorder=100)
 
     ######################################################### DEBUGGING ZONE ENDS ###################################
 
