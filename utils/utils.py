@@ -839,7 +839,7 @@ def arrange_satellites(
     Arranges the satellites by index by transforming a TLE file into sorted orbits.
 
     Args:
-        orbital_data (dict):                Extracted orbital parameters for each satellite in TLE
+        orbital_data (dict):                Extracted orbital parameters for each satellite in TLE for all shells
         satellites_by_name (dict):          Satellite information arranged by name
         sat_config (dict):                  Constellation configuration file
         operator_name (name):               Constellation/operator name
@@ -856,9 +856,6 @@ def arrange_satellites(
     file_path = sat_orbit_file_path+operator_name+"/"
     check_create_path(file_path)
     file_name = "sorted_satellites_within_orbit_"+tle_timestamp+".txt"
-    #f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
-    f0 = open(file_path + file_name, "w")
-    f0.close()
     f = open(file_path + file_name, "a")
     
     # Debugging purposes
@@ -868,29 +865,30 @@ def arrange_satellites(
     # Initialize satellite names according to constellation naming conversion
     satellites_sorted_in_orbits = []
 
-    # Iterate over the number of orbits in first shell
-    for i in range(sat_config["shell1"]["orbits"]):
-        sorted = []
-        satellites_in_orbit = []
-        cn = 0
-        for data in orbital_data:
-            if i == int(orbital_data[str(data)][0]):
-                satellites_in_orbit.append(satellites_by_name[str(data.split(" ")[0])])
-                cn +=1
+    # Iterate over all the number of orbits in every shell    
+    for itr, shell_name in enumerate(sat_config["shells"].keys()):
+        for i in range(sat_config["shells"][shell_name]["orbits"]):
+            sorted = []
+            satellites_in_orbit = []
+            cn = 0
+            for data in orbital_data:
+                if i == int(orbital_data[str(data)][0]) and itr == int(orbital_data[str(data)][-1])-1:
+                    satellites_in_orbit.append(satellites_by_name[str(data.split(" ")[0])])
+                    cn +=1
 
-        # Sort the satellites in orbit and append them to list
-        sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
-        satellites_sorted_in_orbits.append(sorted)
+            # Sort the satellites in orbit and append them to list
+            sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
+            satellites_sorted_in_orbits.append(sorted)
 
-        # Debugging purposes
-        if sat_config["Debug"] == 1:
-            print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
+            # Debugging purposes
+            if sat_config["Debug"] == 1:
+                print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
 
-        # Debugging purposes
-        if sat_config["Debug"] == 1:
-            for s in sorted:
-                write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
-                f.write(write_this)
+            # Debugging purposes
+            if sat_config["Debug"] == 1:
+                for s in sorted:
+                    write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
+                    f.write(write_this)
     
     # Close debugging file to minimize memory leak
     f.close()

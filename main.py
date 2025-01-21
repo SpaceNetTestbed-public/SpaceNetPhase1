@@ -228,7 +228,7 @@ def main():
     satellites = load.tle_file(path_of_recent_TLE)
 
     # Create dictionaries of satellites by name and index
-    satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}
+    satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}  # entire sats from TLE (Dict FORMAT- 'STARLINK-####' : Skyfield type)
     satellites_by_index = {}
 
     # Read the ground stations from the file specified in the configurations
@@ -256,7 +256,11 @@ def main():
         criterion = int(main_config["TopoCrit"])
         
     # Get the orbital data and arrange the satellites in the orbits
-    orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
+    orbital_data = {}
+    for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
+        orb_data = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shells"][sh]["orbits"], itr, sat_config["shells"][sh]["inclination"], sat_config["shells"][sh]["altitude"])
+        orbital_data.update(orb_data)
+        #print(itr, len(orb_data))
     arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path)
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
@@ -300,7 +304,7 @@ def main():
 
     # Save satellite and ground station indices
     save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, tle_timestamp, operator_name, t2t_dict)
-
+    exit()
     # Remove any existing files
     if os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
         os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
