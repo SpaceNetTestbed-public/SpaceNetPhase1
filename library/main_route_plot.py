@@ -8,11 +8,6 @@ import numpy as np
 from datetime import datetime, timezone
 from mpl_toolkits.basemap import Basemap
 
-
-
-
-
-
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -24,14 +19,14 @@ from mpl_toolkits.basemap import Basemap
 time_index              = 0
 plot_GSs                = False
 plot_only_optimal       = False
-plot_in_3D              = False
+plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existing in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -180  #-35 
-lat0_3d                 = 0
+lon0_3d                 = -145  #-80    #-100   #5  #-35 
+lat0_3d                 = 0 #-30       #20   #30
 timestamp               = "2024_07_21_19_00_0"
-output_pathname         = "alt1500_inc50_7pm_rio"
+output_pathname         = "alt1500_inc50_7pm_sydney"
 gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/terrestrial_info/terrestrial_1721552400.txt', 'r')
 tle_file                = open('/home/spacenet/Desktop/jacktles/alt1500km/starlink_tles/starlink_1721552400', 'r')
 optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
@@ -44,7 +39,7 @@ conn_folder             = '/home/spacenet/simulator/gitlab/dynamic-topology-gene
 opt_route_folder        = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/optimal_routes/starlink/'
 gif_path                = '/home/spacenet/Desktop/jack_results/gifs/gif_'+output_pathname+'/'
 #######################################################
-number_of_orbits = 15  #$
+number_of_orbits = 72  #$
 ref = 0  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -239,8 +234,9 @@ if not make_gif:
         #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
     else:
         m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=0, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
-        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/2.25, llcrnry=-m0.urcrnrx/2.25, urcrnrx=m0.urcrnrx/2.25, urcrnry=m0.urcrnry/2.25, resolution='c')
+        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/3.75, llcrnry=-m0.urcrnrx/3.75, urcrnrx=m0.urcrnrx/3.75, urcrnry=m0.urcrnry/3.75, resolution='c')
+        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/5.75, llcrnry=m0.urcrnry/5.75, urcrnrx=m0.urcrnrx/5.75, urcrnry=m0.urcrnry/3.3, resolution='c')
     m.drawcoastlines()
     m.drawcountries()
     m.fillcontinents(color='lightgray', lake_color='white')
@@ -575,7 +571,9 @@ else:    ## (MAKING GIF)
         else:
             m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
             #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=0, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
-            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.5, llcrnry=-m0.urcrnrx/10.5, urcrnrx=m0.urcrnrx/1.5, urcrnry=m0.urcrnry/2, resolution='c')
+            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/2.25, llcrnry=-m0.urcrnrx/2.25, urcrnrx=m0.urcrnrx/2.25, urcrnry=m0.urcrnry/2.25, resolution='c')
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/5.75, llcrnry=m0.urcrnry/130.75, urcrnrx=m0.urcrnrx/5.75, urcrnry=m0.urcrnry/3.3, resolution='c')
         m.drawcoastlines()
         m.drawcountries()
         m.fillcontinents(color='lightgray', lake_color='white')
@@ -596,7 +594,7 @@ else:    ## (MAKING GIF)
                     if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                         plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
                         plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>6:
+                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>100:
                         plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                         plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:
@@ -718,7 +716,8 @@ else:    ## (MAKING GIF)
         print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[-1])+') (hops='+str(len(optimal_route_at_t)-1)+')')
         plt.xlabel('Longitude')
         plt.ylabel('Latitude')
-        plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
+        #plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
+        plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1))
         #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
         plt.tight_layout()
         #plt.show()

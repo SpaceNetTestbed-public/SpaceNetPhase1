@@ -25,11 +25,12 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
-use_multiprocessing         = True
+use_multiprocessing         = False
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
 run_resource_logger         = False
+link_changes_save           = True
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
@@ -37,7 +38,7 @@ run_resource_logger         = False
 
 config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
-sat_config_sub_path         = "sat_config_files/"
+sat_config_sub_path         = "sat_config_files/Scitech/"
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
@@ -75,7 +76,7 @@ def topology_generation(inc, sat_config,
 
         # Initialize the connectivity matrix
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
-        
+        """
         # Add ISLs to the connectivity matrix
         connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
@@ -98,6 +99,15 @@ def topology_generation(inc, sat_config,
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
         #print(topfile_path)
+        global CONN_mat_store
+        #CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
+        CONN_mat_store[inc] = connectivity_matrix   # All links
+        
+        optroutefile_path = optimal_file_path+operator_name+"/best_path_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
+        optimal_nodes = extract_optim_routes(optroutefile_path)
+        #print(optimal_nodes)
+        global OPTIM_ROUTE_NODES
+        OPTIM_ROUTE_NODES[inc] = optimal_nodes
         """
         # Assign the metrics for routing
         metric_type = None # default (hops)
@@ -134,7 +144,7 @@ def topology_generation(inc, sat_config,
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
         save_optimal_weights(net_optimal_weight, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_weight_path)
-        
+        """
         # Save CPU clock runtime
         #save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
@@ -146,7 +156,11 @@ def main():
 
     # Set global variable
     global criterion
+    global CONN_mat_store
+    global OPTIM_ROUTE_NODES
     criterion = 2 # default
+    CONN_mat_store = {}
+    OPTIM_ROUTE_NODES = {}
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
@@ -166,7 +180,8 @@ def main():
     node_index_file_path        = output_filepath+"/node_indices/"
     terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
-    optimal_weight_path           = output_filepath+"/optimal_weights/"
+    optimal_weight_path         = output_filepath+"/optimal_weights/"
+    link_change_path            = output_filepath+"/link_changes/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -418,8 +433,30 @@ def main():
             save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
             """
     
+    """Checking Link changes between each interval (10sec)"""
+    DIFF = [] # Stores only the total number of link changes per timestep difference
+    for itr in range(len(CONN_mat_store)):
+        if itr>0:
+            diff = np.array(CONN_mat_store[time_hist[itr]]) - np.array(CONN_mat_store[time_hist[itr-1]])
+            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # WHile flattening stores only the links that are changed 
+            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # While flattening stores only the links that are changed 
+            if link_changes_save:
+                save_link_changes(len(diff_flatten), itr, "All_"+ str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
+            DIFF.append(len(diff_flatten))
+    print(DIFF)
+
+    """Checking Link variations between each consecutive time interval optimal route"""
+    for itr in range(len(OPTIM_ROUTE_NODES)):
+        if itr>0:
+            print('\n', OPTIM_ROUTE_NODES[time_hist[itr]], OPTIM_ROUTE_NODES[time_hist[itr-1]])
+            comment = comment_route_link_var(OPTIM_ROUTE_NODES[time_hist[itr]], OPTIM_ROUTE_NODES[time_hist[itr-1]])
+            print(comment)
+
     # Stop CPU clock timer and save total time
-    executor.shutdown()
+    try:
+        executor.shutdown()
+    except:
+        pass
     cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
     save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 

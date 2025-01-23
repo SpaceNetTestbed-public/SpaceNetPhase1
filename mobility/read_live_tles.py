@@ -79,7 +79,8 @@ def get_orbital_planes_classifications(
         # Inclination of constellation shell
         # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
         #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
-        if tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 7.1524):    # tle : (1727475306, 1727718467)  threshold : (7.1524, 7.0330)     
+        if  float(tle_second_line[2]) < (orbits_inclination + 0.1) and float(tle_second_line[2]) >= (orbits_inclination - 0.9) \
+            and tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 9.0524):     # tle : (1727475306, 1727718467)  threshold : (7.1524, 7.0330)     
 
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])

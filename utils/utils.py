@@ -322,8 +322,21 @@ def save_optimal_path(
     # Close file to minimize memory leaks
     optimal_log.close()
 
+def extract_optim_routes(  
+                            optimal_route_path               : str  
+                        ):
+    # Extracting list of nodes in optimal route from optimal_route files files already generated
+    with open(optimal_route_path, 'r') as lines:
+        for nodes in lines:
+            t_data, route_data  = nodes.split(": ", 1)
+            route_node_list = route_data.split(", ")
+            route_node_list[-1] = route_node_list[-1][:-1]
+            route_node_list = [int(node) for node in route_node_list]
+
+    return route_node_list
+
 def save_optimal_weights(
-                        optimal_weights            : list, 
+                        optimal_weights         : list, 
                         timestamp               : int,
                         operator_name           : str, 
                         optimal_w_path          : str
@@ -341,6 +354,30 @@ def save_optimal_weights(
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_weights) + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
+
+    # Close file to minimize memory leaks
+    optimal_log.close()
+
+def save_link_changes(
+                        link_changes            : list, 
+                        itr                     : int,
+                        targetgs                : str,
+                        operator_name           : str, 
+                        link_changes_path          : str
+                     ):
+    
+    # Generate a new file
+    file_path = link_changes_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "link_changes_"+targetgs+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
+    
+    # Iterate over the optimal path list
+    if link_changes: # Path weight list
+        optimal_log.write("(" + (str(itr-1)+"_"+str(itr)) + "): " + str(link_changes) + "\n")
+    else:
+        optimal_log.write("(" + (str(itr-1)+"_"+str(itr)) + "): " + str(0) + "\n")
 
     # Close file to minimize memory leaks
     optimal_log.close()
@@ -477,6 +514,7 @@ def save_cpu_time(
     """
 
     # Generate a new file
+    check_create_path(cpu_time_path+operator_name)
     cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "w")
     
     # Iterate over the optimal path list
@@ -1026,6 +1064,27 @@ def get_sats_by_name(filename: str) -> list:
 
     # Return the list of satellites
     return satellites
+
+def comment_route_link_var(
+                            current_node_list    : list, 
+                            previous_node_list   : list
+                        ) -> str:
+    # Comments on the link variations between consecutive optimal routes
+    ##### Remove source and dest since they dont contribute to changes
+    comments = []
+    curr_list = current_node_list[1:-1]
+    prev_list = previous_node_list[1:-1]
+    if curr_list==prev_list:
+        return "NO changes"
+    else:
+        current_set = set(curr_list)
+        previous_set = set(prev_list)
+        if not current_set.intersection(previous_set):
+            return "Whole path changed"
+        else:
+            extras = current_set.difference(previous_set)
+            extras =  extras.union(previous_set.difference(current_set))
+            return "Link changes : " + str(len(extras))
 
 
 # =================================================================================== #
