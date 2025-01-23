@@ -3,10 +3,10 @@
 # Configuration for <Constellation_name>
 TotalSatCnt: 1584
 TotalGSCnt: 25
-ConnectivityMatrixPath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/connectivity/
-RoutingFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/output/routing/
+ConnectivityMatrixPath: /home/spacenet/t2t-plotting/dynamic-topology-generator/output/connectivity/
+RoutingFilePath: /home/spacenet/t2t-plotting/dynamic-topology-generator/output/routing/
 EpochIntervalDuration: 30
-EpochIntervalCount: 5
+EpochIntervalCount: 2
 EpochStartYear: 2024
 EpochStartMonth: 07
 EpochStartDay: 17
@@ -22,10 +22,9 @@ shell1:
     name: shell1
     orbits: 72
     sat_per_orbit: 22
-    altitude: 500
+    altitude: 500  #Originally calulated at 500 for real
     elevation_angle: 25
     inclination: 53
-Source: gs24
-Destination: gs12
-GroundStationFile: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/gs_files/gs_default.txt
-TLEFilePath: /mnt/c/Users/BluBoy/Desktop/Professional/Git/Repositories/dynamic-topology-generator/utils/
+GroundStationFile: /home/spacenet/t2t-plotting/dynamic-topology-generator/utils/gs_files/gs_default.txt
+OutputFilePath: /home/spacenet/t2t-plotting/dynamic-topology-generator/output/
+TLEFilePath: /home/spacenet/t2t-plotting/dynamic-topology-generator/utils/

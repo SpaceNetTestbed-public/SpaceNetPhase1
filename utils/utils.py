@@ -350,7 +350,9 @@ def save_optimal_weights(
     optimal_log = open(file_path + file_name, "a")
     
     # Iterate over the optimal path list
-    if optimal_weights:
+    if len(optimal_weights)>1: # Path weight list
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + ", ".join(map(str, optimal_weights)) + "\n")
+    elif len(optimal_weights)==1:  # Total path weight
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_weights) + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
@@ -382,6 +384,26 @@ def save_link_changes(
     # Close file to minimize memory leaks
     optimal_log.close()
 
+def save_weather_info(
+                        gs_weather_info         : list, 
+                        timestamp               : list,
+                        operator_name           : str, 
+                        weather_info_path       : str
+                     ):
+    
+    # Generate a new file
+    file_path = weather_info_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "weather_info_"+("_".join(timestamp))+".txt"
+    weather_log = open(file_path + file_name, "w")
+    
+    # Iterate over the ground stations list
+    for gs in gs_weather_info:
+        gs_vals = gs.values()
+        weather_log.write(", ".join(map(str, gs_vals)) + "\n")
+
+    # Close file to minimize memory leaks
+    weather_log.close()
 """
 def update_node_index(t2t_dict, node_index_file_path, timestamp, operator_name):
     # Open existing file for appending

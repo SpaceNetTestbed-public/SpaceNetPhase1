@@ -94,6 +94,7 @@ def topology_generation(inc, sat_config,
         
         """
         topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
+        #print(topfile_path)
         if t2t_dict == None:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
         else:
@@ -109,6 +110,8 @@ def topology_generation(inc, sat_config,
         global OPTIM_ROUTE_NODES
         OPTIM_ROUTE_NODES[inc] = optimal_nodes
         """
+        global CONN_mat_store
+        CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
         # Assign the metrics for routing
         metric_type = None # default (hops)
         if "RouteWeight" in main_config and str(main_config["RouteWeight"]):
@@ -127,6 +130,7 @@ def topology_generation(inc, sat_config,
             all_possible_routes, optimal_route, net_optimal_weight = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
         else:
             all_possible_routes = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, None, criterion)
+        # print(net_optimal_weight)
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
         
@@ -182,6 +186,7 @@ def main():
     optimal_file_path           = output_filepath+"/optimal_routes/"
     optimal_weight_path         = output_filepath+"/optimal_weights/"
     link_change_path            = output_filepath+"/link_changes/"
+    weather_info_path           = output_filepath+"/weather_info/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -221,11 +226,10 @@ def main():
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
     tle_timestamp       = path_of_recent_TLE.split("_")[2]
-    print(tle_timestamp)
     print("\n\n..... Phase-0: Configuration Set-up:")
     print(".......... Operator Name: \t\t", operator_name)
-    print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(tle_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
-    print(".......... End Epoch: \t\t\t", datetime.fromtimestamp(int(tle_timestamp)+int(simulation_length)).strftime('%B %d, %Y %H:%M:%S UTC'))
+    print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(time_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
+    print(".......... End Epoch: \t\t\t", datetime.fromtimestamp(int(time_timestamp)+int(simulation_length)).strftime('%B %d, %Y %H:%M:%S UTC'))
     print(".......... Simulation Step-Size: \t", sat_config["EpochIntervalDuration"], "s")
     print(".......... Simulation Interval Count: \t", sat_config["EpochIntervalCount"])
     print(".......... Simulation Length: \t\t", simulation_length, "s") 
@@ -313,41 +317,45 @@ def main():
         os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
     if os.path.exists(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
         os.remove(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join([str(y), str(mon), str(d)]))+".txt")
+    if os.path.exists(optimal_weight_path+operator_name+"/optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
+        os.remove(optimal_weight_path+operator_name+"/optimal_weights_"+("_".join([str(y), str(mon), str(d)]))+".txt")  
     
     # Start main simulation process
+    # Before starting concurrent execution, get weather conditions for all ground stations to avoid excessive/unnecesary API calls
+    print(".......... Preemptively getting weather data for all ground stations")
+    from link.link_utils import get_weather_info
+    recv_cnt = 0
+    recving_weather_data = True
+    for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
+        if recving_weather_data and use_weather_data:
+            gs_lat = float(ground_station["latitude_degrees_str"])
+            gs_lon = float(ground_station["longitude_degrees_str"])
+            weather_data = get_weather_info(gs_lat, gs_lon, int(time_timestamp))
+            if weather_data != "":
+                ground_station["weather_data"] = weather_data
+                recv_cnt += 1
+                # Wait 1 second to avoid API rate limit
+                if recv_cnt % 25 == 0:
+                    time.sleep(1)
+            else:
+                recving_weather_data = False # Stop trying to get weather data
+                ground_station["weather_data"] = ""
+        else:
+            ground_station["weather_data"] = ""
+    if not use_weather_data:
+        print(".......... User decided not to use weather data for simulation")
+    else:
+        print(f".......... Weather data received for {recv_cnt} ground stations")
+    # Save Weather data
+    save_weather_info(ground_stations, [str(epoch_start[0]), str(epoch_start[1]), str(epoch_start[2]), str(epoch_start[3]), str(epoch_start[4]), str(float(epoch_start[5]))], operator_name, weather_info_path)
+
     global global_arranged_sats, global_satellites_by_name # Make these global for multiprocessing, but being used regardless
     global_arranged_sats = arranged_sats
     global_satellites_by_name = satellites_by_name
     if use_multiprocessing:
         print(f".......... Using multi-process execution for topology generation.\n.......... Operation started {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        # Before starting concurrent execution, get weather conditions for all ground stations to avoid excessive/unnecesary API calls
-        print(".......... Preemptively getting weather data for all ground stations")
-        from link.link_utils import get_weather_info
-        recv_cnt = 0
-        recving_weather_data = True
-        for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
-            if recving_weather_data and use_weather_data:
-                gs_lat = float(ground_station["latitude_degrees_str"])
-                gs_lon = float(ground_station["longitude_degrees_str"])
-                weather_data = get_weather_info(gs_lat, gs_lon)
-                if weather_data != "":
-                    ground_station["weather_data"] = weather_data
-                    recv_cnt += 1
-                    # Wait 1 second to avoid API rate limit
-                    if recv_cnt % 25 == 0:
-                        time.sleep(1)
-                else:
-                    recving_weather_data = False # Stop trying to get weather data
-                    ground_station["weather_data"] = ""
-            else:
-                ground_station["weather_data"] = ""
-        if not use_weather_data:
-            print(".......... User decided not to use weather data for simulation")
-        else:
-            print(f".......... Weather data received for {recv_cnt} ground stations")
-        
         # Execute simulation process
-        with ProcessExecutor(max_workers=20) as executor:
+        with ProcessExecutor(max_workers=4) as executor:
             results = list(tqdm(executor.map(topology_generation,
                                              time_hist,
                                              [sat_config]*len(time_hist),
