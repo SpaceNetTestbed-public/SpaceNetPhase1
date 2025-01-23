@@ -132,7 +132,7 @@ def get_orbital_planes_classifications(
                 if float(dump_orbital_data["RAAN"][j]) <= upperBound_of_class and float(dump_orbital_data["RAAN"][j]) >= lowerBound_of_class:
                     
                     # Store orbital information in data_orbits dictionary
-                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], str(orbits_inclination), dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
+                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], dump_orbital_data["Inclination"][j], dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
@@ -145,7 +145,7 @@ def get_orbital_planes_classifications(
                 if float(dump_orbital_data["RAAN"][j]) <= upperBound_of_class and float(dump_orbital_data["RAAN"][j]) > lowerBound_of_class:
                     
                     # Store orbital information in data_orbits dictionary
-                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], str(orbits_inclination), dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
+                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], dump_orbital_data["Inclination"][j], dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
