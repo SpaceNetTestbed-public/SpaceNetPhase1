@@ -10,6 +10,7 @@ from multiprocessing import Pool
 import sys
 sys.path.append("./")
 from routing.routing_utils import *
+from routing.G_weight_fun import *
 
 
 
@@ -93,30 +94,36 @@ def update_GSL_thread(sat_id, change, constellation_routes, links_updated, list_
 # ================================================================================================
 # FLOYD-WARSHALL ALG. IMPLEMENTATION (INITIAL ROUTING)
 # ================================================================================================
-def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency, distance, source_dest_nodes):
+def initial_routing_fw(satellites, connectivity_matrix, metric, source_dest_nodes, criterion=2):
     """
     Perform initial routing for a constellation network using Floyd-Warshall algorithm.
 
     Args:
         satellites (list):          List of satellite nodes.
-        ground_stations (list):     List of ground station nodes.
         connectivity_matrix (list): Matrix representing the connectivity between nodes.
-        latency (list):             Matrix representing the latency between nodes (unused?).
-        distance (list):            Matrix representing distance between nodes
+        metric (list):              Matrix representing the metric used for minimum-cost routing
         source_dest_nodes (tuple):  Default is None. If provided, then return output of shortest-path first route between Source/Destination nodes
+        criterion (int):            Routing criterion for corresponding edge weight assignment
+                                    (0) ISL only
+                                    (1) Terrestrial only
+                                    (2) Integrated satellite/terrestrial (default)
 
     Returns:
         dict: Dictionary of static routes with keys as (source, destination) tuples and values as lists of nodes in the path.
     """
 
-    mega_constellation_graph = nx.Graph()  # Create a new NetworkX graph for the constellation network
-    for n in range(len(satellites) + len(ground_stations)):  # For each satellite and ground station
-        mega_constellation_graph.add_node(n)  # Add the satellite or ground station to the graph
+    # mega_constellation_graph = nx.Graph()  # Create a new NetworkX graph for the constellation network
+    # #for n in range(len(satellites) + len(ground_stations)):  # For each satellite and ground station
+    # for n in range(len(connectivity_matrix)):  # For all nodes in the connectivity matrix (satellites, ground stations, and endpoints)
+    #     mega_constellation_graph.add_node(n)  # Add the satellite or ground station to the graph
 
-    for i in range(len(connectivity_matrix)):  # For each row in the connectivity matrix
-        for j in range(len(connectivity_matrix[i])):  # For each column in the connectivity matrix
-            if connectivity_matrix[i][j] == 1:  # If there is a connection between the nodes
-                mega_constellation_graph.add_edge(i, j, weight=int(latency[i][j]*1e3)) #int(latency[i][j]))  # Add an edge between the nodes with a weight of 1
+    # for i in range(len(connectivity_matrix)):  # For each row in the connectivity matrix
+    #     for j in range(len(connectivity_matrix[i])):  # For each column in the connectivity matrix
+    #         if connectivity_matrix[i][j] == 1:  # If there is a connection between the nodes
+    #             mega_constellation_graph.add_edge(i, j, weight=1)#int(latency[i][j]))  # Add an edge between the nodes with a weight of 1
+
+    mega_constellation_graph = topology_G(satellites=satellites, source_dest_nodes=source_dest_nodes, connectivity_matrix=connectivity_matrix,
+                                          metrics=metric, criterion=criterion)
 
     # Use Floyd-Warshall algorithm to find shortest paths between all pairs of nodes
     pred, _ = nx.floyd_warshall_predecessor_and_distance(mega_constellation_graph, weight="weight")
@@ -125,17 +132,28 @@ def initial_routing_fw(satellites, ground_stations, connectivity_matrix, latency
     optimal_output = None
     if source_dest_nodes:   # Check if source exists
         src, dest = source_dest_nodes
-        optimal_output = nx.reconstruct_path(src, dest, pred)
+        try:
+            optimal_output = nx.reconstruct_path(src, dest, pred)
+        except KeyError:
+            optimal_output = None
 
-    # Iterate over results and only look at satellite nodes for the routing
+    if criterion > 0:
+        max_iter_value = len(connectivity_matrix) # Iterate over results for all nodes
+    elif criterion == 0:
+        max_iter_value = len(satellites) # Iterate over results and only look at satellite nodes for the routing
+        
     static_routes = {}
-    for i in range(len(satellites)):  # Iterate only over satellite nodes as sources
-        for j in range(len(satellites)):
-            if i != j:
+    for i in range(max_iter_value):  # Iterate only over satellite nodes as sources
+        for j in range(max_iter_value):
+            if i != j and (i in pred and j in pred[i]):
                 static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 
     if source_dest_nodes:
-        return (static_routes, optimal_output)
+        weight_list= []
+        for i in range(len(optimal_output)-1):
+            weight_list.append(mega_constellation_graph[optimal_output[i]][optimal_output[i+1]]['weight'])
+        #return (static_routes, optimal_output, nx.path_weight(mega_constellation_graph, optimal_output, weight="weight"))
+        return (static_routes, optimal_output, weight_list)
     else:
         return static_routes
 

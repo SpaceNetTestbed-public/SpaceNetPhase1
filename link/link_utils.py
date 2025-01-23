@@ -31,7 +31,8 @@ from mobility.mobility_utils import *
 # =================================================================================== #
 # ---------------------------- BUILT-IN ASSUMPTIONS --------------------------------- #
 # =================================================================================== #
-api_key                                 = "d06b0a02f8377dff811a2a6d0882a2d6"
+#api_key                                 = "d06b0a02f8377dff811a2a6d0882a2d6"
+api_key                                 = "cab2710f043a0aeedb61b28b3a316146" #Contains weather history subscription of OpenWeather API (One Call API 3.0)
 channelFreq_isls                        = 37.0      # GHz
 channelFreq_sat_to_ground               = 12.7      # GHz
 channelFreq_ground_to_sat               = 14.5      # GH
@@ -50,26 +51,41 @@ ground_station_transmit_attenna_gain    = 34.6      # dBi -- https://apps.fcc.go
 # ---------------------------- LINK UTILITY FUNCTIONS ------------------------------- #
 # =================================================================================== #
 def get_weather_info(
-                        lat : float, 
-                        lon : float
+                        lat            : float, 
+                        lon            : float,
+                        init_timestamp : int,
+                        wait_on_rate_limit=False
                     ) -> dict:
     """
     Retrieve weather information using OpenWeatherMap API based on latitude and longitude.
 
     Args:
-        lat (float):    Latitude of the location
-        lon (float):    Longitude of the location
+        lat (float)         :    Latitude of the location
+        lon (float)         :    Longitude of the location
+        init_timestamp (int):    Initial simulation timestamp in unix time
 
     Returns:
         dict:           Dictionary containing temperature, humidity, pressure, and weather description
     """
 
     # Construct the OpenWeatherMap API URL using latitude, longitude, and API key
-    url = "https://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&appid=%s&units=standard" % (str(lat), str(lon), api_key)
+    #url = "https://api.openweathermap.org/data/2.5/weather?lat=%s&lon=%s&appid=%s&units=standard" % (str(lat), str(lon), api_key)
+    url = "https://api.openweathermap.org/data/3.0/onecall/timemachine?lat=%s&lon=%s&dt=%s&appid=%s" % (str(lat), str(lon), str(init_timestamp), api_key)
     
     # Send a GET request to the API
-    response = requests.get(url)
-
+    try:
+        response = requests.get(url)
+    except requests.exceptions.RequestException as e:
+        print("Error: Unable to connect to the weather API - skipping...")
+        return ""
+    if response.status_code == 429: # Too many requests
+        if not wait_on_rate_limit:
+            return ""
+        retry_after = int(response.headers.get("Retry-After", 10))
+        print(f"Rate limit exceeded. Waiting for {retry_after} seconds...")
+        import time
+        time.sleep(retry_after)
+        return get_weather_info(lat, lon, init_timestamp, wait_on_rate_limit=True)
     # Parse the JSON response
     data = response.json()
 
@@ -82,15 +98,20 @@ def get_weather_info(
     # Check if the response contains weather information
     if data != "":
 
-        # Extract weather description
-        da = data["weather"]
-        description =  da[0]["description"]
+        try:
+            # Extract weather description
+            w_data = data['data'][0]
+            da = w_data["weather"]
+            description =  da[0]["description"]
 
-        # Extract general weather data
-        general = data["main"]
-        temp  = general["temp"]
-        humidity = general["humidity"]
-        pressure = general["pressure"]
+            # Extract general weather data
+            temp  = w_data["temp"]
+            humidity = w_data["humidity"]
+            pressure = w_data["pressure"]
+        except KeyError:
+            #print("Error: Unable to extract weather data - skipping...")
+            return ""
+
 
     # Return a dictionary containing weather information
     return {"temp": temp,
@@ -146,7 +167,10 @@ def calc_gsl_snr(
     p       = 0.01
 
     # Get weather information for the ground station
-    weather_data = get_weather_info(lat_gs, lon_gs)
+    if 'weather_data' in ground_station: # data already queried
+        weather_data = ground_station['weather_data']
+    else:
+        weather_data = get_weather_info(lat_gs, lon_gs)
 
     # Check if weather data isn't empty
     if weather_data != "":
@@ -201,14 +225,18 @@ def calc_gsl_snr(
 
     else:
 
-        print("no weather data -- ")
+        #print("no weather data -- ")
 
         # Downlink attenuation without weather 
         weather_attenuation_dl = itur.atmospheric_attenuation_slant_path(lat_gs, lon_gs, f_dl, el, p, D, return_contributions=True)
+        if type(weather_attenuation_dl) == tuple:
+            weather_attenuation_dl = weather_attenuation_dl[4] # 4th index is the total attenuation
         weather_attenuation_dl = weather_attenuation_dl.value
 
         # Uplink attenuation without weather
         weather_attenuation_ul = itur.atmospheric_attenuation_slant_path(lat_gs, lon_gs, f_ul, el, p, D, return_contributions=True)
+        if type(weather_attenuation_ul) == tuple:
+            weather_attenuation_ul = weather_attenuation_ul[4] # 4th index is the total attenuation
         weather_attenuation_ul = weather_attenuation_ul.value
 
 

@@ -1,0 +1,33 @@
+# Main configuration script for the SpaceNet Mininet Simulator
+ConstellationName: starlink400_120_5 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+OutputFilePath: /home/spacenet/shared/dynamic-topology-generator/output
+DeleteAppResults: False
+Verbose: True
+# App configurations
+AppName: Ping # Options- Ping, iPerf, CLI
+# For Ping and iPerf
+# Useable keywords- firstGS, lastGS, firstSat, lastSat
+SourceDeviceName: firstGS
+DestDeviceName: lastGS
+# For CLI
+CLIStartInterval: 0
+CLIIntervalCount: 0
+
+
+# Phase I Settings
+
+# Configuration for terrestrial-to-terrestrial (t2t) links
+Use_t2t: True
+t2t_gateway_kmz_type: local # Options- local, link
+t2t_gateway_kmz_path: /home/spacenet/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
+t2t_dict_output_file: /home/spacenet/shared/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json
+# Configuration for using Azure data center locations for t2t link endpoints
+t2t_use_azure: True
+t2t_azure_endpoint_location_file: /home/spacenet/dynamic-topology-generator/t2t/azure/AzureDataCenterLocations.csv
+t2t_azure_endpoint_latency_url: https://learn.microsoft.com/en-us/azure/networking/azure-network-latency
+t2t_azure_dict_output_file: /home/spacenet/dynamic-topology-generator/t2t/azure/t2t_azure_dict.json
+# Configuration for using WonderProxy server locations for t2t link endpoints
+t2t_use_wonderproxy: True
+t2t_wonderproxy_endpoint_location_file: /home/spacenet/dynamic-topology-generator/t2t/wonderproxy/wonderproxy_servers-2020-07-19.csv
+t2t_wonderproxy_endpoint_latency_file: /home/spacenet/dynamic-topology-generator/t2t/wonderproxy/wonderproxy_pings-2020-07-19-2020-07-20.csv
+t2t_wonderproxy_dict_output_file: /home/spacenet/dynamic-topology-generator/t2t/wonderproxy/t2t_wonderproxy_dict.json

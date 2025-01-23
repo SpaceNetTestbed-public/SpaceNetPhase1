@@ -23,26 +23,45 @@ def calc_max_gsl_length(
     
     # Initialize return variable
     max_gsl_length_m = -1 
-
+    
     # Check for starlink operator
-    if operator_name == "starlink":
+    # if operator_name == "starlink":
         # Set a specific value for max GSL length
-        max_gsl_length_m = 1089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
+        # max_gsl_length_m = 2089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
         # (additionally, the above value does not match the value one would get using the algorithm in the else case, but applied to a starlink case)
         
-        return max_gsl_length_m
-
+        # return max_gsl_length_m
+    
     # Max GSL length for non-starlink operators
-    else:
-        # Calculate satellite cone radius based on altitude and elevation angle
-        satellite_cone_radius = (sat_config["shell1"]["altitude"])/math.tan(math.radians(sat_config["shell1"]["elevation_angle"]))
-        
-        # Calculate max GSL length using cone radius and satellite altitude, convert to meters
-        max_gsl_length_m =  (math.sqrt(math.pow(satellite_cone_radius, 2) + math.pow(sat_config["shell1"]["altitude"], 2)))*1000
-        
-        return max_gsl_length_m
+    # else:
+
+    # Calculate satellite cone radius based on altitude and elevation angle
+    satellite_cone_radius = (sat_config["shell1"]["altitude"])/math.tan(math.radians(sat_config["shell1"]["elevation_angle"]))
+     
+    # Calculate max GSL length using cone radius and satellite altitude, convert to meters
+    max_gsl_length_m =  (math.sqrt(math.pow(satellite_cone_radius, 2) + math.pow(sat_config["shell1"]["altitude"], 2)))*1000
+    
+    return max_gsl_length_m
 
 # removed calc_distance_gs_sat_worker, as it was only used in mininet_add_GSLs (which has also been removed)
+
+def get_orbit_from_sat(
+                       sat_id,
+                       satellites_by_index,
+                       satellites_by_name,
+                       satellites_sorted_in_orbits):
+    """
+    Provides Orbit ID from satellite ID (Function for simplifying things!)
+    """
+
+    sat_name = satellites_by_index[sat_id]
+
+    for i, orbit in enumerate(satellites_sorted_in_orbits):
+        for sat in orbit:
+            this_sat_name = list(satellites_by_name.keys())[list(satellites_by_name.values()).index(sat)]
+            if this_sat_name == sat_name:
+                return i
+
 
 def calc_distance_gs_sat_thread(
                                 ground_stations, 
@@ -80,7 +99,7 @@ def calc_distance_gs_sat_thread(
                 # If in range, append a tuple to the result list
                 ground_station_satellites_in_range.append((distance_m, sid, gs["gid"]))
 
-     # Return the list of valid ground station-satellite pairs
+    # Return the list of valid ground station-satellite pairs
     return ground_station_satellites_in_range
 
 # removed calc_distance_gs_sat_worker_alan, as it was only used in mininet_add_GSLs (which has also been removed)
@@ -118,6 +137,50 @@ def distance_between_ground_station_satellite(
     return distance.m
 
 # removed distance_between_ground_station_satellite_alan, as it was only used in calc_distance_gs_sat_worker_alan
+
+def calc_distance_sat_sat_thread(
+                                current_sat_list, 
+                                satellites_by_name, 
+                                satellites_by_index, 
+                                satellite_sorted_in_orbits,
+                                time_t, 
+                                max_isl_search_length, 
+                                current_sat_satellites_in_range
+                                ):
+    """
+    Determines which nearby satellites are in range of each satellite.
+
+    Args:
+        current_sat_list (dict): list of current orbit satellite (SKYFIELD type)
+        satellites_by_name (dict): satellites sorted by name
+        satellites_by_index (dict): satellites sorted by index
+        time_t (datetime): timestamp corresponding to current satellite locations
+        max_isl_search_length (float): maximum sat-sat link length (in meters)
+        current_sat_satellites_in_range (dict): list containing current_sat identifiers, sat indices, and distances in between
+
+    Returns:
+        current_sat_satellites_in_range (dict): list containing newly appended current_sat identifiers, sat indices, and distances in between
+
+    """
+    current_sat_by_name = [sat.name.split(" ")[0] for sat in current_sat_list]   # STORES SATELLITE STRINGS IN THE ORDER
+    current_sat_ids = [list(satellites_by_index.keys())[list(satellites_by_index.values()).index(s)] for s in current_sat_by_name]  # STORES SATELLITE INDICES IN THE ORDER
+    #print("Interior thread --> " + str(current_sat_ids))
+
+    for itr, current_sat in enumerate(current_sat_list):
+        curr_id = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(current_sat_by_name[itr])]
+        # Iterate over the range of satellite indices
+        for num, sid in enumerate(satellites_by_index.keys()):
+            
+            if sid is not curr_id:   # dont store itself
+                # Calculate the distance between the current ground station and satellite
+                distance_m = distance_between_two_satellites(current_sat, satellites_by_name[str(satellites_by_index[sid])], time_t)
+                # Check if the calculated distance is within the maximum GSL length
+                if distance_m <= max_isl_search_length:
+                    # If in range, append a tuple to the result list
+                    current_sat_satellites_in_range.append((distance_m, sid, current_sat_by_name[itr]))
+
+     # Return the list of valid ground station-satellite pairs
+    return current_sat_satellites_in_range
 
 def distance_between_two_satellites(
                                     satellite1, 
@@ -195,6 +258,17 @@ def find_adjacent_orbit_sat(
     return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None
 
 
+def get_current_isl_to_sats(
+                            connectivity_matrix_row
+                            ):
+    
+    satidx_list = []
+    for idx, link in connectivity_matrix_row:
+        if link==1:
+            satidx_list.append(idx) 
+    return satidx_list
+
+
 def mininet_add_ISLs(
                         connectivity_matrix, 
                         satellites_sorted_in_orbits, 
@@ -217,7 +291,7 @@ def mininet_add_ISLs(
     Returns:
         connectivity_matrix (list): updated connectivity matrix, now including ISLs
     """
-    
+
     # Get the number of orbits
     n_orbits = len(satellites_sorted_in_orbits)
 
@@ -241,13 +315,13 @@ def mininet_add_ISLs(
                 current_sat_name = satellites_by_index[sat]
                 current_sat = satellites_by_name[current_sat_name]
 
-                # Determine the index of next satellite
+                # Determine the index of next satellite in same orbit
                 sat_same_orbit = total_sat_now + ((j + 1) % n_sats_per_orbit)
                 current_sat_same_orbit_name = satellites_by_index[sat_same_orbit]
                 current_sat_same_orbit = satellites_by_name[current_sat_same_orbit_name]
 
-                # Intra-orbit connection
-                if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 501600000:
+                # Intra-orbit connection (Connection to all same orbit sats within threshold)
+                if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 5016000:
                     connectivity_matrix[sat][sat_same_orbit] = 1
                     connectivity_matrix[sat_same_orbit][sat] = 1
                 
@@ -269,9 +343,276 @@ def mininet_add_ISLs(
             # Update the current total number of satellites
             total_sat_now += n_sats_per_orbit
 
+    # Simple distance based forward sat connections
+    elif isl_config == "DISTANCE_BASED_SAME_AND_ACROSS_ORBITS":
+
+        number_of_threads = 4
+        max_isl_conn = 80
+        
+        # Setting maximum ISL length
+        max_isl_search_length = int(5016000/2)
+
+        numsats_per_orb = [len(orbs) for orbs in satellites_sorted_in_orbits]
+        
+        """
+        OPTIMIZING CODESPACE STARTS
+        """
+        ######################## FINDING NEARBY SATS BASED ON THREADING ALLOCATION OF ORBIT #############################
+        # Calculate number of pools and orbits per thread pool (for parallel execution)
+        number_of_pools = n_orbits/number_of_threads
+        num_of_orbits_per_pool = n_orbits/number_of_pools
+
+        # Initialize list to store results for each pool
+        current_sat_satellites_in_range = [[] for _ in range(int(number_of_pools+1))]
+
+        # Create thread list
+        thread_list = []
+        count = 0
+
+        # Divide same-orbit satellites into pools and create threads
+        for pool in range(int(number_of_pools)):
+            orb_index = int(num_of_orbits_per_pool)*pool
+            same_orbit_sat_list = satellites_sorted_in_orbits[orb_index:orb_index+int(num_of_orbits_per_pool)]  # List of Skyfield type
+            subsat_list = [sts for orb in same_orbit_sat_list for sts in orb]
+            #print(subsat_list)
+            total_sat_name_list = [sat.name.split(" ")[0] for sat in subsat_list]  # List of strs
+            thread = threading.Thread(target=calc_distance_sat_sat_thread, args=(subsat_list, satellites_by_name, satellites_by_index, satellites_sorted_in_orbits, t, max_isl_search_length, current_sat_satellites_in_range[count]))
+            thread_list.append(thread)
+            count += 1
+
+        # Start and join threads for parallel execution
+        for thread in thread_list:
+            thread.start()
+        for thread in thread_list:
+            thread.join()
+        
+        current_sat_satellites_in_range_flatten = [sats for sat_list in current_sat_satellites_in_range for sats in sat_list]
+        for i in range(n_orbits):
+            # Get sats and the number of satellites in the current orbit
+            same_orbit_sat_list = satellites_sorted_in_orbits[i]    # List of Skyfield type
+            total_sat_name_list = [sat.name.split(" ")[0] for sat in same_orbit_sat_list]  # List of strs
+            adj_orb = [(i-1)%len(satellites_sorted_in_orbits), (i+1)%len(satellites_sorted_in_orbits)]
+            adj_sat_ids = []
+            adj_sat_ids_flatten = []
+            for orb in adj_orb:
+                adj_sats = satellites_sorted_in_orbits[orb]
+                adj_sats_id = [list(satellites_by_index.keys())[list(satellites_by_index.values()).index(adj_sats[m].name.split(" ")[0])] for m in range(len(adj_sats))]
+                adj_sat_ids.append(adj_sats_id)
+                adj_sat_ids_flatten.extend(adj_sats_id)
+            
+            same_orbit_sats_id = [list(satellites_by_index.keys())[list(satellites_by_index.values()).index(s)] for s in total_sat_name_list]
+            # print(i, same_orbit_sats_id)
+            current_sat_satellites_in_range_flatten = [sats for sat_list in current_sat_satellites_in_range for sats in sat_list]
+            for curr_sid_name in total_sat_name_list:  # Iterating over sats in the current ith orbit
+                temp_isl_list = []
+                sat = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(curr_sid_name)]  # sat id based on name
+                for sat_data in current_sat_satellites_in_range_flatten:
+                    if sat_data:
+                        if sat_data[2] == curr_sid_name:
+                            temp_isl_list.append([sat_data[0],sat_data[1],sat])  # Taking all the isl connections generated from the thread for the current sat in the orbit (distance, neighbour_sat_id, current_sat_id)
+                temp_isl_list = sorted(temp_isl_list, key=lambda x:x[0])  # sort from smallest to largest distance ISL
+                #temp_isl_list = temp_isl_list[:max_isl_conn]
+                same_counter = 0
+                adj_flag1 = 0
+                adj_flag2 = 0
+                non_adj_counter = 0
+                store_orbits = []   # Just stores the relevant orbits for each ISL connection per sat
+                #print("Number of connections for " + curr_sid_name + "(" + str(sat) + ")" + " : " + str(len(temp_isl_list)))
+                for sat_neighbour_index in temp_isl_list:
+                    if sat_neighbour_index[1] in same_orbit_sats_id: # Takes two sats from the same orbit (j orbit)
+                        if same_counter<2:
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            same_counter += 1
+                            if same_counter==1:
+                                store_orbits.append(i)
+                            
+                    elif sat_neighbour_index[1] in adj_sat_ids_flatten: # Takes two sats from the next near neighbours 
+
+                        if sat_neighbour_index[1] in adj_sat_ids[0] and not adj_flag1:  # Takes one sat from j-1 orbit
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            adj_flag1 = 1
+                            store_orbits.append(adj_orb[0])
+                        elif sat_neighbour_index[1] in adj_sat_ids[1] and not adj_flag2:  # Takes one sat from j+1 orbit
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            adj_flag2 = 1
+                            store_orbits.append(adj_orb[1])
+
+                    else:  # If sats are neither in same orbit or the two closest orbit (k, l orbits)
+                        neighbour_sat_orbit_id = get_orbit_from_sat(sat_neighbour_index[1], satellites_by_index, satellites_by_name, satellites_sorted_in_orbits)
+                        if non_adj_counter<2 and neighbour_sat_orbit_id not in store_orbits:
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            non_adj_counter += 1
+                            store_orbits.append(neighbour_sat_orbit_id)
+
+                    if same_counter==2 and adj_flag1 and adj_flag2 and non_adj_counter==1:
+                        # sat_count += 1
+                        # print(sat_count, " Reached!")
+                        break
+        """
+        OPTIMIZING CODESPACE ENDS
+        """
+        # Iterate through each orbit
+        # sat_count = 0
+        """
+        for i in range(n_orbits):
+            ######################## FINDING NEARBY SATS BASED ON THREADING INDIVIDUALLY FOR EACH ORBIT #############################
+            # Get sats and the number of satellites in the current orbit
+            same_orbit_sat_list = satellites_sorted_in_orbits[i]    # List of Skyfield type
+            total_sat_name_list = [sat.name.split(" ")[0] for sat in same_orbit_sat_list]  # List of strs
+            n_sats_per_orbit = len(same_orbit_sat_list)
+                
+            # Calculate number of pools and satellites per thread pool (for parallel execution)
+            ####### (VERY IMPORTANT: FOR REAL TLES THIS SECTION WOULD CREATE ALOT OF PROBLEMS, SINCE EACH ORBIT HAS DIFFERENT NUMER OF SATS)
+            number_of_pools = n_sats_per_orbit/number_of_threads
+            num_of_sat_per_pool = n_sats_per_orbit/number_of_pools
+
+            # Initialize list to store results for each pool
+            current_sat_satellites_in_range = [[] for _ in range(int(number_of_pools+1))]
+
+            # Create thread list
+            thread_list = []
+            count = 0
+
+            # Divide same-orbit satellites into pools and create threads
+            for pool in range(int(number_of_pools)):
+                index = int(num_of_sat_per_pool)*pool
+                if pool == int(number_of_pools)-1:      # Check for the last pool and assign all the remaining sats that were not able to be assigned because of num_of_sat_per_pool not a perfect integer
+                    subsat_list = same_orbit_sat_list[index:]
+                else:
+                    subsat_list = same_orbit_sat_list[index:index+int(num_of_sat_per_pool)]
+                thread = threading.Thread(target=calc_distance_sat_sat_thread, args=(subsat_list, satellites_by_name, satellites_by_index, satellites_sorted_in_orbits, t, max_isl_search_length, current_sat_satellites_in_range[count]))
+                thread_list.append(thread)
+                count += 1
+
+            # Start and join threads for parallel execution
+            for thread in thread_list:
+                thread.start()
+            for thread in thread_list:
+                thread.join()
+
+            # if i==32:
+            #     print(current_sat_satellites_in_range[-1])
+            ######################### THREADING DONE ########################
+            # s = 0
+            # for curr_sid_name in total_sat_name_list:
+            #     c = 0
+            #     for pool in current_sat_satellites_in_range:
+            #         for sat_data in pool:
+            #             if sat_data is not []:
+            #                 d, sid, curr_sid = sat_data
+            #                 if curr_sid == curr_sid_name:
+            #                     c += 1
+            #     print(i, s, curr_sid_name, c)
+            #     s += 1
+
+            adj_orb = [(i-1)%len(satellites_sorted_in_orbits), (i+1)%len(satellites_sorted_in_orbits)]
+            adj_sat_ids = []
+            adj_sat_ids_flatten = []
+            for orb in adj_orb:
+                adj_sats = satellites_sorted_in_orbits[orb]
+                adj_sats_id = [list(satellites_by_index.keys())[list(satellites_by_index.values()).index(adj_sats[m].name.split(" ")[0])] for m in range(len(adj_sats))]
+                adj_sat_ids.append(adj_sats_id)
+                adj_sat_ids_flatten.extend(adj_sats_id)
+            
+            same_orbit_sats_id = [list(satellites_by_index.keys())[list(satellites_by_index.values()).index(s)] for s in total_sat_name_list]
+            # print(i, same_orbit_sats_id)
+            current_sat_satellites_in_range_flatten = [sats for sat_list in current_sat_satellites_in_range for sats in sat_list]
+            for curr_sid_name in total_sat_name_list:  # Iterating over sats in the current ith orbit
+                temp_isl_list = []
+                sat = list(satellites_by_index.keys())[list(satellites_by_index.values()).index(curr_sid_name)]
+                for sat_data in current_sat_satellites_in_range_flatten:
+                    if sat_data:
+                        if sat_data[2] == curr_sid_name:
+                            temp_isl_list.append([sat_data[0],sat_data[1],sat])  # Taking all the isl connections generated from the thread for the current sat in the orbit (distance, neighbour_sat_id, current_sat_id)
+                temp_isl_list = sorted(temp_isl_list, key=lambda x:x[0])  # sort from smallest to largest distance ISL
+                #temp_isl_list = temp_isl_list[:max_isl_conn]
+                same_counter = 0
+                adj_flag1 = 0
+                adj_flag2 = 0
+                non_adj_counter = 0
+                store_orbits = []   # Just stores the relevant orbits for each ISL connection per sat
+                #print("Number of connections for " + curr_sid_name + "(" + str(sat) + ")" + " : " + str(len(temp_isl_list)))
+                for sat_neighbour_index in temp_isl_list:
+                    if sat_neighbour_index[1] in same_orbit_sats_id: # Takes two sats from the same orbit (j orbit)
+                        if same_counter<2:
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            same_counter += 1
+                            if same_counter==1:
+                                store_orbits.append(i)
+                            
+                    elif sat_neighbour_index[1] in adj_sat_ids_flatten: # Takes two sats from the next near neighbours 
+
+                        if sat_neighbour_index[1] in adj_sat_ids[0] and not adj_flag1:  # Takes one sat from j-1 orbit
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            adj_flag1 = 1
+                            store_orbits.append(adj_orb[0])
+                        elif sat_neighbour_index[1] in adj_sat_ids[1] and not adj_flag2:  # Takes one sat from j+1 orbit
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            adj_flag2 = 1
+                            store_orbits.append(adj_orb[1])
+
+                    else:  # If sats are neither in same orbit or the two closest orbit (k, l orbits)
+                        neighbour_sat_orbit_id = get_orbit_from_sat(sat_neighbour_index[1], satellites_by_index, satellites_by_name, satellites_sorted_in_orbits)
+                        if non_adj_counter<2 and neighbour_sat_orbit_id not in store_orbits:
+                            # Establishing connections
+                            connectivity_matrix[sat][sat_neighbour_index[1]] = 1
+                            connectivity_matrix[sat_neighbour_index[1]][sat] = 1
+                            non_adj_counter += 1
+                            store_orbits.append(neighbour_sat_orbit_id)
+
+                    if same_counter==2 and adj_flag1 and adj_flag2 and non_adj_counter==1:
+                        # sat_count += 1
+                        # print(sat_count, " Reached!")
+                        break
+        """
+                #print("same counter --> " + str(same_counter) + "  flag 1 --> " + str(adj_flag1) + "  flag 2 --> " + str(adj_flag2))
+            # print("Orbit " + str(i) + " : DONE")
+        print("ISLs added to connectivity matrix")
+
     # Return the updated connectivity matrix
     return connectivity_matrix
 
+def retrieve_GS_by_type(ground_stations, gs_type):
+    """
+    Retrieves a list of ground stations based on their type
+    Gateway: 0 - connects satellite network to the internet
+    Customer Terminal: 1 - connects end users to the satellite network
+    Endpoint: 2 - Internet locations connected to gateways
+
+    Args:
+        ground_stations (dict): list of ground stations
+        gs_type (int): type of ground station (0: gateway, 1: customer terminal, 2: endpoint)
+
+    Returns:
+        gs_list (list): list of ground stations of the specified type
+    """
+    
+    # Initialize the list of ground stations
+    gs_list = []
+
+    # Iterate through the list of ground stations
+    for gs in ground_stations:
+        # Check if the ground station type matches the specified type
+        if gs["type"] == gs_type:
+            # Append the ground station to the list
+            gs_list.append(gs)
+
+    # Return the list of ground stations of the specified type
+    return gs_list
 
 def mininet_add_GSLs_parallel(
                               connectivity_matrix, 
@@ -303,7 +644,7 @@ def mininet_add_GSLs_parallel(
 
     """
     
-    # Calculate maximum GSL length
+    # Retrieve maximum GSL length from config
     max_gsl_length_m = calc_max_gsl_length(sat_config, operator_name)
 
     # Check if max GSL length is valid
@@ -312,7 +653,7 @@ def mininet_add_GSLs_parallel(
             print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
             return
         
-    # Calculate number of pools and ground stations per pool (further clarification needed?)
+    # Calculate number of pools and ground stations per thread pool (for parallel execution)
     number_of_pools = len(ground_stations)/number_of_threads
     num_of_gs_per_pool = len(ground_stations)/number_of_pools
 
@@ -549,38 +890,59 @@ def M_gs_sat_association_criteria_BasedOnDistance(
     # ######################################
     for gid in range(len(ground_stations)):
         chosen_sid = -1
+        chosen_sid_list = []
         best_distance_m = 1000000000000000
+        sat_wth_distance = {}
         for (distance_m, sid, gr_id) in ground_station_satellites_in_range:
             # print t.utc_strftime(), az, distance_m, alt, sid, gr_id
             if gid == gr_id:
+
+                #$ Add top 4 closes sat-links for each GS
+                sat_wth_distance[sid] = distance_m
+
                 # if gid != 1: # USE CASE 1 -- REMOVE for general run
-                if distance_m < best_distance_m:
-                    chosen_sid = sid
-                    best_distance_m = distance_m
+                # if distance_m < best_distance_m:
+                #     chosen_sid = sid
+                #     best_distance_m = distance_m
                 # USE CASE 1 -- REMOVE for general run
                 # if gid == 1:
                 #     if sid == chosen_sid_forAlan:
                 #         chosen_sid = sid
                 #         best_distance_m = distance_m
                 ######################################
-        if chosen_sid != -1:
-            # USE CASE 1 -- REMOVE for general run
-            #if gid == 0:
-            #    chosen_sid_forAlan = chosen_sid
-            ######################################
+        sat_wth_distance = dict(sorted(sat_wth_distance.items(),key=lambda x:x[1]))
+        try:
+            chosen_sid_list = list(sat_wth_distance.keys())[:4]   # Taking top 4 shortest sat-links to GS
+        except:
+            chosen_sid_list = list(sat_wth_distance.keys())       # Taking all sat-links to GS
 
-            connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
-            connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
-            # print chosen_sid, gid, best_distance_m
-            # if gid == 1:
-            #     chosen_sid = chosen_sid_forAlan
-            #     connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
-            #     connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
 
-            #print "best distance ",gid, chosen_sid, best_distance_m
-            gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
-            gsl_latency[gid] = best_distance_m/299792458            #speed of light
-            # print "best distance ",gid, chosen_sid, best_distance_m, gsl_latency[gid]
+        if chosen_sid_list:
+            for sid_id in chosen_sid_list:
+                connectivity_matrix[sid_id][num_of_satellites+gid] = 1
+                connectivity_matrix[num_of_satellites+gid][sid_id] = 1
+
+                gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
+                gsl_latency[gid] = best_distance_m/299792458            #speed of light
+
+        # if chosen_sid != -1:
+        #     # USE CASE 1 -- REMOVE for general run
+        #     #if gid == 0:
+        #     #    chosen_sid_forAlan = chosen_sid
+        #     ######################################
+
+        #     connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
+        #     connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
+        #     # print chosen_sid, gid, best_distance_m
+        #     # if gid == 1:
+        #     #     chosen_sid = chosen_sid_forAlan
+        #     #     connectivity_matrix[chosen_sid][num_of_satellites+gid] = 1
+        #     #     connectivity_matrix[num_of_satellites+gid][chosen_sid] = 1
+
+        #     #print "best distance ",gid, chosen_sid, best_distance_m
+        #     gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
+        #     gsl_latency[gid] = best_distance_m/299792458            #speed of light
+        #     # print "best distance ",gid, chosen_sid, best_distance_m, gsl_latency[gid]
 
     return connectivity_matrix
 
@@ -628,21 +990,21 @@ def calculate_link_characteristics_for_gsls_isls(
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light  (Units in ms)
                 throughput_matrix[i][j]     = 500            #20Gbps
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] == 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light
+                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
                 snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                 channel_width               = channel_bandwidth_downlink
                 throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
                 if throughput_matrix[i][j] > 500:
                     throughput_matrix[i][j] = 500
 
-                # Additional check for specific conditions (further clarification?)
+                # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
                     snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                     channel_width               = channel_bandwidth_downlink

@@ -35,7 +35,7 @@ def read_gs(filename_ground_stations_extended):
         for line in f:
             split = line.split(',')
             if len(split) != 9:
-                raise ValueError("Extended ground station file has 8 columns: " + line)
+                raise ValueError("Extended ground station file has 9 columns: " + line)
             if int(split[0]) != gid:
                 raise ValueError("Ground station id must increment each line")
             ground_station_basic = {

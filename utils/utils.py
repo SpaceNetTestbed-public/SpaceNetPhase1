@@ -76,6 +76,7 @@ import yaml
 import sys
 sys.path.append("../")
 from mobility.read_live_tles import *
+from utils.file_utils import *
 
 # =================================================================================== #
 # ---------------------------------- FILE SYSTEM ------------------------------------ #
@@ -201,7 +202,11 @@ def save_topology(
     existing_links = []
 
     # Generate a new file
-    f = open(connectivity_matrix_path+operator_name+"/topology_"+timestamp+".txt", "a")
+    file_path = connectivity_matrix_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "topology_"+timestamp+".txt"
+    #f = open(connectivity_matrix_path+operator_name+"/topology_"+timestamp+".txt", "a")
+    f = open(file_path + file_name, "a")
 
     # Iterate over the connectivity matrix list
     for i in range(len(connectivity_matrix)):
@@ -209,11 +214,41 @@ def save_topology(
             if connectivity_matrix[i][j] == 1:
                 if i!=j and (i, j) not in existing_links:
                    write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+"\n"
+                   #write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["distance_matrix"][i][j],2))+"\n"
                    f.write(write_this)
                    existing_links.append((i, j))
     
     # Close file to minimize memory leaks
     f.close()
+
+
+
+def extract_connectivity(  
+                            topology_path               : str, 
+                            conn_mat_size               : int  
+                        ):
+    # Extracting connectivity matrix from topology files already generated
+    connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
+    latency_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    throughput_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    distance_matrix = [[0.0 for _ in range(conn_mat_size)] for _ in range(conn_mat_size)]
+    with open(topology_path, 'r') as links:
+        for link_data in links:
+            data  = link_data.split(",")
+            d = data[3].split("\n")
+            data[3] = d[0]
+            connectivity_matrix[int(data[0])][int(data[1])] = 1
+            latency_matrix[int(data[0])][int(data[1])] = float(data[2])
+            throughput_matrix[int(data[0])][int(data[1])] = data[3]
+            try:
+                distance_matrix[int(data[0])][int(data[1])] = data[4]
+            except:
+                pass
+
+    link_characteristics = {"latency_matrix": latency_matrix, "throughput_matrix": throughput_matrix, "distance_matrix": distance_matrix}
+
+    return connectivity_matrix, link_characteristics
+            
 
 
 def save_routes(
@@ -241,7 +276,11 @@ def save_routes(
     """
 
     # Generate a new file
-    routes_log = open(routing_file_path+operator_name+"/routes_"+timestamp+".txt", "a")
+    file_path = routing_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "routes_"+timestamp+".txt"
+    #routes_log = open(routing_file_path+operator_name+"/routes_"+timestamp+".txt", "a")
+    routes_log = open(file_path + file_name, "a")
 
     # Iterate over the routes list
     for _, route in routes.items():
@@ -274,10 +313,14 @@ def save_optimal_path(
     """
 
     # Generate a new file
-    optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    file_path = optimal_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "best_path_"+("_".join(timestamp))+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "w")
     
     # Iterate over the optimal path list
-    if optimal_path != None:
+    if optimal_path:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_path)[1:-1] + "\n")
     else:
         optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
@@ -285,14 +328,125 @@ def save_optimal_path(
     # Close file to minimize memory leaks
     optimal_log.close()
 
+def extract_optim_routes(  
+                            optimal_route_path               : str  
+                        ):
+    # Extracting list of nodes in optimal route from optimal_route files files already generated
+    with open(optimal_route_path, 'r') as lines:
+        for nodes in lines:
+            t_data, route_data  = nodes.split(": ", 1)
+            route_node_list = route_data.split(", ")
+            route_node_list[-1] = route_node_list[-1][:-1]
+            route_node_list = [int(node) for node in route_node_list]
 
-def save_node_index(
-                        satellites_by_index     : dict, 
-                        ground_stations         : list, 
-                        node_index_file_path    : str,
+    return route_node_list
+
+def save_optimal_weights(
+                        optimal_weights         : list, 
                         timestamp               : int,
-                        operator_name           : str
-                   ):
+                        operator_name           : str, 
+                        optimal_w_path          : str
+                     ):
+    
+    # Generate a new file
+    file_path = optimal_w_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "optimal_weights_"+("_".join(timestamp[0:3]))+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
+    
+    # Iterate over the optimal path list
+    if len(optimal_weights)>1: # Path weight list
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + ", ".join(map(str, optimal_weights)) + "\n")
+    elif len(optimal_weights)==1:  # Total path weight
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + str(optimal_weights) + "\n")
+    else:
+        optimal_log.write("(" + ("_".join(timestamp)) + "): " + "Unreachable\n")
+
+    # Close file to minimize memory leaks
+    optimal_log.close()
+
+def save_link_changes(
+                        link_changes            : list, 
+                        itr                     : int,
+                        targetgs                : str,
+                        operator_name           : str, 
+                        link_changes_path          : str
+                     ):
+    
+    # Generate a new file
+    file_path = link_changes_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "link_changes_"+targetgs+".txt"
+    #optimal_log = open(optimal_file_path+operator_name+"/best_path_"+("_".join(timestamp[:3]))+".txt", "a")
+    optimal_log = open(file_path + file_name, "a")
+    
+    # Iterate over the optimal path list
+    if link_changes: # Path weight list
+        optimal_log.write("(" + (str(itr-1)+"_"+str(itr)) + "): " + str(link_changes) + "\n")
+    else:
+        optimal_log.write("(" + (str(itr-1)+"_"+str(itr)) + "): " + str(0) + "\n")
+
+    # Close file to minimize memory leaks
+    optimal_log.close()
+
+def save_weather_info(
+                        gs_weather_info         : list, 
+                        timestamp               : list,
+                        operator_name           : str, 
+                        weather_info_path       : str
+                     ):
+    
+    # Generate a new file
+    file_path = weather_info_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "weather_info_"+("_".join(timestamp))+".txt"
+    weather_log = open(file_path + file_name, "w")
+    
+    # Iterate over the ground stations list
+    for gs in gs_weather_info:
+        gs_vals = gs.values()
+        weather_log.write(", ".join(map(str, gs_vals)) + "\n")
+
+    # Close file to minimize memory leaks
+    weather_log.close()
+"""
+def update_node_index(t2t_dict, node_index_file_path, timestamp, operator_name):
+    # Open existing file for appending
+    file_path = node_index_file_path+operator_name+"/"
+    file_name = "nodeindex_"+timestamp+".txt"
+    # Open existing file and find the highest used index value
+    nodeindex_log_r = open(file_path + file_name, "r")
+    max_index = 0
+    for line in nodeindex_log_r:
+        index = int(line.split(":")[0])
+        if index > max_index:
+            max_index = index
+    nodeindex_log_r.close()
+    next_index = max_index + 1
+    endpoint_gid_list = []
+    nodeindex_log_a = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
+    for key in t2t_dict.keys():
+        if 'type' in t2t_dict[key] and t2t_dict[key]['type'] == 'endpoint' and 'gid' in t2t_dict[key]:
+            endpoint_gid_list.append(t2t_dict[key]['gid'])
+            
+    endpoint_gid_list = list(set(endpoint_gid_list)) # Ensure no duplicates
+    endpoint_gid_list.sort() # Sort the list so that the alias is consistent
+    for endpoint_gid in endpoint_gid_list:
+        alias_prefix = "IE-"
+        nodeindex_log_a.write(str(next_index)+":"+alias_prefix+str(endpoint_gid)+"\n")
+        next_index += 1
+    nodeindex_log_a.close() # Close file to minimize memory leaks
+"""
+def save_node_index_and_terrestrial_info(
+                                            satellites_by_index     : dict, 
+                                            ground_stations         : list, 
+                                            node_index_file_path    : str,
+                                            terrestrial_file_path   : str,
+                                            timestamp               : int,
+                                            operator_name           : str,
+                                            t2t_dict                : dict = None
+                                        ):
     """
     Saves the matching node indices and their corresponding aliases.
 
@@ -301,19 +455,32 @@ def save_node_index(
                                         satellite/ground nodes
         ground_stations (list):         List of supplied ground stations
         node_index_file_path (str):     Path to output the node index matching file
+        terrestrial_file_path (str):    Path to output the terrestrial node info file
         timestamp (int):                Unix time
         operator_name (str):            Constellation/operator name
+        t2t_dict (dict):                Dictionary of terrestrial-to-terrestrial connectio
 
     Returns:
-        Saves the node indices as a .txt file.
+        Saves the node indices and terrestrial information as .txt files.
     """
 
-    # Generate a new file
-    nodeindex_log_write = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "w")
+    # Generate a new file for node indices
+    file_path = node_index_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "nodeindex_"+timestamp+".txt"
+    nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
-    # Append to file
+    # Generate a new file for terrestrial information
+    file_path2 = terrestrial_file_path+"/"
+    check_create_path(file_path2)
+    file_name2 = "terrestrial_"+timestamp+".txt"
+    terrestrial_log_write = open(file_path2 + file_name2, "w")
+    terrestrial_log_write.close()
+
+    # Append to files
     nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
+    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+timestamp+".txt", "a")
 
     # Iterate over the satellites_by_index
     for sat_indx, sat_alias in satellites_by_index.items():
@@ -321,10 +488,69 @@ def save_node_index(
 
     # Iterate over ground station list
     for gs in ground_stations:
-        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+"GS-"+str(gs['gid'])+"\n")
+        if gs['type'] == 9: # 9 indicates a gateway ground station
+            alias_prefix = "GW-"
+        else:
+            alias_prefix = "CT-"  # all else are designated as customer terminals (ct)
+        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
+        terrestrial_log.write(
+                                str(1+sat_indx+gs['gid']) +
+                                ":"+alias_prefix+str(gs['gid']) +
+                                ":"+str(gs['name']) +
+                                ":"+str(gs['latitude_degrees_str']) +
+                                ":"+str(gs['longitude_degrees_str']) +
+                                "\n"
+                             )
 
+    # If t2t_dict is included, iterate over the dictionary and append endpoint aliases to the file
+    if t2t_dict is not None:
+        alias_prefix = "IE-" # IE indicates an internet endpoint
+        for id in t2t_dict.keys():
+            if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
+                gs_coord = t2t_dict[id]['coordinates']
+                gs_name = str(t2t_dict[id]['friendly_name']) if 'friendly_name' in t2t_dict.keys() else str(t2t_dict[id]['name'])
+                nodeindex_log.write(str(1+sat_indx+t2t_dict[id]['gid'])+":"+alias_prefix+str(t2t_dict[id]['gid'])+"\n")
+                terrestrial_log.write(
+                                        str(1+sat_indx+t2t_dict[id]['gid']) +
+                                        ":"+alias_prefix+str(t2t_dict[id]['gid']) +
+                                        ":"+gs_name +
+                                        ":"+str(gs_coord[0]) +
+                                        ":"+str(gs_coord[1]) +
+                                        "\n"
+                                     )
     # Close file to minimize memory leaks
     nodeindex_log.close()
+    terrestrial_log.close()
+
+def save_cpu_time(
+                    cpu_runtime     : float, 
+                    timestamp       : int,
+                    operator_name   : str, 
+                    cpu_time_path   : str
+                 ):
+    """
+    Saves the matching node indices and their corresponding aliases.
+
+    Args:
+        cpu_runtime (float):            CPU clock runtime, in seconds
+        timestamp (list):               Unix time as a list
+        operator_name (str):            Constellation/operator name
+        cpu_time_path (str):            Path to output CPU clock runtime file  
+
+    Returns:
+        Saves the CPU clock runtime as a .txt file.
+    """
+
+    # Generate a new file
+    check_create_path(cpu_time_path+operator_name)
+    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "w")
+    
+    # Iterate over the optimal path list
+    if cpu_runtime != None:
+        cpu_clock_log.write(str(cpu_runtime)+"\n")
+
+    # Close file to minimize memory leaks
+    cpu_clock_log.close()
 
 
 def save_cpu_time(
@@ -378,6 +604,7 @@ def parse_config_file_yml(
     Returns:
         dict:           Dictionary containing the parsed configuration parameters
     """
+
 
     # Obtain the constellation YAML file from main configuration YAML
     with open(filepath+"/"+filename, "r") as main_yml:
@@ -678,7 +905,13 @@ def arrange_satellites(
     """
 
     # Generate a new file
-    f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
+    file_path = sat_orbit_file_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "sorted_satellites_within_orbit_"+tle_timestamp+".txt"
+    #f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
+    f0 = open(file_path + file_name, "w")
+    f0.close()
+    f = open(file_path + file_name, "a")
     
     # Debugging purposes
     if sat_config["Debug"] == 1:
@@ -892,6 +1125,27 @@ def get_sats_by_name(filename: str) -> list:
     # Return the list of satellites
     return satellites
 
+def comment_route_link_var(
+                            current_node_list    : list, 
+                            previous_node_list   : list
+                        ) -> str:
+    # Comments on the link variations between consecutive optimal routes
+    ##### Remove source and dest since they dont contribute to changes
+    comments = []
+    curr_list = current_node_list[1:-1]
+    prev_list = previous_node_list[1:-1]
+    if curr_list==prev_list:
+        return "NO changes"
+    else:
+        current_set = set(curr_list)
+        previous_set = set(prev_list)
+        if not current_set.intersection(previous_set):
+            return "Whole path changed"
+        else:
+            extras = current_set.difference(previous_set)
+            extras =  extras.union(previous_set.difference(current_set))
+            return "Link changes : " + str(len(extras))
+
 
 # =================================================================================== #
 # ----------------------------------- CONVERSION ------------------------------------ #
@@ -916,8 +1170,14 @@ def convert_time_utc_to_unix(
     # Convert string to 'datetime' object
     time_datetime = datetime.strptime(time_utc_string, "%Y-%m-%d %H:%M:%S %Z")
 
-    # Convert the 'datetime' object to a float
+    # Convert the 'datetime' object to a float in local time
     time_timestamp = time.mktime(time_datetime.timetuple())
+
+    # Convert the float back to UTC from local time
+    datetime.now().isoformat()
+    datetime.utcnow().isoformat()
+    time.altzone
+    time_timestamp = time_timestamp - time.altzone
 
     # Return conversion to unix time
     return time_timestamp
