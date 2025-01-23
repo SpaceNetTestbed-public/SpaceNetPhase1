@@ -228,7 +228,7 @@ def main():
     satellites = load.tle_file(path_of_recent_TLE)
 
     # Create dictionaries of satellites by name and index
-    satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}
+    satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites} # entire sats from TLE (Dict FORMAT- 'STARLINK-####' : Skyfield type)
     satellites_by_index = {}
 
     # Read the ground stations from the file specified in the configurations
