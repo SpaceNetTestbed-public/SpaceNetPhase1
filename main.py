@@ -230,7 +230,10 @@ def main():
     inc = 0
     time_resolution_in_seconds = sat_config["EpochIntervalDuration"]
     simulation_length = time_resolution_in_seconds * sat_config["EpochIntervalCount"]
-
+    
+    # Start CPU clock timer
+    cpu_clock_tot_t0 = time.perf_counter_ns()
+    
     # Split the start time from the configurations into individual components
     epoch_start = (
                     sat_config["EpochStartYear"],
@@ -452,10 +455,27 @@ def main():
             else:
                 all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None, route_to_gs)
 
-            # Save the routes
-            if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-                os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-            save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
+        # Stop CPU timer
+        dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
+
+        # Save the topology
+        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_topology(connectivity_matrix, 
+                      links_characteristics, 
+                      operator_name, 
+                      str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
+                      connectivity_matrix_path,
+                      time_resolution_in_seconds)
+
+        # Save the routes
+        if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_routes(all_possible_routes, 
+                    operator_name, 
+                    str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
+                    routing_file_path,
+                    time_resolution_in_seconds)
 
             # Save the optimal routes between provided src/dest
             if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
