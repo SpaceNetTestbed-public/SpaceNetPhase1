@@ -1,4 +1,6 @@
+import os
 import matplotlib
+import gif_utils
 #matplotlib.use('tkagg')
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
@@ -7,11 +9,6 @@ import re
 import numpy as np
 from datetime import datetime, timezone
 from mpl_toolkits.basemap import Basemap
-
-
-
-
-
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -24,24 +21,31 @@ from mpl_toolkits.basemap import Basemap
 time_index              = 0
 plot_GSs                = False
 plot_only_optimal       = False
-plot_in_3D              = False
-plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
+plot_in_3D              = True
+plot_debug              = True   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
-lon0_3d                 = 0  #-35
-lat0_3d                 = -40
-timestamp               = "2024_07_21_09_00_0"
-gs_filepath             = open('/home/spacenet/simulator/dynamic-topology-generator/output/terrestrial_info/terrestrial_1721552400.txt', 'r')
-tle_file                = open('/home/spacenet/Desktop/jacktles/alt500km/inc50/starlink_tles/starlink_1721552400', 'r')
-optimal_route_filepath  = '/home/spacenet/simulator/dynamic-topology-generator/output/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/spacenet/simulator/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/spacenet/simulator/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1721552400.txt'
-orb_sat_txt             = '/home/spacenet/simulator/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
-optimal_weight = 24349
+make_gif                = True   # Makes gif of all the timestep plots in this file existing in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
+lon0_3d                 = -145  #-80    #-100   #5  #-35 
+lat0_3d                 = 0 #-30       #20   #30
+timestamp               = "2024_07_21_19_00_0"
+output_pathname         = "alt1500_inc50_7pm_sydney"
+gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/terrestrial_info/terrestrial_1721552400.txt', 'r')
+tle_file                = open('/home/spacenet/Desktop/jacktles/alt1500km/starlink_tles/starlink_1721552400', 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/node_indices/starlink/nodeindex_1721552400.txt'
+orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
+gif_name                = 'gif_'+output_pathname
+################### Folder Paths ######################
+conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/connectivity_matrix/starlink/'
+opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/optimal_routes/starlink/'
+gif_path                = '/home/suryaryan/GIFS/'
+#######################################################
 number_of_orbits = 72  #$
-num_plotorbit = range(1)  #$ Number of orbits to plot
-gs0 = (-74.003663, 40.717042) # NYC
-gs1 = (103.850070, 1.289670) # Singapore
-ref = 558  # index of satellite to be debugged for ISLs 
+# num_plotorbit = range(1)  #$ Number of orbits to plot
+# gs0 = (-74.003663, 40.717042) # NYC
+# gs1 = (103.850070, 1.289670) # Singapore
+ref = 1263  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -90,6 +94,7 @@ for i in range(0, len(gs_lines), 1):
 # ================================================================================================
 # FILE PARSING - NODE INDEXING DICT
 # ================================================================================================
+# (node_alias_to_index_topology_dict{} & node_alias_to_index_topology_dict{} contains satellite and GS indices and alias)
 with open(node_indices_filepath, 'r') as node_indices_file:
     for node_assignment in node_indices_file:
         node_index, node_alias  = node_assignment.split(":")
@@ -117,281 +122,640 @@ with open(orb_sat_txt, 'r') as orbsat_file:
             sat_orbit_index[int(IDs[0])-1].append(int(IDs[1])) # Actually a nested list  ||||| Input:orbit_index  Output:sat_index list
             sat_index_orbit[int(IDs[1])].append(int(IDs[0])-1) # Actually a nested list  ||||| Input:sat_index  Output:orbit_index
 
-# ================================================================================================
-# FILE PARSING - CONNECTIVITY FILE (Checking only sat links)
-# ================================================================================================
-conn_mat = {}
-with open(conn_filepath, 'r') as conn_file:
-    for i, conn_index in enumerate(conn_file):
-        line = conn_index.split(",")
-        if int(line[0]) < total_num_sat and int(line[1]) < total_num_sat:       ###### Both endpoints should be satellites (exclude all the GSL links) 
-            if line[0] not in conn_mat.keys():
-                conn_mat[line[0]] = [int(line[1])]
-            else:
-                conn_mat[line[0]].append(int(line[1])) # Actually a nested list
-num_links = []
-count = 0
-for i, js in conn_mat.items():
-    num_links.append(len(js))
-    if len(js)>4:
-        count += 1
 
-# ================================================================================================
-# FILE PARSING - OPTIMAL PATH ASSIGNMENT
-# ================================================================================================
-with open(optimal_route_filepath, 'r') as optimal_path_file:
-    for route_line in optimal_path_file:
 
-        # Separate datetime and route information
-        dt, route_info          = route_line.split(": ", 1)
 
-        # Build time history
-        dt_info                 = dt.strip('()').split("_")
-        yr, mon, day, hr, min   = map(int, dt_info[:5])
-        sec                     = float(dt_info[5])
-        dt_hist.append(datetime(yr, mon, day, hr, min, int(sec), int((sec - int(sec)) * 1000000), tzinfo=timezone.utc))
+if not make_gif:
+    #$ ================================================================================================
+    # FILE PARSING - CONNECTIVITY FILE (Checking only sat links)
+    #$ ================================================================================================
+    conn_mat = {}
+    with open(conn_filepath, 'r') as conn_file:
+        for i, conn_index in enumerate(conn_file):
+            line = conn_index.split(",")
+            if int(line[0]) < total_num_sat and int(line[1]) < total_num_sat:       ###### Both endpoints should be satellites (exclude all the GSL links) 
+                if line[0] not in conn_mat.keys():
+                    conn_mat[line[0]] = [int(line[1])]
+                else:
+                    conn_mat[line[0]].append(int(line[1])) # Actually a nested list
+    num_links = []
+    count = 0
+    for i, js in conn_mat.items():
+        num_links.append(len(js))
+        if len(js)>4:
+            count += 1
 
-        # Routing information
-        route_node_indices      = route_info.split(", ")
-        route_node_indices[-1]  = route_node_indices[-1][:-1]   # Removes the next line command
-        
-        # Assign the corresponding satellite alias with the route node indices
-        optimal_route_at_epoch  = []
-        for route_node_index in route_node_indices:
-            optimal_route_at_epoch.append(node_index_to_alias_topology_dict[int(route_node_index)])
-        
-        #$ Adding only sat node optimal route data
-        optimal_route_satonly_at_epoch = []   # Indices of all the sats in optimal route
-        for i, nodes in enumerate(optimal_route_at_epoch):
-            a_node = nodes.split("-")
-            if a_node[0] == 'STARLINK':
-                optimal_route_satonly_at_epoch.append(route_node_indices[i])
+    # ================================================================================================
+    # FILE PARSING - OPTIMAL PATH ASSIGNMENT
+    # ================================================================================================
+    with open(optimal_route_filepath, 'r') as optimal_path_file:
+        for route_line in optimal_path_file:
 
-        # Append to complete list
-        optimal_routes.append(optimal_route_at_epoch)
+            # Separate datetime and route information
+            dt, route_info          = route_line.split(": ", 1)
 
-        # (Debugging purpose) List of orbits used for optimal path 
-        optimal_orbits = [sat_index_orbit[int(k)][0] for k in optimal_route_satonly_at_epoch]
-        optimal_orbits = np.unique(optimal_orbits)
-# ================================================================================================
-# DEFINE CURRENT TIME INDEX
-# ================================================================================================
-t_current   = ts.from_datetime(dt_hist[time_index])
+            # Build time history
+            dt_info                 = dt.strip('()').split("_")
+            yr, mon, day, hr, min   = map(int, dt_info[:5])
+            sec                     = float(dt_info[5])
+            dt_hist.append(datetime(yr, mon, day, hr, min, int(sec), int((sec - int(sec)) * 1000000), tzinfo=timezone.utc))
 
-#$ Filter sat's (lat,long) orbit-wise as given in nodeindices (rearranged from arranged sats in nodeindex)
-lats, lons = [], []
-for k in range(max(optimal_orbits)+1):
-    for sat_in_orb in sat_orbit_index[k]:
-        aliass = node_index_to_alias_topology_dict[sat_in_orb]
-        sat_at_t    = sats_from_tle_dict[aliass].at(t_current)
-        lat, lon    = sat_at_t.subpoint().latitude.degrees, sat_at_t.subpoint().longitude.degrees
-        plotted_sat_index[sat_in_orb] = (lat, lon)
-        lats.append(lat)
-        lons.append(lon)
+            # Routing information
+            route_node_indices      = route_info.split(", ")
+            route_node_indices[-1]  = route_node_indices[-1][:-1]   # Removes the next line command
+            
+            # Assign the corresponding satellite alias with the route node indices
+            optimal_route_at_epoch  = []
+            for route_node_index in route_node_indices:
+                optimal_route_at_epoch.append(node_index_to_alias_topology_dict[int(route_node_index)])
+            
+            #$ Adding only sat node optimal route data
+            optimal_route_satonly_at_epoch = []   # Indices of all the sats in optimal route
+            for i, nodes in enumerate(optimal_route_at_epoch):
+                a_node = nodes.split("-")
+                if a_node[0] == 'STARLINK':
+                    optimal_route_satonly_at_epoch.append(route_node_indices[i])
 
-# ================================================================================================
-# CREATE DICTIONARY WITH SATELLITE GEODETIC POSITION
-# ================================================================================================
-for topology_node_alias, topology_node_index in node_alias_to_index_topology_dict.items():
+            # Append to complete list
+            optimal_routes.append(optimal_route_at_epoch)
 
-    # Check that it's a satellite
-    if not any(gs_type in topology_node_alias for gs_type in gs_alias_list):
+            # (Debugging purpose) List of orbits used for optimal path 
+            optimal_orbits = [sat_index_orbit[int(k)][0] for k in optimal_route_satonly_at_epoch]
+            optimal_orbits = np.unique(optimal_orbits)
 
-        # Extract satellite object based on node alias
-        sat_node            = sats_from_tle_dict[topology_node_alias]
+    # ================================================================================================
+    # DEFINE CURRENT TIME INDEX
+    # ================================================================================================
+    t_current   = ts.from_datetime(dt_hist[time_index])
 
-        # Propagate satellite object to t
-        sat_node_at_t       = sat_node.at(t_current)
-
-        # Compute longitude/latitude of satellite object at t
-        lon_at_t, lat_at_t  = sat_node_at_t.subpoint().longitude.degrees, sat_node_at_t.subpoint().latitude.degrees
-        
-        # Add to dictionary
-        node_info_topology_at_t[sat_node.name] = (topology_node_alias, lon_at_t, lat_at_t)
-
-    # And if it's a ground station
-    else:
-
-        # Add to dictionary
-        node_info_topology_at_t[topology_node_alias] = gs_dict[topology_node_alias][1:]
-        
-# ================================================================================================
-# PLOTTING
-# ================================================================================================
-fig = plt.figure()
-font = {'family' : 'monospace', 
-        'size' : 12}
-plt.rc('font', **font)
-
-# PLOT BASEMAP
-if not plot_in_3D:
-    m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='c')
-    #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
-else:
-    m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-    #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=0, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
-    m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
-m.drawcoastlines()
-m.drawcountries()
-m.fillcontinents(color='lightgray', lake_color='white')
-m.drawmapboundary(fill_color='white')
-
-# PLOT ALL SATELLITE NODES IN TOPOLOGY
-if not plot_only_optimal:
-
-    #$ Custom plotting individual orbits
-    if plot_optimal_orbits:
-        for i in optimal_orbits:
-            X = []
-            Y = []
-            col = np.random.rand(3,)
-            #col = [1, 0, 0]
-            for j in sat_orbit_index[i]:
-                x, y = m(lons[j], lats[j])
-                X.append(x)
-                Y.append(y)
-                #plt.scatter(x, y, s=13, marker="o", c=col, edgecolors=col, facecolors='none', zorder=5)
-            X.append(X[0])  #completing the orbit
-            Y.append(Y[0])  #completing the orbit
-            plt.plot(X, Y, color=col, marker='o')
-
-    for node_alias, node_info in node_info_topology_at_t.items():
-
-        # Extract information
-        node_assigned_alias     = node_info[0]
-        node_lon, node_lat      = node_info[1:]
-        
-        # Plot satellite node as a regular scatter point with label
-        if not any(gs_type in node_alias for gs_type in gs_alias_list):
-            x, y = m(node_lon, node_lat)
-            if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
-                plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
-                plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-            elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
-                plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
-                plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
-            else:
-                plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
-            #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
-
-####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
-if plot_debug:
-    print(ref, node_index_to_alias_topology_dict[ref])
-
-    ###### Get unique list of relevant orbits
-    debug_orbits = [sat_index_orbit[int(k)][0] for k in conn_mat[str(ref)]]
-    debug_orbits = np.unique(debug_orbits)
-
-    ###### Lat-Lon of all satellites in the relevant orbits
+    #$ Filter sat's (lat,long) orbit-wise as given in nodeindices (rearranged from arranged sats in nodeindex)
     lats, lons = [], []
-    for k in range(max(debug_orbits)+1):
+    for k in range(max(optimal_orbits)+1):
         for sat_in_orb in sat_orbit_index[k]:
             aliass = node_index_to_alias_topology_dict[sat_in_orb]
             sat_at_t    = sats_from_tle_dict[aliass].at(t_current)
             lat, lon    = sat_at_t.subpoint().latitude.degrees, sat_at_t.subpoint().longitude.degrees
             plotted_sat_index[sat_in_orb] = (lat, lon)
-            lats.append(lat)  # lats till the max index in the debug_orbit list
-            lons.append(lon)  # lons till the max index in the debug_orbit list
+            lats.append(lat)
+            lons.append(lon)
 
-    for i in debug_orbits:
-        X, Y = [], []
-        for j in sat_orbit_index[i]:
-            x, y = m(lons[j], lats[j])
-            X.append(x)
-            Y.append(y)
-        X.append(X[0])  #completing the orbit
-        Y.append(Y[0])  #completing the orbit
-        if sat_index_orbit[j] == sat_index_orbit[ref]:
-            plt.plot(X, Y, color='green', marker=',')   ##### Plots current orbit
+    # ================================================================================================
+    # CREATE DICTIONARY WITH SATELLITE GEODETIC POSITION
+    # ================================================================================================
+    for topology_node_alias, topology_node_index in node_alias_to_index_topology_dict.items():
+
+        # Check that it's a satellite
+        if not any(gs_type in topology_node_alias for gs_type in gs_alias_list):
+
+            # Extract satellite object based on node alias
+            sat_node            = sats_from_tle_dict[topology_node_alias]
+
+            # Propagate satellite object to t
+            sat_node_at_t       = sat_node.at(t_current)
+
+            # Compute longitude/latitude of satellite object at t
+            lon_at_t, lat_at_t  = sat_node_at_t.subpoint().longitude.degrees, sat_node_at_t.subpoint().latitude.degrees
+            
+            # Add to dictionary
+            node_info_topology_at_t[sat_node.name] = (topology_node_alias, lon_at_t, lat_at_t)
+
+        # And if it's a ground station
         else:
-            plt.plot(X, Y, color='blue', marker=',')   ##### Plots neighbouring orbits 
 
-    for neighbours in conn_mat[str(ref)]:
-        print(neighbours, node_index_to_alias_topology_dict[neighbours])
-        info = node_info_topology_at_t[node_index_to_alias_topology_dict[neighbours]]
-        neighbour_lon, neighbour_lat = info[1:]
-        x, y = m(neighbour_lon, neighbour_lat)
-        if sat_index_orbit[neighbours] == sat_index_orbit[ref]:
-            plt.scatter(x, y, s=30, marker="o", facecolors='green', edgecolors='green', zorder=20)
-            plt.text(x, y-0.5, neighbours, fontsize=15, zorder=100)
-        else:
-            plt.scatter(x, y, s=30, marker="o", facecolors='blue', edgecolors='blue', zorder=20)
-            plt.text(x, y-0.5, neighbours, fontsize=15, zorder=100)
+            # Add to dictionary
+            node_info_topology_at_t[topology_node_alias] = gs_dict[topology_node_alias][1:]
 
-######################################################### DEBUGGING ZONE ENDS ###################################
-
-# PLOT ALL GROUND STATIONS
-optimal_route_at_t          = optimal_routes[time_index]
-gs0                         = node_info_topology_at_t[optimal_route_at_t[0]]
-gs1                         = node_info_topology_at_t[optimal_route_at_t[-1]]
-optimal_endpoints           = [gs0, gs1]
-x1, y1 = m(gs0[1], gs0[2])
-x2, y2 = m(gs1[1], gs1[2])
-plt.scatter(x1, y1, s=150, marker='^', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Source ("+gs0[0]+")")
-plt.scatter(x2, y2, s=150, marker='s', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Destination ("+gs1[0]+")")
-# plt.text(x1, y1-0.5, gs0[0], fontsize=7, zorder=100)
-# plt.text(x2, y2-0.5, gs1[0], fontsize=7, zorder=100)
-if plot_GSs:
-    for node_alias, node_info in node_info_topology_at_t.items():
-        if any(gs_type in node_alias for gs_type in gs_alias_list) and node_alias not in optimal_endpoints: # Rest of ground stations
-            node_assigned_alias = node_info[0]
-            node_lon, node_lat = node_info[1:]
-            x, y = m(node_lon, node_lat)
-            plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
-            #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
-handles, labels = plt.gca().get_legend_handles_labels()
-sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
-gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
-
-# PLOT OPTIMAL ROUTE
-optimal_lon = np.array([0., ] * len(optimal_route_at_t))
-optimal_lat = np.array([0., ] * len(optimal_route_at_t))
-for indx, optimal_node in enumerate(optimal_route_at_t):
-    optimal_node_info   = node_info_topology_at_t[optimal_node]
-    optimal_lon[indx]   = optimal_node_info[1]
-    optimal_lat[indx]   = optimal_node_info[2]
-    x, y = m(optimal_lon[indx], optimal_lat[indx])
-    plt.scatter(x, y, s=20, marker='X', facecolors='k', edgecolors='k', zorder=4, linewidth=2)
-    #plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=4)
-
-# Define colors for different types of connections
-colors = {'sat-sat': 'blue', 'sat-gs': 'green', 'gs-gs': 'red'}
-blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
-green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
-red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
-handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
-labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
-
-# Iterate over pairs of nodes in the optimal route
-for i in range(len(optimal_route_at_t) - 1):
     
-    # Assign node for comparison
-    node1 = optimal_route_at_t[i]
-    node2 = optimal_route_at_t[i+1]
+    # ================================================================================================
+    # PLOTTING
+    # ================================================================================================
+    fig = plt.figure()
+    font = {'family' : 'monospace', 
+            'size' : 12}
+    plt.rc('font', **font)
 
-    # Check if nodes are terrestrial nodes
-    node1_gs = any(gs_type in node1 for gs_type in gs_alias_list)
-    node2_gs = any(gs_type in node2 for gs_type in gs_alias_list)
-
-    # Determine the type of connection
-    if node1_gs and node2_gs:
-        color = colors['gs-gs']
-    elif node1_gs or node2_gs:
-        color = colors['sat-gs']
+    # PLOT BASEMAP
+    if not plot_in_3D:
+        m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='c')
+        #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
     else:
-        color = colors['sat-sat']
+        m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
+        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/2.25, llcrnry=-m0.urcrnrx/2.25, urcrnrx=m0.urcrnrx/2.25, urcrnry=m0.urcrnry/2.25, resolution='c')
+        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/3.75, llcrnry=-m0.urcrnrx/3.75, urcrnrx=m0.urcrnrx/3.75, urcrnry=m0.urcrnry/3.75, resolution='c')
+        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/5.75, llcrnry=m0.urcrnry/5.75, urcrnrx=m0.urcrnrx/5.75, urcrnry=m0.urcrnry/3.3, resolution='c')
+    m.drawcoastlines()
+    m.drawcountries()
+    m.fillcontinents(color='lightgray', lake_color='white')
+    m.drawmapboundary(fill_color='white')
 
-    # Plot the line with the chosen color
-    x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
-    plt.plot(x, y, '--', linewidth=4.5, c=color, zorder=1)
+    # PLOT ALL SATELLITE NODES IN TOPOLOGY (IF not make_gif then just plot OTHERWISE make the GIF OFC!)
+    if not plot_only_optimal:
 
-# PLOT INFORMATION
-#plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-plt.xlabel('Longitude')
-plt.ylabel('Latitude')
-plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
-#plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
-plt.tight_layout()
-plt.show()
-# plt.savefig('/home/barbourbruce/dynamic-topology-generator/test_plot.pdf')
+        #$ Custom plotting individual orbits
+        if plot_optimal_orbits:
+            for i in optimal_orbits:
+                X = []
+                Y = []
+                col = np.random.rand(3,)
+                #col = [1, 0, 0]
+                for j in sat_orbit_index[i]:
+                    x, y = m(lons[j], lats[j])
+                    X.append(x)
+                    Y.append(y)
+                    #plt.scatter(x, y, s=13, marker="o", c=col, edgecolors=col, facecolors='none', zorder=5)
+                X.append(X[0])  #completing the orbit
+                Y.append(Y[0])  #completing the orbit
+                plt.plot(X, Y, color=col, marker='o')
+
+        for node_alias, node_info in node_info_topology_at_t.items():
+
+            # Extract information
+            node_assigned_alias     = node_info[0]
+            node_lon, node_lat      = node_info[1:]
+            
+            # Plot satellite node as a regular scatter point with label
+            if not any(gs_type in node_alias for gs_type in gs_alias_list):
+                x, y = m(node_lon, node_lat)
+                if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
+                    plt.scatter(x, y, s=50, marker="o", facecolors='red', edgecolors='red', zorder=20)
+                    plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
+                elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
+                    plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
+                    plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
+                else:
+                    plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
+                    plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
+                    #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
+
+    ####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
+    if plot_debug:
+        print(ref, node_index_to_alias_topology_dict[ref])
+
+        ###### Get unique list of relevant orbits
+        debug_orbits = [sat_index_orbit[int(k)][0] for k in conn_mat[str(ref)]]
+        debug_orbits = np.unique(debug_orbits)
+
+        ###### Lat-Lon of all satellites in the relevant orbits
+        lats, lons = [], []
+        for k in range(max(debug_orbits)+1):
+            for sat_in_orb in sat_orbit_index[k]:
+                aliass = node_index_to_alias_topology_dict[sat_in_orb]
+                sat_at_t    = sats_from_tle_dict[aliass].at(t_current)
+                lat, lon    = sat_at_t.subpoint().latitude.degrees, sat_at_t.subpoint().longitude.degrees
+                plotted_sat_index[sat_in_orb] = (lat, lon)
+                lats.append(lat)  # lats till the max index in the debug_orbit list
+                lons.append(lon)  # lons till the max index in the debug_orbit list
+
+        for i in debug_orbits:
+            X, Y = [], []
+            for j in sat_orbit_index[i]:
+                x, y = m(lons[j], lats[j])
+                X.append(x)
+                Y.append(y)
+            X.append(X[0])  #completing the orbit
+            Y.append(Y[0])  #completing the orbit
+            if sat_index_orbit[j] == sat_index_orbit[ref]:
+                plt.plot(X, Y, color='green', marker=',')   ##### Plots current orbit
+            else:
+                plt.plot(X, Y, color='blue', marker=',')   ##### Plots neighbouring orbits 
+
+        for neighbours in conn_mat[str(ref)]:
+            print(neighbours, node_index_to_alias_topology_dict[neighbours])
+            info = node_info_topology_at_t[node_index_to_alias_topology_dict[neighbours]]
+            neighbour_lon, neighbour_lat = info[1:]
+            x, y = m(neighbour_lon, neighbour_lat)
+            if sat_index_orbit[neighbours] == sat_index_orbit[ref]:
+                plt.scatter(x, y, s=30, marker="o", facecolors='green', edgecolors='green', zorder=20)
+                plt.text(x, y-0.5, neighbours, fontsize=15, color='green', zorder=100)
+            else:
+                plt.scatter(x, y, s=30, marker="o", facecolors='blue', edgecolors='blue', zorder=20)
+                plt.text(x, y-0.5, neighbours, fontsize=15, color='blue', zorder=100)
+
+    ######################################################### DEBUGGING ZONE ENDS ###################################
+
+    # PLOT ALL GROUND STATIONS
+    optimal_route_at_t          = optimal_routes[time_index]
+    gs0                         = node_info_topology_at_t[optimal_route_at_t[0]]
+    gs1                         = node_info_topology_at_t[optimal_route_at_t[-1]]
+    optimal_endpoints           = [gs0, gs1]
+    x1, y1 = m(gs0[1], gs0[2])
+    x2, y2 = m(gs1[1], gs1[2])
+    plt.scatter(x1, y1, s=150, marker='^', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Source ("+gs0[0]+")")
+    plt.scatter(x2, y2, s=150, marker='s', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Destination ("+gs1[0]+")")
+    # plt.text(x1, y1-0.5, gs0[0], fontsize=7, zorder=100)
+    # plt.text(x2, y2-0.5, gs1[0], fontsize=7, zorder=100)
+    if plot_GSs:
+        for node_alias, node_info in node_info_topology_at_t.items():
+            if any(gs_type in node_alias for gs_type in gs_alias_list) and node_alias not in optimal_endpoints: # Rest of ground stations
+                node_assigned_alias = node_info[0]
+                node_lon, node_lat = node_info[1:]
+                x, y = m(node_lon, node_lat)
+                plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
+                #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
+    handles, labels = plt.gca().get_legend_handles_labels()
+    sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
+    gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
+
+    # PLOT OPTIMAL ROUTE
+    optimal_lon = np.array([0., ] * len(optimal_route_at_t))
+    optimal_lat = np.array([0., ] * len(optimal_route_at_t))
+    for indx, optimal_node in enumerate(optimal_route_at_t):
+        optimal_node_info   = node_info_topology_at_t[optimal_node]
+        optimal_lon[indx]   = optimal_node_info[1]
+        optimal_lat[indx]   = optimal_node_info[2]
+        x, y = m(optimal_lon[indx], optimal_lat[indx])
+        plt.scatter(x, y, s=20, marker='X', facecolors='k', edgecolors='k', zorder=4, linewidth=2)
+        #plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=4)
+
+    # Define colors for different types of connections
+    colors = {'sat-sat': 'blue', 'sat-gs': 'green', 'gs-gs': 'red'}
+    blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
+    green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
+    red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
+    handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
+    labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+
+    # Iterate over pairs of nodes in the optimal route
+    for i in range(len(optimal_route_at_t) - 1):
+        
+        # Assign node for comparison
+        node1 = optimal_route_at_t[i]
+        node2 = optimal_route_at_t[i+1]
+
+        # Check if nodes are terrestrial nodes
+        node1_gs = any(gs_type in node1 for gs_type in gs_alias_list)
+        node2_gs = any(gs_type in node2 for gs_type in gs_alias_list)
+
+        # Determine the type of connection
+        if node1_gs and node2_gs:
+            color = colors['gs-gs']
+        elif node1_gs or node2_gs:
+            color = colors['sat-gs']
+        else:
+            color = colors['sat-sat']
+
+        # Plot the line with the chosen color
+        x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
+        plt.plot(x, y, '--', linewidth=4.5, c=color, zorder=1)
+
+    # PLOT INFORMATION
+    #plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
+    print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
+    plt.xlabel('Longitude')
+    plt.ylabel('Latitude')
+    plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
+    #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
+    plt.tight_layout()
+    plt.show()
+
+
+
+
+else:    ## (MAKING GIF)
+
+
+    
+    conn_mat_global = {}   # Only exists if make_gif exists
+    COUNT_global = []      # Only exists if make_gif exists
+    num_links_global = {}  # Only exists if make_gif exists
+    conn_sorted_path = sorted(os.listdir(conn_folder))
+    ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
+    # temp = conn_sorted_path[6:9]
+    # temp.extend(conn_sorted_path)
+    # conn_sorted_path = temp
+    # conn_sorted_path.pop(-1)
+    # conn_sorted_path.pop(-1)
+    # conn_sorted_path.pop(-1)
+    # conn_sorted_path.pop(-1)
+
+    # conn_sorted_path.insert(0, conn_sorted_path[5])
+    # conn_sorted_path.pop(6)
+    # conn_sorted_path.insert(6, conn_sorted_path[9])
+    # conn_sorted_path.pop(-1)
+
+    # conn_sorted_path.insert(6, conn_sorted_path[11])
+    # conn_sorted_path.pop(12)
+    # conn_sorted_path.insert(12, conn_sorted_path[17])
+    # conn_sorted_path.pop(18)
+    # conn_sorted_path.insert(18, conn_sorted_path[23])
+    # conn_sorted_path.pop(24)
+    # conn_sorted_path.insert(24, conn_sorted_path[29])
+    # conn_sorted_path.pop(30)
+    ##################################################################################################################
+
+    for itr, conn_path_iter in enumerate(conn_sorted_path):
+        conn_mat = {}
+        #indices = []
+        with open(conn_folder+conn_path_iter, 'r') as conn_file:
+            for conn_index in conn_file:
+                line = conn_index.split(",")
+                if int(line[0]) < total_num_sat and int(line[1]) < total_num_sat:       ###### Both endpoints should be satellites (exclude all the GSL links) 
+                    #indices.append(int(line[0]))
+                    if line[0] not in conn_mat.keys():
+                        conn_mat[line[0]] = [int(line[1])]
+                    else:
+                        conn_mat[line[0]].append(int(line[1])) # Actually a nested list
+        num_links = []
+        count = 0
+        for i, js in conn_mat.items():
+            num_links.append(len(js))
+            if len(js)>4:
+                count += 1
+        # if itr==1:
+        #     print(conn_path_iter)
+        #     print(np.unique(np.array(indices))[700:800])
+        #     exit()
+        conn_mat_global[itr] = conn_mat
+        COUNT_global.append(count)
+        num_links_global[itr] = num_links
+    #print(len(num_links_global[3]))
+
+
+    optroute_global = {}                                            # Only exists if make_gif exists
+    optroute_sorted_path = sorted(os.listdir(opt_route_folder))     # Only exists if make_gif exists
+    node_info_topology_at_t_global = {}                             # Only exists if make_gif exists
+    TIMESTAMPS = []
+    ######################################### HARDCODED FOR 2024_09_27 FILES #########################################
+    # temp = optroute_sorted_path[6:9]
+    # temp.extend(optroute_sorted_path)
+    # optroute_sorted_path = temp
+    # optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.pop(-1)
+    
+    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    # optroute_sorted_path.pop(6)
+    # optroute_sorted_path.insert(6, optroute_sorted_path[9])
+    # optroute_sorted_path.pop(-1)
+
+    # optroute_sorted_path.insert(6, optroute_sorted_path[11])
+    # optroute_sorted_path.pop(12)
+    # optroute_sorted_path.insert(12, optroute_sorted_path[17])
+    # optroute_sorted_path.pop(18)
+    # optroute_sorted_path.insert(18, optroute_sorted_path[23])
+    # optroute_sorted_path.pop(24)
+    # optroute_sorted_path.insert(24, optroute_sorted_path[29])
+    # optroute_sorted_path.pop(30)
+    ##################################################################################################################
+    # ================================================================================================
+    # FILE PARSING - OPTIMAL PATH ASSIGNMENT
+    # ================================================================================================
+    for itr, route_path_iter in enumerate(optroute_sorted_path):
+        optimal_routes = []
+        with open(opt_route_folder+route_path_iter, 'r') as optimal_path_file:
+            for route_line in optimal_path_file:
+
+                # Separate datetime and route information
+                dt, route_info          = route_line.split(": ", 1)
+
+                # Build time history
+                dt_info                 = dt.strip('()').split("_")
+                yr, mon, day, hr, min   = map(int, dt_info[:5])
+                sec                     = float(dt_info[5])
+                dt_hist.append(datetime(yr, mon, day, hr, min, int(sec), int((sec - int(sec)) * 1000000), tzinfo=timezone.utc))
+                timestamp               = str(yr)+"_"+str(mon)+"_"+str(day)+"_"+str(hr)+"_"+str(min)+"_"+str(int(sec))
+                # Routing information
+                route_node_indices      = route_info.split(", ")
+                route_node_indices[-1]  = route_node_indices[-1][:-1]   # Removes the next line command
+                
+                # Assign the corresponding satellite alias with the route node indices
+                optimal_route_at_epoch  = []
+                for route_node_index in route_node_indices:
+                    optimal_route_at_epoch.append(node_index_to_alias_topology_dict[int(route_node_index)])
+                
+                #$ Adding only sat node optimal route data
+                # optimal_route_satonly_at_epoch = []   # Indices of all the sats in optimal route
+                # for i, nodes in enumerate(optimal_route_at_epoch):
+                #     a_node = nodes.split("-")
+                #     if a_node[0] == 'STARLINK':
+                #         optimal_route_satonly_at_epoch.append(route_node_indices[i])
+
+                # Append to complete list
+                optimal_routes.append(optimal_route_at_epoch)
+        TIMESTAMPS.append(timestamp)
+        optroute_global[itr] = optimal_routes
+
+        # ================================================================================================
+        # DEFINE CURRENT TIME INDEX
+        # ================================================================================================
+        t_current   = ts.from_datetime(dt_hist[-1])
+
+        node_info_topology_at_t = {}
+        # ================================================================================================
+        # CREATE DICTIONARY WITH SATELLITE GEODETIC POSITION
+        # ================================================================================================
+        # (node_info_topology_at_t{} --> key: SAT NAME + GS NAME (GS, CT, IE, GW)  ||||  values: (NAME (SAT NAME + GS TRUE NAME (London, Tokyo etc..)), lat, long)   )
+        for topology_node_alias, topology_node_index in node_alias_to_index_topology_dict.items():
+
+            # Check that it's a satellite
+            if not any(gs_type in topology_node_alias for gs_type in gs_alias_list):
+
+                # Extract satellite object based on node alias
+                sat_node            = sats_from_tle_dict[topology_node_alias]
+
+                # Propagate satellite object to t
+                sat_node_at_t       = sat_node.at(t_current)
+
+                # Compute longitude/latitude of satellite object at t
+                lon_at_t, lat_at_t  = sat_node_at_t.subpoint().longitude.degrees, sat_node_at_t.subpoint().latitude.degrees
+                
+                # Add to dictionary
+                node_info_topology_at_t[sat_node.name] = (topology_node_alias, lon_at_t, lat_at_t)
+
+            # And if it's a ground station
+            else:
+
+                # Add to dictionary
+                node_info_topology_at_t[topology_node_alias] = gs_dict[topology_node_alias][1:]
+        node_info_topology_at_t_global[itr] = node_info_topology_at_t
+
+    #print(TIMESTAMPS)
+
+    # ================================================================================================
+    # PLOTTING
+    # ================================================================================================
+    figures = []
+    for itr in range(len(conn_sorted_path)):
+        conn_mat = conn_mat_global[itr]
+        num_links = num_links_global[itr]
+        node_info_topology_at_t = node_info_topology_at_t_global[itr]
+        optimal_routes = optroute_global[itr]
+        count = COUNT_global[itr]
+        timestamp = TIMESTAMPS[itr]
+
+        fig = plt.figure(figsize=(16,9))
+        font = {'family' : 'monospace', 
+                'size' : 12}
+        plt.rc('font', **font)
+
+        # PLOT BASEMAP
+        if not plot_in_3D:
+            m = Basemap(projection='cyl', llcrnrlat=-60, urcrnrlat=60, llcrnrlon=-180, urcrnrlon=180, resolution='c')
+            #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
+        else:
+            m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=0, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.5, llcrnry=-m0.urcrnrx/10.5, urcrnrx=m0.urcrnrx/1.5, urcrnry=m0.urcrnry/2, resolution='c')
+            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/2.25, llcrnry=-m0.urcrnrx/2.25, urcrnrx=m0.urcrnrx/2.25, urcrnry=m0.urcrnry/2.25, resolution='c')
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/5.75, llcrnry=m0.urcrnry/130.75, urcrnrx=m0.urcrnrx/5.75, urcrnry=m0.urcrnry/3.3, resolution='c')
+        m.drawcoastlines()
+        m.drawcountries()
+        m.fillcontinents(color='lightgray', lake_color='white')
+        m.drawmapboundary(fill_color='white')
+
+        # PLOT ALL SATELLITE NODES IN TOPOLOGY (IF not make_gif then just plot OTHERWISE make the GIF OFC!)
+        if not plot_only_optimal:
+
+            for node_alias, node_info in node_info_topology_at_t.items():
+
+                # Extract information
+                node_assigned_alias     = node_info[0]
+                node_lon, node_lat      = node_info[1:]
+
+                # Plot ONLY satellite node as a regular scatter point with label
+                if not any(gs_type in node_alias for gs_type in gs_alias_list):
+                    x, y = m(node_lon, node_lat)
+                    if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
+                        plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
+                        plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
+                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
+                        plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
+                        plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
+                    else:
+                        plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
+                    #plt.text(x, y-0.5, node_a
+
+        ####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
+        if plot_debug:
+            print(ref, node_index_to_alias_topology_dict[ref])
+
+            ###### Get unique list of relevant orbits
+            debug_orbits = [sat_index_orbit[int(k)][0] for k in conn_mat[str(ref)]]
+            debug_orbits = np.unique(debug_orbits)
+
+            ###### Lat-Lon of all satellites in the relevant orbits
+            lats, lons = [], []
+            for k in range(max(debug_orbits)+1):
+                for sat_in_orb in sat_orbit_index[k]:
+                    aliass = node_index_to_alias_topology_dict[sat_in_orb]
+                    sat_at_t    = sats_from_tle_dict[aliass].at(t_current)
+                    lat, lon    = sat_at_t.subpoint().latitude.degrees, sat_at_t.subpoint().longitude.degrees
+                    plotted_sat_index[sat_in_orb] = (lat, lon)
+                    lats.append(lat)  # lats till the max index in the debug_orbit list
+                    lons.append(lon)  # lons till the max index in the debug_orbit list
+
+            for i in debug_orbits:
+                X, Y = [], []
+                for j in sat_orbit_index[i]:
+                    x, y = m(lons[j], lats[j])
+                    X.append(x)
+                    Y.append(y)
+                X.append(X[0])  #completing the orbit
+                Y.append(Y[0])  #completing the orbit
+                if sat_index_orbit[j] == sat_index_orbit[ref]:
+                    plt.plot(X, Y, color='green', marker=',')   ##### Plots current orbit
+                else:
+                    plt.plot(X, Y, color='blue', marker=',')   ##### Plots neighbouring orbits 
+
+            for neighbours in conn_mat[str(ref)]:
+                print(neighbours, node_index_to_alias_topology_dict[neighbours])
+                info = node_info_topology_at_t[node_index_to_alias_topology_dict[neighbours]]
+                neighbour_lon, neighbour_lat = info[1:]
+                x, y = m(neighbour_lon, neighbour_lat)
+                if sat_index_orbit[neighbours] == sat_index_orbit[ref]:
+                    plt.scatter(x, y, s=30, marker="o", facecolors='green', edgecolors='green', zorder=20)
+                    plt.text(x, y-0.5, neighbours, fontsize=15, zorder=100)
+                else:
+                    plt.scatter(x, y, s=30, marker="o", facecolors='blue', edgecolors='blue', zorder=20)
+                    plt.text(x, y-0.5, neighbours, fontsize=15, zorder=100)
+
+        ######################################################### DEBUGGING ZONE ENDS ###################################
+
+        # PLOT ALL GROUND STATIONS
+        optimal_route_at_t          = optimal_routes[time_index]
+        gs0                         = node_info_topology_at_t[optimal_route_at_t[0]]
+        gs1                         = node_info_topology_at_t[optimal_route_at_t[-1]]
+        optimal_endpoints           = [gs0, gs1]
+        x1, y1 = m(gs0[1], gs0[2])
+        x2, y2 = m(gs1[1], gs1[2])
+        plt.scatter(x1, y1, s=150, marker='^', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Source ("+gs0[0]+")")
+        plt.scatter(x2, y2, s=150, marker='s', linewidth=1.5, edgecolors='r', facecolors='none', zorder=3, label="Destination ("+gs1[0]+")")
+        # plt.text(x1, y1-0.5, gs0[0], fontsize=7, zorder=100)
+        # plt.text(x2, y2-0.5, gs1[0], fontsize=7, zorder=100)
+        if plot_GSs:
+            for node_alias, node_info in node_info_topology_at_t.items():
+                if any(gs_type in node_alias for gs_type in gs_alias_list) and node_alias not in optimal_endpoints: # Rest of ground stations
+                    node_assigned_alias = node_info[0]
+                    node_lon, node_lat = node_info[1:]
+                    x, y = m(node_lon, node_lat)
+                    plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
+                    #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
+        handles, labels = plt.gca().get_legend_handles_labels()
+        sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
+        gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
+
+        # PLOT OPTIMAL ROUTE
+        optimal_lon = np.array([0., ] * len(optimal_route_at_t))
+        optimal_lat = np.array([0., ] * len(optimal_route_at_t))
+        for indx, optimal_node in enumerate(optimal_route_at_t):
+            optimal_node_info   = node_info_topology_at_t[optimal_node]
+            optimal_lon[indx]   = optimal_node_info[1]
+            optimal_lat[indx]   = optimal_node_info[2]
+            x, y = m(optimal_lon[indx], optimal_lat[indx])
+            plt.scatter(x, y, s=20, marker='X', facecolors='k', edgecolors='k', zorder=4, linewidth=2)
+            #plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=4)
+
+        # Define colors for different types of connections
+        colors = {'sat-sat': 'blue', 'sat-gs': 'green', 'gs-gs': 'red'}
+        blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
+        green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
+        red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
+        handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
+        labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+
+        # Iterate over pairs of nodes in the optimal route
+        for i in range(len(optimal_route_at_t) - 1):
+            
+            # Assign node for comparison
+            node1 = optimal_route_at_t[i]
+            node2 = optimal_route_at_t[i+1]
+
+            # Check if nodes are terrestrial nodes
+            node1_gs = any(gs_type in node1 for gs_type in gs_alias_list)
+            node2_gs = any(gs_type in node2 for gs_type in gs_alias_list)
+
+            # Determine the type of connection
+            if node1_gs and node2_gs:
+                color = colors['gs-gs']
+            elif node1_gs or node2_gs:
+                color = colors['sat-gs']
+            else:
+                color = colors['sat-sat']
+
+            # Plot the line with the chosen color
+            x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
+            plt.plot(x, y, '--', linewidth=4.5, c=color, zorder=1)
+
+        # PLOT INFORMATION
+        print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[-1])+') (hops='+str(len(optimal_route_at_t)-1)+')')
+        plt.xlabel('Longitude')
+        plt.ylabel('Latitude')
+        #plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
+        plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1))
+        #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
+        plt.tight_layout()
+        #plt.show()
+
+        figures.append(fig)
+        print('Saved ' + str(itr+1))
+        if itr<10:
+            plt.savefig(gif_path+"fig0"+str(itr)+".jpg")
+        else:
+            plt.savefig(gif_path+"fig"+str(itr)+".jpg")
+        plt.close()
+    
+    gif_utils.convert_gif(gif_path, gif_path+gif_name, 500)
+    print('Exiting and saving...')
+
+###### Make GIF ends ######
