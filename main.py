@@ -39,12 +39,7 @@ link_changes_save           = True
 
 config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
-<<<<<<< HEAD
 sat_config_sub_path         = "sat_config_files/Scitech/"
-=======
-sat_config_sub_path         = "sat_config_files/"
-
->>>>>>> 592a1f5 (Added link_changes capability)
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
@@ -105,7 +100,6 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
-<<<<<<< HEAD
         #print(topfile_path)
         global CONN_mat_store
         #CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
@@ -116,9 +110,6 @@ def topology_generation(inc, sat_config,
         #print(optimal_nodes)
         global OPTIM_ROUTE_NODES
         OPTIM_ROUTE_NODES[inc] = optimal_nodes
-=======
-        
->>>>>>> 592a1f5 (Added link_changes capability)
         """
         global CONN_mat_store
         CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
@@ -171,15 +162,10 @@ def main():
     # Set global variable
     global criterion
     global CONN_mat_store
-<<<<<<< HEAD
     global OPTIM_ROUTE_NODES
     criterion = 2 # default
     CONN_mat_store = {}
     OPTIM_ROUTE_NODES = {}
-=======
-    criterion = 2 # default
-    CONN_mat_store = {}
->>>>>>> 592a1f5 (Added link_changes capability)
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
@@ -201,14 +187,7 @@ def main():
     optimal_file_path           = output_filepath+"/optimal_routes/"
     optimal_weight_path         = output_filepath+"/optimal_weights/"
     link_change_path            = output_filepath+"/link_changes/"
-<<<<<<< HEAD
-<<<<<<< HEAD
     weather_info_path           = output_filepath+"/weather_info/"
-=======
->>>>>>> 592a1f5 (Added link_changes capability)
-=======
-    weather_info_path           = output_filepath+"/weather_info/"
->>>>>>> 7bd2252 (resolved weather fetch)
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -484,23 +463,13 @@ def main():
             """
     
     """Checking Link changes between each interval (10sec)"""
-<<<<<<< HEAD
-=======
-    #global CONN_mat_store
->>>>>>> 592a1f5 (Added link_changes capability)
     DIFF = [] # Stores only the total number of link changes per timestep difference
     for itr in range(len(CONN_mat_store)):
         if itr>0:
             diff = np.array(CONN_mat_store[time_hist[itr]]) - np.array(CONN_mat_store[time_hist[itr-1]])
-<<<<<<< HEAD
-            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # WHile flattening stores only the links that are changed 
             diff_flatten = [ele for row in diff for ele in row if ele != 0]  # While flattening stores only the links that are changed 
             if link_changes_save:
                 save_link_changes(len(diff_flatten), itr, "All_"+ str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
-=======
-            diff_flatten = [ele for row in diff for ele in row if ele != 0]  # While flattening stores only the links that are changed 
-            save_link_changes(len(diff_flatten), itr, str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
->>>>>>> 592a1f5 (Added link_changes capability)
             DIFF.append(len(diff_flatten))
     print(DIFF)
 
