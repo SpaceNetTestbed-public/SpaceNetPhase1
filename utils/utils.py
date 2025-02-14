@@ -863,10 +863,12 @@ def arrange_satellites(
         print("..... Phase-1: Constellation Orbits:")
 
     # Initialize satellite names according to constellation naming conversion
+    satellites_sorted_in_shells = []
     satellites_sorted_in_orbits = []
 
     # Iterate over all the number of orbits in every shell    
     for itr, shell_name in enumerate(sat_config["shells"].keys()):
+        sat_sorted_in_orb_temp = []
         for i in range(sat_config["shells"][shell_name]["orbits"]):
             sorted = []
             satellites_in_orbit = []
@@ -879,6 +881,7 @@ def arrange_satellites(
             # Sort the satellites in orbit and append them to list
             sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
             satellites_sorted_in_orbits.append(sorted)
+            sat_sorted_in_orb_temp.append(sorted)
 
             # Debugging purposes
             if sat_config["Debug"] == 1:
@@ -889,6 +892,8 @@ def arrange_satellites(
                 for s in sorted:
                     write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
                     f.write(write_this)
+
+        satellites_sorted_in_shells.append(sat_sorted_in_orb_temp)
     
     # Close debugging file to minimize memory leak
     f.close()
@@ -898,7 +903,7 @@ def arrange_satellites(
     sat_index = -1
     orbit_id = 0
 
-    # Append new information to provided empty dictionary
+    # Append new information to provided empty dictionary (this is same as code before multi-shell)
     for orbit in satellites_sorted_in_orbits:
         orbit_id += 1
         for i in range(len(orbit)):
@@ -910,7 +915,7 @@ def arrange_satellites(
     file.close()
 
     # Return dictionary
-    return {"sorted satellite in orbits": satellites_sorted_in_orbits,
+    return {"sorted satellite in orbits": satellites_sorted_in_shells,
             "satellites by index": satellites_by_index
             }
 
