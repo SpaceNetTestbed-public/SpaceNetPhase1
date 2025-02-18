@@ -77,7 +77,7 @@ def topology_generation(inc, sat_config,
 
         # Initialize the connectivity matrix
         connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
-        """
+        
         # Add ISLs to the connectivity matrix
         connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
@@ -100,16 +100,6 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
-        #print(topfile_path)
-        global CONN_mat_store
-        #CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
-        CONN_mat_store[inc] = connectivity_matrix   # All links
-        
-        optroutefile_path = optimal_file_path+operator_name+"/best_path_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
-        optimal_nodes = extract_optim_routes(optroutefile_path)
-        #print(optimal_nodes)
-        global OPTIM_ROUTE_NODES
-        OPTIM_ROUTE_NODES[inc] = optimal_nodes
         """
         global CONN_mat_store
         CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
@@ -149,7 +139,7 @@ def topology_generation(inc, sat_config,
         save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
 
         save_optimal_weights(net_optimal_weight, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_weight_path)
-        """
+        
         # Save CPU clock runtime
         #save_cpu_time(dt_it, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
@@ -471,7 +461,7 @@ def main():
             if link_changes_save:
                 save_link_changes(len(diff_flatten), itr, "All_"+ str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
             DIFF.append(len(diff_flatten))
-    print(DIFF)
+    #print(DIFF)
 
     """Checking Link variations between each consecutive time interval optimal route"""
     for itr in range(len(OPTIM_ROUTE_NODES)):
