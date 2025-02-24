@@ -39,7 +39,7 @@ link_changes_save           = True
 
 config_file_path            = "config_files/"
 config_file_name            = "main_mn_config.yaml"
-sat_config_sub_path         = "sat_config_files/Scitech/"
+sat_config_sub_path         = "sat_config_files/"
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
@@ -475,8 +475,8 @@ def main():
         executor.shutdown()
     except:
         pass
-    cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
-    save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+    # cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
+    # save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
     # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
