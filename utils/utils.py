@@ -177,8 +177,7 @@ def save_topology(
                     links_charateristics        : dict, 
                     operator_name               : str, 
                     timestamp                   : int,
-                    connectivity_matrix_path    : str,
-                    dt                          : int
+                    connectivity_matrix_path    : str
                  ):
     """
     Saves the link characteristics (latency and bandwidth) for each sat/gs pair in the topology.
@@ -255,8 +254,7 @@ def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
                     timestamp               : int,
-                    routing_file_path       : str,
-                    dt                      : int
+                    routing_file_path       : str
                ):
     """
     Saves all possible optimal routes from the Bellman-Ford (BF) algorithm for each satellite and ground 
@@ -295,8 +293,7 @@ def save_optimal_path(
                         optimal_path            : list, 
                         timestamp               : int,
                         operator_name           : str, 
-                        optimal_file_path       : str,
-                        dt                      : int
+                        optimal_file_path       : str
                      ):
     """
     Saves a single optimal route determined by BF algorithm between a source and destination node.
