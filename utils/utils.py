@@ -911,6 +911,7 @@ def arrange_satellites(
                         orbital_data            : dict, 
                         satellites_by_name      : dict, 
                         sat_config              : dict,
+                        main_config             : dict,
                         operator_name           : str,
                         satellites_by_index     : {},
                         timestamp               : object,
@@ -924,6 +925,7 @@ def arrange_satellites(
         orbital_data (dict):                Extracted orbital parameters for each satellite in TLE
         satellites_by_name (dict):          Satellite information arranged by name
         sat_config (dict):                  Constellation configuration file
+        main_config (dict):                 Main simulation configuration file
         operator_name (name):               Constellation/operator name
         satellites_by_index (empty dic):    Satellite information arranged by index, given as an empty dictionary
         timestamp (object):                 Skyfield object datetime
@@ -944,7 +946,7 @@ def arrange_satellites(
     f = open(file_path + file_name, "a")
     
     # Debugging purposes
-    if sat_config["Debug"] == 1:
+    if main_config["Debug"] == 1:
         print("..... Phase-1: Constellation Orbits:")
 
     # Initialize satellite names according to constellation naming conversion
@@ -965,11 +967,11 @@ def arrange_satellites(
         satellites_sorted_in_orbits.append(sorted)
 
         # Debugging purposes
-        if sat_config["Debug"] == 1:
+        if main_config["Debug"] == 1:
             print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
 
         # Debugging purposes
-        if sat_config["Debug"] == 1:
+        if main_config["Debug"] == 1:
             for s in sorted:
                 write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
                 f.write(write_this)

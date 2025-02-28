@@ -615,30 +615,30 @@ def get_t2t_settings(main_config, output_filepath):
     t2t_settings = {}
     t2t_output_path = output_filepath+"/t2t/"
     t2t_settings['t2t_output_path'] = t2t_output_path # Save output path seperately in case it is needed for other functions
-    t2t_settings['kmz_type'] = main_config["t2t_gateway_kmz_type"] # local or link
-    t2t_settings['gateway_kmz_path'] = main_config["t2t_gateway_kmz_path"] # either a file path or a url
-    if "t2t_dict_output_file" in main_config and main_config["t2t_dict_output_file"] != "":
-        t2t_settings['t2t_dict_output_file'] = main_config["t2t_dict_output_file"] 
+    t2t_settings['kmz_type'] = main_config["Gateways"]["t2t_gateway_kmz_type"] # local or link
+    t2t_settings['gateway_kmz_path'] = main_config["Gateways"]["t2t_gateway_kmz_path"] # either a file path or a url
+    if "t2t_dict_output_file" in main_config and main_config["Gateways"]["t2t_dict_output_file"] != "":
+        t2t_settings['t2t_dict_output_file'] = main_config["Gateways"]["t2t_dict_output_file"] 
     else:
         t2t_settings['t2t_dict_output_file'] = None
     if "t2t_use_azure" in main_config:
-        t2t_settings['use_azure'] = main_config["t2t_use_azure"]
+        t2t_settings['use_azure'] = main_config["Azure"]["t2t_use_azure"]
         if t2t_settings['use_azure']:
-            t2t_settings['azure_endpoint_location_file'] = main_config["t2t_azure_endpoint_location_file"]
-            t2t_settings['azure_endpoint_latency_url'] = main_config["t2t_azure_endpoint_latency_url"]
-            if "t2t_azure_dict_output_file" in main_config and main_config["t2t_azure_dict_output_file"] != "":
-                t2t_settings['azure_dict_output_file'] = main_config["t2t_azure_dict_output_file"]
+            t2t_settings['azure_endpoint_location_file'] = main_config["Azure"]["t2t_azure_endpoint_location_file"]
+            t2t_settings['azure_endpoint_latency_url'] = main_config["Azure"]["t2t_azure_endpoint_latency_url"]
+            if "t2t_azure_dict_output_file" in main_config and main_config["Azure"]["t2t_azure_dict_output_file"] != "":
+                t2t_settings['azure_dict_output_file'] = main_config["Azure"]["t2t_azure_dict_output_file"]
         else:
             t2t_settings['azure_dict_output_file'] = None
     else:
         t2t_settings['use_azure'] = False
     if "t2t_use_wonderproxy" in main_config:
-        t2t_settings['use_wonderproxy'] = main_config["t2t_use_wonderproxy"]
+        t2t_settings['use_wonderproxy'] = main_config["WonderProxy"]["t2t_use_wonderproxy"]
         if t2t_settings['use_wonderproxy']:
-            t2t_settings['wonderproxy_endpoint_location_file'] = main_config["t2t_wonderproxy_endpoint_location_file"]
-            t2t_settings['wonderproxy_endpoint_latency_file'] = main_config["t2t_wonderproxy_endpoint_latency_file"]
-            if "t2t_wonderproxy_dict_output_file" in main_config and main_config["t2t_wonderproxy_dict_output_file"] != "":
-                t2t_settings['wonderproxy_dict_output_file'] = main_config["t2t_wonderproxy_dict_output_file"]
+            t2t_settings['wonderproxy_endpoint_location_file'] = main_config["WonderProxy"]["t2t_wonderproxy_endpoint_location_file"]
+            t2t_settings['wonderproxy_endpoint_latency_file'] = main_config["WonderProxy"]["t2t_wonderproxy_endpoint_latency_file"]
+            if "t2t_wonderproxy_dict_output_file" in main_config and main_config["WonderProxy"]["t2t_wonderproxy_dict_output_file"] != "":
+                t2t_settings['wonderproxy_dict_output_file'] = main_config["WonderProxy"]["t2t_wonderproxy_dict_output_file"]
             else:
                 t2t_settings['wonderproxy_dict_output_file'] = None
     else:

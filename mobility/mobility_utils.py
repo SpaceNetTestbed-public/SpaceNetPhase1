@@ -8,6 +8,7 @@ from link.link_utils import *
 
 
 def calc_max_gsl_length(
+                        main_config,
                         sat_config,
                         operator_name
                         ):
@@ -36,7 +37,7 @@ def calc_max_gsl_length(
     # else:
 
     # Calculate satellite cone radius based on altitude and elevation angle
-    satellite_cone_radius = (sat_config["shell1"]["altitude"])/math.tan(math.radians(sat_config["shell1"]["elevation_angle"]))
+    satellite_cone_radius = (sat_config["shell1"]["altitude"])/math.tan(math.radians(main_config["min_elevation_angle"]))
      
     # Calculate max GSL length using cone radius and satellite altitude, convert to meters
     max_gsl_length_m =  (math.sqrt(math.pow(satellite_cone_radius, 2) + math.pow(sat_config["shell1"]["altitude"], 2)))*1000
@@ -623,6 +624,7 @@ def mininet_add_GSLs_parallel(
                               association_criteria, 
                               t, 
                               sat_config,
+                              main_config,
                               operator_name
                               ):
     """
@@ -645,11 +647,11 @@ def mininet_add_GSLs_parallel(
     """
     
     # Retrieve maximum GSL length from config
-    max_gsl_length_m = calc_max_gsl_length(sat_config, operator_name)
+    max_gsl_length_m = calc_max_gsl_length(sat_config, main_config, operator_name)
 
     # Check if max GSL length is valid
     if max_gsl_length_m == -1:
-        if sat_config["Debug"] == 1:
+        if main_config["Debug"] == 1:
             print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
             return
         

@@ -1,6 +1,6 @@
 # Main configuration script for Phase 1 (Simulation Phase) of the SpaceNet Testbed
 ConstellationName: starlink1584_10_12  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
-
+Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local repository
 OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output
