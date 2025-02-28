@@ -60,11 +60,6 @@ def get_orbital_planes_classifications(
     # Open TLE file in read mode
     tle_file = open(tle_filename, 'r')
 
-    # Open Output TLE save file in write mode
-    path_segments = tle_filename.split('/')
-    tle_savefilename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/analysis/extracted_"+path_segments[-1]
-    tle_savefile = open(tle_savefilename, 'w')
-
     # Extract the contents of TLE file
     Lines = tle_file.readlines()
 
@@ -95,9 +90,6 @@ def get_orbital_planes_classifications(
             dump_orbital_data["aop"].append(tle_second_line[5])
             dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
             dump_orbital_data["Mean motion"].append(tle_second_line[7])
-
-            # Storing the TLEs of all the selected sats in a file
-            tle_savefile.writelines([Lines[i], Lines[i+1], Lines[i+2]]) 
 
     # Collect RAAN values in data dump
     list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
@@ -154,40 +146,6 @@ def get_orbital_planes_classifications(
                     
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
-
-    """Debugging Zone"""
-
-    # # Print total satellites for checking before completing sim
-    # #ggs = [((398600.435507 / ((float(dump_orbital_data["Mean motion"][i]) * 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - 6378.137) for i, data in enumerate(dump_orbital_data["Inclination"]) if float(data) > 40 and float(data) < 45 and ((398600.435507 / ((float(dump_orbital_data["Mean motion"][i]) * 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - 6378.137)>0]
-    # ggs = [float(data) for i, data in enumerate(dump_orbital_data["Inclination"]) if float(data) > 40 and float(data) < 45 and ((398600.435507 / ((float(dump_orbital_data["Mean motion"][i]) * 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - 6378.137)>0]
-    # print(".......... No. of Sat Nodes: ", totalsatellites, "  Total number of sats in desired inclination: ", len(ggs))
-    
-    # raan_mean = range(0,360,5)
-    # RAAN_sats = {i:[] for i in raan_mean}
-    # anom_sats = {i:[] for i in raan_mean}
-    # for raan in raan_mean:
-    #     anomalies = []
-    #     for k, data in enumerate(dump_orbital_data["RAAN"]):
-    #         if float(data) > raan-1.7 and float(data) < raan+1.7:
-    #             RAAN_sats[raan].append(float(data))
-    #             anomalies.append(float(dump_orbital_data["Mean anomaly"][k]))
-
-    #     sat_list = sorted(anomalies)
-    #     anom_mean = range(int(sat_list[0]),360+int(sat_list[0]),20)
-    #     for anom_data in anom_mean:
-    #         for sat_anoms in sat_list:
-    #             if float(sat_anoms) > anom_data-4.5 and float(sat_anoms) < anom_data+4.5:
-    #                 anom_sats[raan].append(float(sat_anoms))
-
-    # print(".......... No. of Sat Nodes: ", totalsatellites, "  Total number of sats after anomaly filter: ", sum([len(R_sats) for R_sats in RAAN_sats.values()]))
-    # print(anom_sats[raan_mean[0]])
-
-    # import matplotlib.pyplot as plt
-    # plt.hist(ggs)
-    # plt.title("Number of satellites from tle: " + str(totalsatellites))
-    # plt.show()
-
-    """Debugging Zone Ends!"""
 
     # Return the collected orbital information separated by orbit
     return data_orbits
