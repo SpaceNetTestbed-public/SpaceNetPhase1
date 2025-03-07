@@ -27,29 +27,30 @@ time_index              = 0
 plot_GSs                = False
 plot_only_optimal       = False
 plot_in_3D              = True
-plot_debug              = True   #Plots linked sats to the given sat index and their respective orbits
+plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = -90  #-35 
-lat0_3d                 = 20
-timestamp               = "2024_09_27_12_30_30"
-gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/terrestrial_info/terrestrial_1727475306.txt', 'r')
+lat0_3d                 = 20      # 20
+timestamp               = "2024_09_27_22_15_6"
+gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/terrestrial_info/terrestrial_1727475306.txt', 'r')
 tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727475306', 'r')
-optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/node_indices/starlink/nodeindex_1727475306.txt'
-orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'Orlando_Seattle_real_plusgrid_10sec_3D_1230pm'
+optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/node_indices/starlink/nodeindex_1727475306.txt'
+orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/satellites_orbits/orbits_satellites.txt'
+gif_name                = 'gif_multishell'
 ################### Folder Paths ######################
-conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/connectivity_matrix/starlink/'
-opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/optimal_routes/starlink/'
-gif_path                = '/home/suryaryan/GIFS/'
+conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/connectivity_matrix/starlink/'
+opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/optimal_routes/starlink/'
+gif_path                = '/home/suryaryan/GIFS/multi-shell/inter-continental2/'
 #######################################################
-number_of_orbits = 72  #$
+number_of_orbits = 72+5  #$
 # num_plotorbit = range(1)  #$ Number of orbits to plot
 # gs0 = (-74.003663, 40.717042) # NYC
 # gs1 = (103.850070, 1.289670) # Singapore
-ref = 1263  # index of satellite to be debugged for ISLs 
+ref = 1056 #1263  # index of satellite to be debugged for ISLs 
+shell_color = {1584:"orange",1814:"green"}
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -244,8 +245,8 @@ if not make_gif:
         #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
     else:
         m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=0, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
-        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c')   #US zoomed
+        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
     m.drawcoastlines()
     m.drawcountries()
     m.fillcontinents(color='lightgray', lake_color='white')
@@ -278,15 +279,23 @@ if not make_gif:
             
             # Plot satellite node as a regular scatter point with label
             if not any(gs_type in node_alias for gs_type in gs_alias_list):
+
+                node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
+                shell_span = 0
+                shell_list = list(shell_color.keys())
+                while node_idx>shell_list[shell_span]:
+                    shell_span += 1
+                coloring_shell_sats = shell_color[shell_list[shell_span]]
+
                 x, y = m(node_lon, node_lat)
                 if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                     plt.scatter(x, y, s=50, marker="o", facecolors='red', edgecolors='red', zorder=20)
                     plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
+                elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4 and plot_debug:
                     plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                     plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                 else:
-                    plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
+                    plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats, edgecolors=coloring_shell_sats, zorder=20)
                     plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
 
@@ -404,8 +413,8 @@ if not make_gif:
     # PLOT INFORMATION
     #plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
     print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
+    #plt.xlabel('Longitude')
+    #plt.ylabel('Latitude')
     plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
     #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
     plt.tight_layout()
@@ -431,10 +440,10 @@ else:    ## (MAKING GIF)
     # conn_sorted_path.pop(-1)
     # conn_sorted_path.pop(-1)
 
-    # conn_sorted_path.insert(0, conn_sorted_path[5])
-    # conn_sorted_path.pop(6)
-    # conn_sorted_path.insert(6, conn_sorted_path[9])
-    # conn_sorted_path.pop(-1)
+    conn_sorted_path.insert(0, conn_sorted_path[5])
+    conn_sorted_path.pop(6)
+    conn_sorted_path.insert(6, conn_sorted_path[9])
+    conn_sorted_path.pop(-1)
 
     # conn_sorted_path.insert(6, conn_sorted_path[11])
     # conn_sorted_path.pop(12)
@@ -487,10 +496,10 @@ else:    ## (MAKING GIF)
     # optroute_sorted_path.pop(-1)
     # optroute_sorted_path.pop(-1)
     
-    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
-    # optroute_sorted_path.pop(6)
-    # optroute_sorted_path.insert(6, optroute_sorted_path[9])
-    # optroute_sorted_path.pop(-1)
+    optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    optroute_sorted_path.pop(6)
+    optroute_sorted_path.insert(6, optroute_sorted_path[9])
+    optroute_sorted_path.pop(-1)
 
     # optroute_sorted_path.insert(6, optroute_sorted_path[11])
     # optroute_sorted_path.pop(12)
@@ -598,8 +607,8 @@ else:    ## (MAKING GIF)
             #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
         else:
             m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=0, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
-            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c')
+            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c') #US zoomed
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
         m.drawcoastlines()
         m.drawcountries()
         m.fillcontinents(color='lightgray', lake_color='white')
@@ -616,16 +625,23 @@ else:    ## (MAKING GIF)
 
                 # Plot ONLY satellite node as a regular scatter point with label
                 if not any(gs_type in node_alias for gs_type in gs_alias_list):
+
+                    node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
+                    shell_span = 0
+                    shell_list = list(shell_color.keys())
+                    while node_idx>shell_list[shell_span]:
+                        shell_span += 1
+                    coloring_shell_sats = shell_color[shell_list[shell_span]]
+
                     x, y = m(node_lon, node_lat)
                     if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                         plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
-                        plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
+                        #plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
+                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4 and plot_debug:
                         plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
-                        plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
+                        #plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:
-                        plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
-                    #plt.text(x, y-0.5, node_a
+                        plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats, edgecolors=coloring_shell_sats, zorder=20)
 
         ####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
         if plot_debug:
@@ -740,8 +756,8 @@ else:    ## (MAKING GIF)
 
         # PLOT INFORMATION
         print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[-1])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-        plt.xlabel('Longitude')
-        plt.ylabel('Latitude')
+        # plt.xlabel('Longitude')
+        # plt.ylabel('Latitude')
         #plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
         plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1))
         #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
