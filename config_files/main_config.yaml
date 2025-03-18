@@ -1,22 +1,22 @@
 # Main configuration script for Phase 1 (Simulation Phase) of the SpaceNet Testbed
-ConstellationName: starlink1584_10_12  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink1020_10_12  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local repository
-OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output
+OutputFilePath: /home/downs10624d/sim_results/control_noon/london/
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
 
 # Source & Destination Nodes for Optimal Routing (For GSes: Total # of Sats + GS # in list; For Sats: idk lol)
-SourceNode: 1587
-DestNode: 1588
+SourceNode: 1020
+DestNode: 1021
 
 # Routing Algorithm Options
 RouteWeight: latency  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity' 
 
 # Ground Station Options
-GroundStationFile: /home/spacenet/Desktop/spacenet_files/input/gs_files/<ground_station_filename>
+GroundStationFile: /home/downs10624d/dynamic-topology-generator/utils/gs_files/gs_jack_jp.txt
 min_elevation_angle: 25 # minimum elevation angle between GS and Sat (default: 25 degrees)
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
 UseWeatherData: True # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
