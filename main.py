@@ -311,7 +311,7 @@ def main():
     cpu_clock_tot_t0 = time.perf_counter_ns()
 
     # Save satellite and ground station indices
-    save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, tle_timestamp, operator_name, t2t_dict)
+    save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), operator_name, t2t_dict)
 
     # Remove any existing files
     if os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
