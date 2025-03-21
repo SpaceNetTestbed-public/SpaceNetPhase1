@@ -219,7 +219,7 @@ def main():
     time_timestamp = convert_time_utc_to_unix(time_utc)
 
     # Determine if TLE file needs to be generated and, if so, generate TLE file
-    generate_TLE         = bool(sat_config["generate_TLE"]) if "generate_TLe" in main_config else False
+    generate_TLE         = bool(sat_config["generate_TLE"]) if "generate_TLE" in sat_config else False
     if generate_TLE:
         print("\n.......... Generating Constellation TLEs")
         generate_TLE_main(sat_config)
@@ -441,8 +441,7 @@ def main():
                       links_characteristics, 
                       operator_name, 
                       str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
-                      connectivity_matrix_path,
-                      time_resolution_in_seconds)
+                      connectivity_matrix_path)
 
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
@@ -450,8 +449,7 @@ def main():
         save_routes(all_possible_routes, 
                     operator_name, 
                     str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
-                    routing_file_path,
-                    time_resolution_in_seconds)
+                    routing_file_path)
 
             # Save the optimal routes between provided src/dest
             if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite

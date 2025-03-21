@@ -3,7 +3,7 @@ ConstellationName: starlink1020_10_12  # Name must match constellation config fi
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local repository
-OutputFilePath: /home/downs10624d/sim_results/control_noon/london/
+OutputFilePath: /home/spacenet/Desktop/jack_results/aiaa_journal/control_noon/london/
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
@@ -16,7 +16,7 @@ DestNode: 1021
 RouteWeight: latency  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity' 
 
 # Ground Station Options
-GroundStationFile: /home/downs10624d/dynamic-topology-generator/utils/gs_files/gs_jack_jp.txt
+GroundStationFile: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/gs_files/gs_jack_jp.txt
 min_elevation_angle: 25 # minimum elevation angle between GS and Sat (default: 25 degrees)
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
 UseWeatherData: True # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)

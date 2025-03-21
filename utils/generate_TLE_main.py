@@ -20,7 +20,7 @@ import os
 import time
 import numpy as np
 import calendar
-import generate_fake_TLE as gft
+from utils import generate_fake_TLE as gft
 
 # =================================================================================== #
 # -------------------------------- MAIN FUNCTION ------------------------------------ #
@@ -191,7 +191,7 @@ def generate_TLE_main (
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("../utils/starlink_tles/"+filename, 'a') as file:
+    with open(sat_config["TLEFilePath"]+"starlink_tles/"+filename, 'a') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))

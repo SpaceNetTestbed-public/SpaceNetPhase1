@@ -647,7 +647,7 @@ def mininet_add_GSLs_parallel(
     """
     
     # Retrieve maximum GSL length from config
-    max_gsl_length_m = calc_max_gsl_length(sat_config, main_config, operator_name)
+    max_gsl_length_m = calc_max_gsl_length(main_config, sat_config, operator_name)
 
     # Check if max GSL length is valid
     if max_gsl_length_m == -1:
@@ -1000,7 +1000,7 @@ def calculate_link_characteristics_for_gsls_isls(
                 distance_meters             = distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
-                snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
+                snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "uplink")
                 channel_width               = channel_bandwidth_downlink
                 throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
                 if throughput_matrix[i][j] > 500:

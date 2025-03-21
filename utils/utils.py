@@ -17,7 +17,7 @@ CONTENTS:       FILE SYSTEM/ (STARTS AT 80)
                     read_IProute_files_thread(routes, initial_routes)
                     save_topology(connectivity_matrix, links_charateristics, main_configurations, timestamp)
                     save_routes(routes, main_configurations, timestamp)
-                    save_optimal_path(optimal_path, main_configurations, timestap)
+                    save_optimal_path(optimal_path, main_configurations)
 
                 PARSING/ (STARTS AT 275)
                     parse_config_file_yml(filepath, filename)                     
@@ -177,8 +177,7 @@ def save_topology(
                     links_charateristics        : dict, 
                     operator_name               : str, 
                     timestamp                   : int,
-                    connectivity_matrix_path    : str,
-                    dt                          : int
+                    connectivity_matrix_path    : str
                  ):
     """
     Saves the link characteristics (latency and bandwidth) for each sat/gs pair in the topology.
@@ -255,8 +254,7 @@ def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
                     timestamp               : int,
-                    routing_file_path       : str,
-                    dt                      : int
+                    routing_file_path       : str
                ):
     """
     Saves all possible optimal routes from the Bellman-Ford (BF) algorithm for each satellite and ground 
@@ -295,8 +293,7 @@ def save_optimal_path(
                         optimal_path            : list, 
                         timestamp               : int,
                         operator_name           : str, 
-                        optimal_file_path       : str,
-                        dt                      : int
+                        optimal_file_path       : str
                      ):
     """
     Saves a single optimal route determined by BF algorithm between a source and destination node.
@@ -371,7 +368,7 @@ def save_link_changes(
                         itr                     : int,
                         targetgs                : str,
                         operator_name           : str, 
-                        link_changes_path          : str
+                        link_changes_path       : str
                      ):
     
     # Generate a new file
@@ -581,39 +578,6 @@ def save_cpu_time(
 
     # Close file to minimize memory leaks
     cpu_clock_log.close()
-
-
-def save_cpu_time(
-                    cpu_runtime     : float, 
-                    timestamp       : int,
-                    operator_name   : str, 
-                    cpu_time_path   : str,
-                    dt              : int
-                 ):
-    """
-    Saves the matching node indices and their corresponding aliases.
-
-    Args:
-        cpu_runtime (float):            CPU clock runtime, in seconds
-        timestamp (list):               Unix time as a list
-        operator_name (str):            Constellation/operator name
-        cpu_time_path (str):            Path to output CPU clock runtime file
-        dt (int):                       Topology granularity   
-
-    Returns:
-        Saves the CPU clock runtime as a .txt file.
-    """
-
-    # Generate a new file
-    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
-    
-    # Iterate over the optimal path list
-    if cpu_runtime != None:
-        cpu_clock_log.write(str(cpu_runtime)+"\n")
-
-    # Close file to minimize memory leaks
-    cpu_clock_log.close()
-
 
 # =================================================================================== #
 # ------------------------------------ PARSING -------------------------------------- #
