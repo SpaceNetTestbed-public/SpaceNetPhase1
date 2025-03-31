@@ -3,7 +3,7 @@ ConstellationName: starlink1020_10_12  # Name must match constellation config fi
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local repository
-OutputFilePath: /home/spacenet/Desktop/jack_results/aiaa_journal/control_noon/london/
+OutputFilePath: /home/spacenet/Desktop/jack_results/aiaa_journal/control_late/london/
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False

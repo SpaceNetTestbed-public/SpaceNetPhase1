@@ -440,7 +440,7 @@ def save_node_index_and_terrestrial_info(
                                             ground_stations         : list, 
                                             node_index_file_path    : str,
                                             terrestrial_file_path   : str,
-                                            timestamp               : int,
+                                            timestamp               : list,
                                             operator_name           : str,
                                             t2t_dict                : dict = None
                                         ):
@@ -464,20 +464,20 @@ def save_node_index_and_terrestrial_info(
     # Generate a new file for node indices
     file_path = node_index_file_path+operator_name+"/"
     check_create_path(file_path)
-    file_name = "nodeindex_"+timestamp+".txt"
+    file_name = "nodeindex_"+("_".join(timestamp))+".txt"
     nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
     # Generate a new file for terrestrial information
     file_path2 = terrestrial_file_path+"/"
     check_create_path(file_path2)
-    file_name2 = "terrestrial_"+timestamp+".txt"
+    file_name2 = "terrestrial_"+("_".join(timestamp))+".txt"
     terrestrial_log_write = open(file_path2 + file_name2, "w")
     terrestrial_log_write.close()
 
     # Append to files
-    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
-    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+timestamp+".txt", "a")
+    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+("_".join(timestamp))+".txt", "a")
+    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+("_".join(timestamp))+".txt", "a")
 
     # Iterate over the satellites_by_index
     for sat_indx, sat_alias in satellites_by_index.items():
