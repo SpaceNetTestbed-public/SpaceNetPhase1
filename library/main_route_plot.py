@@ -22,30 +22,30 @@ time_index              = 0
 plot_GSs                = False
 plot_only_optimal       = False
 plot_in_3D              = True
-plot_debug              = True   #Plots linked sats to the given sat index and their respective orbits
+plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existing in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -145  #-80    #-100   #5  #-35 
-lat0_3d                 = 0 #-30       #20   #30
-timestamp               = "2024_07_21_19_00_0"
-output_pathname         = "alt1500_inc50_7pm_sydney"
-gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/terrestrial_info/terrestrial_1721552400.txt', 'r')
-tle_file                = open('/home/spacenet/Desktop/jacktles/alt1500km/starlink_tles/starlink_1721552400', 'r')
-optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/connectivity_matrix/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/node_indices/starlink/nodeindex_1721552400.txt'
-orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'gif_'+output_pathname
+lon0_3d                 = -140  #-80    #-100   #5  #-35 
+lat0_3d                 = 5      #20   #30
+timestamp               = "2025_3_17_12_24_14"
+output_pathname         = "aiaa_journal/hi_late/sydney"
+gs_filepath             = open('/home/spacenet/Desktop/jack_results/'+output_pathname+'/terrestrial_info/terrestrial_'+timestamp+'.0.txt', 'r')
+tle_file                = open('/home/spacenet/Desktop/jacktles/alt500km/inc75/starlink_tles/starlink_1742212800', 'r')
+optimal_route_filepath  = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/connectivity/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/node_indices/starlink/nodeindex_'+timestamp+'.0.txt'
+orb_sat_txt             = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
+gif_name                = 'gif_hi_late_sydney'
 ################### Folder Paths ######################
-conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/connectivity_matrix/starlink/'
-opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/real/Orlando_Seattle_plus_10sec_1230pm/optimal_routes/starlink/'
-gif_path                = '/home/suryaryan/GIFS/'
+conn_folder             = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/connectivity/starlink/'
+opt_route_folder        = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/optimal_routes/starlink/'
+gif_path                = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/gifs/'
 #######################################################
-number_of_orbits = 72  #$
+number_of_orbits = 36 #$
 # num_plotorbit = range(1)  #$ Number of orbits to plot
 # gs0 = (-74.003663, 40.717042) # NYC
 # gs1 = (103.850070, 1.289670) # Singapore
-ref = 1263  # index of satellite to be debugged for ISLs 
+ref = 0  # index of satellite to be debugged for ISLs 
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -279,9 +279,9 @@ if not make_gif:
                 if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                     plt.scatter(x, y, s=50, marker="o", facecolors='red', edgecolors='red', zorder=20)
                     plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
-                    plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
-                    plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
+                # elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
+                    # plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
+                    # plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                 else:
                     plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
                     plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
@@ -401,9 +401,9 @@ if not make_gif:
     # PLOT INFORMATION
     #plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
     print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-    plt.xlabel('Longitude')
-    plt.ylabel('Latitude')
-    plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
+    # plt.xlabel('Longitude')
+    # plt.ylabel('Latitude')
+    # plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
     #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
     plt.tight_layout()
     plt.show()
@@ -619,8 +619,8 @@ else:    ## (MAKING GIF)
                     if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                         plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
                         plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
-                        plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
+                    # elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4:
+                        # plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                         plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:
                         plt.scatter(x, y, s=20, marker="o", facecolors='none', edgecolors='black', zorder=20)
@@ -739,10 +739,10 @@ else:    ## (MAKING GIF)
 
         # PLOT INFORMATION
         print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[-1])+') (hops='+str(len(optimal_route_at_t)-1)+')')
-        plt.xlabel('Longitude')
-        plt.ylabel('Latitude')
-        #plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
-        plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1))
+        # plt.xlabel('Longitude')
+        # plt.ylabel('Latitude')
+        # plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1) + ' | Non "+ grid" sats: ' + str(count))
+        # plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_routes[0])-1))
         #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
         plt.tight_layout()
         #plt.show()
