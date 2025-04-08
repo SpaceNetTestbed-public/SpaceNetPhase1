@@ -17,7 +17,7 @@ CONTENTS:       FILE SYSTEM/ (STARTS AT 80)
                     read_IProute_files_thread(routes, initial_routes)
                     save_topology(connectivity_matrix, links_charateristics, main_configurations, timestamp)
                     save_routes(routes, main_configurations, timestamp)
-                    save_optimal_path(optimal_path, main_configurations, timestap)
+                    save_optimal_path(optimal_path, main_configurations)
 
                 PARSING/ (STARTS AT 275)
                     parse_config_file_yml(filepath, filename)                     
@@ -177,8 +177,7 @@ def save_topology(
                     links_charateristics        : dict, 
                     operator_name               : str, 
                     timestamp                   : int,
-                    connectivity_matrix_path    : str,
-                    dt                          : int
+                    connectivity_matrix_path    : str
                  ):
     """
     Saves the link characteristics (latency and bandwidth) for each sat/gs pair in the topology.
@@ -255,8 +254,7 @@ def save_routes(
                     routes                  : list, 
                     operator_name           : str, 
                     timestamp               : int,
-                    routing_file_path       : str,
-                    dt                      : int
+                    routing_file_path       : str
                ):
     """
     Saves all possible optimal routes from the Bellman-Ford (BF) algorithm for each satellite and ground 
@@ -295,8 +293,7 @@ def save_optimal_path(
                         optimal_path            : list, 
                         timestamp               : int,
                         operator_name           : str, 
-                        optimal_file_path       : str,
-                        dt                      : int
+                        optimal_file_path       : str
                      ):
     """
     Saves a single optimal route determined by BF algorithm between a source and destination node.
@@ -371,7 +368,7 @@ def save_link_changes(
                         itr                     : int,
                         targetgs                : str,
                         operator_name           : str, 
-                        link_changes_path          : str
+                        link_changes_path       : str
                      ):
     
     # Generate a new file
@@ -443,7 +440,7 @@ def save_node_index_and_terrestrial_info(
                                             ground_stations         : list, 
                                             node_index_file_path    : str,
                                             terrestrial_file_path   : str,
-                                            timestamp               : int,
+                                            timestamp               : list,
                                             operator_name           : str,
                                             t2t_dict                : dict = None
                                         ):
@@ -467,20 +464,20 @@ def save_node_index_and_terrestrial_info(
     # Generate a new file for node indices
     file_path = node_index_file_path+operator_name+"/"
     check_create_path(file_path)
-    file_name = "nodeindex_"+timestamp+".txt"
+    file_name = "nodeindex_"+("_".join(timestamp))+".txt"
     nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
     # Generate a new file for terrestrial information
     file_path2 = terrestrial_file_path+"/"
     check_create_path(file_path2)
-    file_name2 = "terrestrial_"+timestamp+".txt"
+    file_name2 = "terrestrial_"+("_".join(timestamp))+".txt"
     terrestrial_log_write = open(file_path2 + file_name2, "w")
     terrestrial_log_write.close()
 
     # Append to files
-    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
-    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+timestamp+".txt", "a")
+    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+("_".join(timestamp))+".txt", "a")
+    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+("_".join(timestamp))+".txt", "a")
 
     # Iterate over the satellites_by_index
     for sat_indx, sat_alias in satellites_by_index.items():
@@ -581,39 +578,6 @@ def save_cpu_time(
 
     # Close file to minimize memory leaks
     cpu_clock_log.close()
-
-
-def save_cpu_time(
-                    cpu_runtime     : float, 
-                    timestamp       : int,
-                    operator_name   : str, 
-                    cpu_time_path   : str,
-                    dt              : int
-                 ):
-    """
-    Saves the matching node indices and their corresponding aliases.
-
-    Args:
-        cpu_runtime (float):            CPU clock runtime, in seconds
-        timestamp (list):               Unix time as a list
-        operator_name (str):            Constellation/operator name
-        cpu_time_path (str):            Path to output CPU clock runtime file
-        dt (int):                       Topology granularity   
-
-    Returns:
-        Saves the CPU clock runtime as a .txt file.
-    """
-
-    # Generate a new file
-    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
-    
-    # Iterate over the optimal path list
-    if cpu_runtime != None:
-        cpu_clock_log.write(str(cpu_runtime)+"\n")
-
-    # Close file to minimize memory leaks
-    cpu_clock_log.close()
-
 
 # =================================================================================== #
 # ------------------------------------ PARSING -------------------------------------- #
@@ -911,6 +875,7 @@ def arrange_satellites(
                         orbital_data            : dict, 
                         satellites_by_name      : dict, 
                         sat_config              : dict,
+                        main_config             : dict,
                         operator_name           : str,
                         satellites_by_index     : {},
                         timestamp               : object,
@@ -924,6 +889,7 @@ def arrange_satellites(
         orbital_data (dict):                Extracted orbital parameters for each satellite in TLE
         satellites_by_name (dict):          Satellite information arranged by name
         sat_config (dict):                  Constellation configuration file
+        main_config (dict):                 Main simulation configuration file
         operator_name (name):               Constellation/operator name
         satellites_by_index (empty dic):    Satellite information arranged by index, given as an empty dictionary
         timestamp (object):                 Skyfield object datetime
@@ -944,7 +910,7 @@ def arrange_satellites(
     f = open(file_path + file_name, "a")
     
     # Debugging purposes
-    if sat_config["Debug"] == 1:
+    if main_config["Debug"] == 1:
         print("..... Phase-1: Constellation Orbits:")
 
     # Initialize satellite names according to constellation naming conversion
@@ -965,11 +931,11 @@ def arrange_satellites(
         satellites_sorted_in_orbits.append(sorted)
 
         # Debugging purposes
-        if sat_config["Debug"] == 1:
+        if main_config["Debug"] == 1:
             print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
 
         # Debugging purposes
-        if sat_config["Debug"] == 1:
+        if main_config["Debug"] == 1:
             for s in sorted:
                 write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
                 f.write(write_this)

@@ -62,7 +62,7 @@ def get_orbital_planes_classifications(
 
     # Open Output TLE save file in write mode
     path_segments = tle_filename.split('/')
-    tle_savefilename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/analysis/extracted_"+path_segments[-1]
+    tle_savefilename = "/home/spacenet/Desktop/jacktles/selected_sat_tles/extracted_"+path_segments[-1]
     tle_savefile = open(tle_savefilename, 'w')
 
     # Extract the contents of TLE file
