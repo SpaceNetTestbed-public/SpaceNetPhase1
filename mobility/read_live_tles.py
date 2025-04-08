@@ -9,7 +9,7 @@ EDITOR:         Bruce Barbour
                 Virginia Tech
 
 DESCRIPTION:    This Python script supplies the utility functions for extracting and sorting constellation information, including info on its orbits and sorting of satellites 
-                in their particular orbits.
+                in their particular orbits. (FUTURE INTENTIONS - Identifying different shells of a constellation and sort within each shell)
 
 
 CONTENTS:       TLE CONSTELLATION FUNCTIONS/ (STARTS AT 45)
@@ -52,7 +52,7 @@ def get_orbital_planes_classifications(
         dict:                               Dictionary containing arranged orbital information
                                             Key: Satellite name, Value: Tuple (Orbital number, Epoch, Inclination, RAAN, Eccentricity, Argument of Perigee, Mean Anomaly, Mean Motion)
     """
-
+    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727718467"
     # Initialize dictionaries as empty
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
@@ -73,20 +73,19 @@ def get_orbital_planes_classifications(
         tle_second_line = list([_f for _f in Lines[i+2].strip("\n").split(" ") if _f])
 
         # Compute orbiting altitude
-        tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400
-        tle_a           = (398600.4418 / (tle_n ** 2)) ** (1. / 3.) - 6378.135
+        tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400            # rad/s
+        tle_a           = (398600.435507 / (tle_n ** 2)) ** (1. / 3.) - 6378.137     # (altitude in km)
 
         # Inclination of constellation shell
-        # if  float(tle_second_line[2]) < (orbits_inclination + 1) and float(tle_second_line[2]) >= (orbits_inclination - 1) \
-        #     and tle_a < (orbits_altitude + 1) and tle_a >= (orbits_altitude - 1):
-
-        if tle_a < (orbits_altitude + 5) and tle_a >= (orbits_altitude - 5):
+        if  float(tle_second_line[2]) < (orbits_inclination + 0.1) and float(tle_second_line[2]) >= (orbits_inclination - 0.9) \
+            and tle_a < (orbits_altitude + 7.1524) and tle_a > (orbits_altitude - 9.0524): 
+        #if (tle_a > (orbits_altitude + 7.1524)) and float(tle_second_line[2]) < (orbits_inclination + 8):    # tle : (1727475306, 1727718467, 1730840419)  threshold : (7.1524, 7.0330, 7.0080)  alt-540            ":
 
             # Store TLE data in dump_orbital_data
             dump_orbital_data["Epoch"].append(tle_first_line[3])
             dump_orbital_data["Satellites"].append(Lines[i].strip())
             dump_orbital_data["Inclination"].append(tle_second_line[2])
-            dump_orbital_data["RAAN"].append(tle_second_line[3])
+            dump_orbital_data["RAAN"].append(float(tle_second_line[3]))
             dump_orbital_data["ecc"].append(tle_second_line[4])
             dump_orbital_data["aop"].append(tle_second_line[5])
             dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
@@ -125,7 +124,7 @@ def get_orbital_planes_classifications(
                 if float(dump_orbital_data["RAAN"][j]) <= upperBound_of_class and float(dump_orbital_data["RAAN"][j]) >= lowerBound_of_class:
                     
                     # Store orbital information in data_orbits dictionary
-                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], str(orbits_inclination), dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
+                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], dump_orbital_data["Inclination"][j], dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
@@ -138,18 +137,15 @@ def get_orbital_planes_classifications(
                 if float(dump_orbital_data["RAAN"][j]) <= upperBound_of_class and float(dump_orbital_data["RAAN"][j]) > lowerBound_of_class:
                     
                     # Store orbital information in data_orbits dictionary
-                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], str(orbits_inclination), dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
+                    data_orbits[dump_orbital_data["Satellites"][i]] = (class_num, dump_orbital_data["Epoch"][j], dump_orbital_data["Inclination"][j], dump_orbital_data["RAAN"][j], dump_orbital_data["ecc"][j], dump_orbital_data["aop"][j], dump_orbital_data["Mean anomaly"][j], dump_orbital_data["Mean motion"][j])#Satellite name: (Inclination, RAAN, orbital number)
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
 
-        # print()"Num of Sats ----------------", count_sats_per_orbit)
+        # print("Num of Sats ----------------", count_sats_per_orbit)
                     
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
-
-    # Print total satellites for checking before completing sim
-    # print(".......... No. of Sat Nodes: ", totalsatellites)
 
     # Return the collected orbital information separated by orbit
     return data_orbits

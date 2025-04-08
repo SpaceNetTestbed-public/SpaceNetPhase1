@@ -127,14 +127,14 @@ if __name__ == "__main__":
 
 
     # Settings
-    altitude            = 500.
-    inclination         = 50.
-    tot_num_sats        = 880
-    num_orbits          = 44
+    altitude            = 540   #1500.
+    inclination         = 53.2  #50.
+    tot_num_sats        = 1584  #150
+    num_orbits          = 72    #15
     num_sat_per_orbit   = int(tot_num_sats/num_orbits)
 
     # Date/Time input
-    datetime    = (2024, 7, 21, 9, 0, 0) # year, month, day, hour, minute, second
+    datetime    = (2024, 9, 27, 22, 15, 6)     #(2024, 7, 21, 9, 0, 0) # year, month, day, hour, minute, second
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     

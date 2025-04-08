@@ -5,7 +5,6 @@ import threading
 
 import networkx as nx
 import matplotlib.pyplot as plt
-import bellmanford as bf
 from multiprocessing import Pool
 
 import sys
@@ -150,7 +149,11 @@ def initial_routing_fw(satellites, connectivity_matrix, metric, source_dest_node
                 static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 
     if source_dest_nodes:
-        return (static_routes, optimal_output, nx.path_weight(mega_constellation_graph, optimal_output, weight="weight"))
+        weight_list= []
+        for i in range(len(optimal_output)-1):
+            weight_list.append(mega_constellation_graph[optimal_output[i]][optimal_output[i+1]]['weight'])
+        #return (static_routes, optimal_output, nx.path_weight(mega_constellation_graph, optimal_output, weight="weight"))
+        return (static_routes, optimal_output, weight_list)
     else:
         return static_routes
 
