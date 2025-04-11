@@ -25,6 +25,7 @@ CONTENTS:       TLE CONSTELLATION FUNCTIONS/ (STARTS AT 45)
 import numpy as np
 import jenkspy
 from .mobility_utils import *
+from .lunar_dyn_utils import *
 
 # =================================================================================== #
 # -------------------------- TLE CONSTELLATION FUNCTIONS ---------------------------- #
@@ -61,24 +62,15 @@ def get_orbital_planes_classifications(
     tle_file = open(tle_filename, 'r')
 
     # Open Output TLE save file in write mode
-    path_segments = tle_filename.split('/')
-    tle_savefilename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/analysis/extracted_"+path_segments[-1]
-    tle_savefile = open(tle_savefilename, 'w')
+    # path_segments = tle_filename.split('/')
+    # tle_savefilename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/analysis/extracted_"+path_segments[-1]
+    # tle_savefile = open(tle_savefilename, 'w')
 
     # Extract the contents of TLE file
     Lines = tle_file.readlines()
 
     # Defining thresholds
-    if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
-        thresh1 = 0.1
-        thresh2 = -0.9
-        thresh3 = 7.1524
-        thresh4 = -9.0524
-    elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
-        thresh1 = 0.1
-        thresh2 = -0.9
-        thresh3 = 3.0624
-        thresh4 = 2.0524
+    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(constellation, orbits_inclination, orbits_altitude)
     
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
     for i in range(0, len(Lines), 3):
@@ -91,7 +83,13 @@ def get_orbital_planes_classifications(
 
         # Compute orbiting altitude
         tle_n           = float(tle_second_line[7]) * 2 * np.pi / 86400            # rad/s
-        tle_a           = (398600.435507 / (tle_n ** 2)) ** (1. / 3.) - 6378.137     # (altitude in km)
+        if constellation=='starlink':
+            GM = 398600.435507   #km^3/s^2
+            radius = 6378.137    #km
+        elif constellation=='lunar':
+            GM = get_value("GM")
+            radius = get_value("radius")
+        tle_a           = (GM / (tle_n ** 2)) ** (1. / 3.) - radius     # (altitude in km)
 
         # Inclination of constellation shell
         if  float(tle_second_line[2]) < (orbits_inclination + thresh1) and float(tle_second_line[2]) >= (orbits_inclination + thresh2) \
@@ -109,7 +107,7 @@ def get_orbital_planes_classifications(
             dump_orbital_data["Mean motion"].append(tle_second_line[7])
 
             # Storing the TLEs of all the selected sats in a file
-            tle_savefile.writelines([Lines[i], Lines[i+1], Lines[i+2]]) 
+            # tle_savefile.writelines([Lines[i], Lines[i+1], Lines[i+2]]) 
 
     # Collect RAAN values in data dump
     list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
@@ -231,6 +229,10 @@ def sort_satellites_in_orbit(
     sorted_sats.append(first_sat)
     visited_sats.append(first_sat.name)
 
+    # Change epoch type based on main_body
+    if first_sat.get_body_str() != 'Earth':
+        t = first_sat.epoch   #changes the type to astropy Time object
+
     # Iterate through the satellites in the orbit and find the next corresponding satellite with the minimum distance
     for _ in range(len(satellites_in_orbit)):
         
@@ -256,3 +258,38 @@ def sort_satellites_in_orbit(
 
     # Return the sorted list of satellites in orbit
     return sorted_sats
+
+
+def real_tle_filter(operator_name, orbits_inclination, orbits_altitude):
+    """
+    INPUT:  operator_name (str)        : Name of the constellation (SUPPORTS: starlink, lunar)
+            orbits_inclination (float) : Mean inclination of the shell (in degrees)
+            orbits_altitude (float)    : Mean altitude of the shell (in kms)
+
+
+    OUTPUT:  thresh1 : Inclination lower bound
+             thresh2 : Inclination upper bound
+             thresh3 : ALtitude lower bound
+             thresh4 : Altitude upper bound
+
+    """
+
+    if operator_name=='starlink':
+        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+            thresh1 = 0.1
+            thresh2 = -0.9
+            thresh3 = 7.1524
+            thresh4 = -9.0524
+        elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
+            thresh1 = 0.1
+            thresh2 = -0.9
+            thresh3 = 3.0624
+            thresh4 = 2.0524
+
+    elif operator_name=='lunar':
+        thresh1 = 1
+        thresh2 = -1
+        thresh3 = 1
+        thresh4 = -1
+
+    return thresh1, thresh2, thresh3, thresh4

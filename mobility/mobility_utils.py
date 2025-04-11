@@ -5,7 +5,8 @@ import threading
 import sys
 sys.path.append("../")
 from link.link_utils import *
-
+from .lunar_dyn_utils import *
+import mobility.lunar_dyn_utils as lunar_dyn
 
 def calc_max_gsl_length(
                         sat_config,
@@ -86,6 +87,10 @@ def calc_distance_gs_sat_thread(
         ground_station_satellites_in_range (dict): list containing gs identifiers, sat indices, and distances in between, including newly appended data
 
     """
+
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
+        distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
 
     # Iterate over each ground station
     for gs in ground_stations:
@@ -233,6 +238,10 @@ def find_adjacent_orbit_sat(
         nearest_sat_in_adj_plane (object): satellite in the adjacent plane nearest to the original satellite
     """
     
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(origin_sat)==CustomSatellites:
+        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+
     # Get the list of satellites in the specified adjacent plane
     adj_plane_sats = satellites_sorted_in_orbits[adj_plane]
 
@@ -247,7 +256,7 @@ def find_adjacent_orbit_sat(
         distance = distance_between_two_satellites(origin_sat, adj_plane_sats[i], t)
 
         # Check if the calculated distance is smaller than both the current minimum distance and a threshold value
-        if distance < min_distance and distance < 5016000:
+        if distance < min_distance and distance < 716000:
             min_distance = distance # update the minimum distance
             nearest_sat_in_adj_plane = adj_plane_sats[i] # set the current adj. plane sat as the nearest to the original sat
 
@@ -292,6 +301,10 @@ def mininet_add_ISLs(
         connectivity_matrix (list): updated connectivity matrix, now including ISLs
     """
 
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
+        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+
     # Initialize the total number of satellites
     total_sat_now = 0
 
@@ -322,7 +335,7 @@ def mininet_add_ISLs(
                     current_sat_same_orbit = satellites_by_name[current_sat_same_orbit_name]
 
                     # Intra-orbit connection (Connection to all same orbit sats within threshold)
-                    if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 5016000:
+                    if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 716000:
                         connectivity_matrix[sat][sat_same_orbit] = 1
                         connectivity_matrix[sat_same_orbit][sat] = 1
                     
@@ -355,7 +368,7 @@ def mininet_add_ISLs(
             max_isl_conn = 80
             
             # Setting maximum ISL length
-            max_isl_search_length = int(5016000/2)
+            max_isl_search_length = int(716000/2)
 
             numsats_per_orb = [len(orbs) for orbs in satellites_sorted_in_orbits]
             
@@ -640,6 +653,10 @@ def last_visible_satellite(
 
     """
 
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
+        distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
+
     # Time step for each iteration
     step = 10       #in seconds
 
@@ -854,6 +871,11 @@ def calculate_link_characteristics_for_gsls_isls(
         throughput_matrix (??): ??
 
     """
+
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
+        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+        distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
     
     # Initialize matrices for latency and throughput
     matrix_size = len(satellites_by_index)+len(ground_stations)

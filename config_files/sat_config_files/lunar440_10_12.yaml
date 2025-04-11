@@ -1,0 +1,34 @@
+# Template for constellation configurations
+# Constellation naming convention: <constellation_name><sat_count>_<interval_duration>_<interval_count>.yaml
+# Configuration for <Constellation_name>
+TotalSatCnt: 440
+TotalGSCnt: 5
+ConnectivityMatrixPath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix/connectivity/
+RoutingFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix/routing/
+EpochIntervalDuration: 30
+EpochIntervalCount: 120
+EpochStartYear: 2024
+EpochStartMonth: 09    #09  #11         #07
+EpochStartDay: 27      #27  #05  #30    #17
+EpochStartHour: 22     #22  #21  #17
+EpochStartMinute: 15   #15  #00  #47    #41
+EpochStartSecond: 00   #06  #00  #47    #51
+
+# Additional information to be edited for topology gen. (Phase 1), some of these are set as default
+Debug: 1
+AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
+TopologyISL: grid
+shells:
+    shell1:
+        ConstellationName: lunar
+        name: shell1
+        orbits: 20
+        sat_per_orbit: 22
+        altitude: 200
+        elevation_angle: 30
+        inclination: 84.0
+        body: Moon
+        perturber: Earth
+GroundStationFile: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/gs_files/lunar_gs.txt
+OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar/
+TLEFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/

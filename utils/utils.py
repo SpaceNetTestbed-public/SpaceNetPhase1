@@ -867,15 +867,16 @@ def arrange_satellites(
     satellites_sorted_in_orbits = []
 
     # Iterate over all the number of orbits in every shell    
-    for itr, shell_name in enumerate(sat_config["shells"].keys()):
+    for itr, shell_name in enumerate(sat_config["shells"].keys()):  #Iterate over shells
         sat_sorted_in_orb_temp = []
-        for i in range(sat_config["shells"][shell_name]["orbits"]):
+        for i in range(sat_config["shells"][shell_name]["orbits"]): #Iterate over orbits in current shell
             sorted = []
             satellites_in_orbit = []
             cn = 0
             for data in orbital_data:
-                if i == int(orbital_data[str(data)][0]) and itr == int(orbital_data[str(data)][-1])-1:
-                    satellites_in_orbit.append(satellites_by_name[str(data.split(" ")[0])])
+                if i == int(orbital_data[str(data)][0]) and itr == int(orbital_data[str(data)][-1])-1: #If sat exists in current shell and current orbit in the loops
+                    satellite_name = str(data.split(" ")[0])
+                    satellites_in_orbit.append(satellites_by_name[satellite_name])
                     cn +=1
 
             # Sort the satellites in orbit and append them to list

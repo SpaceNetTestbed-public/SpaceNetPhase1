@@ -8,6 +8,7 @@ import numpy as np
 import re
 from mobility.read_live_tles import *
 from mobility.mobility_utils import *
+from mobility.lunar_dyn_utils import *
 from mobility.read_gs import *
 from routing.routing_utils import *
 from routing.constellation_routing import *
@@ -70,6 +71,8 @@ def topology_generation(inc, sat_config,
         # Convert the updated time to UTC and Unix timestamp
         time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
         y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
+        if operator_name=='lunar':
+            time_utc_inc = get_current_epoch(inc) #Changes Skyfield.timelib type to astropy Time type
 
         # Update the size of the connectivity matrix
         conn_mat_size = num_of_satellites + num_of_ground_stations
@@ -91,7 +94,7 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
             #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
                 #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
-        
+
         """
         topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
         #print(topfile_path)
@@ -224,11 +227,18 @@ def main():
     print(".......... Simulation Length: \t\t", simulation_length, "s") 
     print(".......... TLE File: \t\t\t", path_of_recent_TLE, "\n")
 
-    # Load the satellites from the TLE file
-    satellites = load.tle_file(path_of_recent_TLE)
+    # Load the satellites from the TLE file (CHANGE THIS TO TAKE IN MULTIPLE TLES FOR FUTURE CASES (EARTH AND LUNAR TLES IN ONE SIMULATION)) [FIX THIS]
+    if operator_name=='starlink':
+        satellites = load.tle_file(path_of_recent_TLE)
 
-    # Create dictionaries of satellites by name and index
-    satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}  # entire sats from TLE (Dict FORMAT- 'STARLINK-####' : Skyfield type)
+        # Create dictionaries of satellites by name and index
+        satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}  # entire sats from TLE (Dict FORMAT- 'STARLINK-####' : Skyfield type) (Globally tracked)
+
+    else:
+        ####### IMPORTANT: THIS ONLY WORKS WITH SINGLE-SHELL (POTENTIALLY BREAKS WITH MULTI SHELL) [FIX THIS]
+        main_body = sat_config["shells"]["shell1"]["body"]
+        perturber = sat_config["shells"]["shell1"]["perturber"]
+        satellites_by_name = satellites_from_tle(path_of_recent_TLE, simulation_length, main_body, perturber)  # entire sats from TLE (Dict FORMAT- 'LUNAR-####' : Poliastro Orbit type) (Globally tracked)  
     satellites_by_index = {}
 
     # Read the ground stations from the file specified in the configurations
@@ -254,14 +264,13 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
-        
+
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data = {}
     for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
         orb_data = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shells"][sh]["orbits"], itr, sat_config["shells"][sh]["inclination"], sat_config["shells"][sh]["altitude"])
         orbital_data.update(orb_data)
-        #print(itr, len(orb_data))
-    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path)
+    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path) #Globally tracked
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
@@ -450,8 +459,8 @@ def main():
         executor.shutdown()
     except:
         pass
-    cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
-    save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+    # cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
+    # save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
     # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")
