@@ -46,32 +46,33 @@ plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = 30  #-35 
-lat0_3d                 = -35      # 20
-ll                      = [0.7, 0.7]   #scaling of the 3D plot (lower left point)
-ur                      = [0.7, 0.7]   # scaling of the 3D plot (upper right point)
-timestamp               = "2024_09_27_23_02_30"
-outputfolder_name       = "lunar_fix"
-operator_name           = "lunar"
-gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/terrestrial_info/terrestrial_1727475306.txt', 'r')
-tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/lunar_tles/lunar_1727475306', 'r')
+lon0_3d                 = 50 #30  
+lat0_3d                 = -15 #-35      
+ll                      = [0.5, 0.5]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
+ur                      = [0.5, 0.5]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
+timestamp               = "2024_09_27_22_15_6"
+tle_unix_timestamp      = "1727475306"
+outputfolder_name       = "Earth"
+operator_name           = "starlink"
+gif_name                = 'gif_earth2'
+number_of_orbits        = 72+5
+_timespan               = 120 #Important to change if doesnt match Phase1 settings
+gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/terrestrial_info/terrestrial_'+tle_unix_timestamp+'.txt', 'r')
+tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+tle_unix_timestamp, 'r')
 optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/optimal_routes/'+operator_name+'/best_path_'+timestamp+'.0.txt'
 conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/connectivity_matrix/'+operator_name+'/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/node_indices/'+operator_name+'/nodeindex_1727475306.txt'
+node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/node_indices/'+operator_name+'/nodeindex_'+tle_unix_timestamp+'.txt'
 orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'gif_lunar'
 ################### Folder Paths ######################
 conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/connectivity_matrix/'+operator_name+'/'
 opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/optimal_routes/'+operator_name+'/'
-gif_path                = '/home/suryaryan/GIFS/lunar_ortho/'
+gif_path                = '/home/suryaryan/GIFS/Earth2/'
 #######################################################
-number_of_orbits = 20
 Main_body = 'Moon'
 Third_body = 'Earth'
-_timespan = 120 #Important to change if doesnt match Phase1 settings
-ref = 1 #1263  # index of satellite to be debugged for ISLs 
-#shell_color = {1584:"orange",1814:"green"}
-shell_color = {440:"orange"}
+ref = 1 #1263  # index of satellite to be debugged for ISLs (Only use with plot_debug=True)
+shell_color = {1584:"orange",1814:"green"}
+#shell_color = {440:"orange"}
 default_projection_for_moon = "ortho"
 
 
@@ -190,15 +191,16 @@ def figuring_latlon(t_current, orbits, sat_orbit_index):
             if operator_name.upper()=='STARLINK':  #Skyfield type
                 sat_at_t    = sats_from_tle_dict[aliass].at(t_current)
                 lat, lon    = sat_at_t.subpoint().latitude.degrees, sat_at_t.subpoint().longitude.degrees
+                plotted_sat_index[sat_in_orb] = (lat, lon)
             else:  #CustomSatellite type
                 sat_obj     = sats_from_tle_dict[aliass]
                 sat_ephem_at_epoch = sat_obj.get_ephem()
                 sat_at_epoch_r, sat_at_epoch_v = sat_ephem_at_epoch.rv(t_current)
                 rr_PA = frame_conversions(t_current, sat_at_epoch_r, 'ICRS', 'PA')
                 sat_at_epoch_sph = frame_conversions(t_current, rr_PA, 'PA', 'MER', format='spherical')
-            plotted_sat_index[sat_in_orb] = (sat_at_epoch_sph[1], sat_at_epoch_sph[2])
-            lats.append(sat_at_epoch_sph[1])
-            lons.append(sat_at_epoch_sph[2])
+                plotted_sat_index[sat_in_orb] = (sat_at_epoch_sph[1], sat_at_epoch_sph[2])
+            lats.append(plotted_sat_index[sat_in_orb][0])
+            lons.append(plotted_sat_index[sat_in_orb][1])
     return lats, lons
 
 
@@ -295,7 +297,7 @@ def basemap_settings():
             m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
             #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c')   #US zoomed
             #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
-            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=ll[0]*m0.llcrnrx, llcrnry=ll[1]*m0.llcrnry, urcrnrx=ur[0]*m0.urcrnrx, urcrnry=ur[1]*m0.urcrnry, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
+            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-ll[0]*m0.urcrnrx, llcrnry=-ll[1]*m0.urcrnrx, urcrnrx=ur[0]*m0.urcrnrx, urcrnry=ur[1]*m0.urcrnrx, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
         m.drawcoastlines()
         m.drawcountries()
         m.fillcontinents(color='lightgray', lake_color='white')
