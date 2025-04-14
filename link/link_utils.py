@@ -144,6 +144,10 @@ def calc_gsl_snr(
 
     # Initialize variable
     gsl_distance = distance
+    if get_main_body_str(satellite) == "Earth":
+        curr_timestamp = t.tt       # Skyfield.Time
+    else:
+        curr_timestamp = t.value    # Astropy.Time
 
     # *Computes distance already in the mobility_utils
     # distance_between_ground_station_satellite(ground_station, satellite, t)
@@ -170,7 +174,7 @@ def calc_gsl_snr(
     if 'weather_data' in ground_station: # data already queried
         weather_data = ground_station['weather_data']
     else:
-        weather_data = get_weather_info(lat_gs, lon_gs)
+        weather_data = get_weather_info(lat_gs, lon_gs, curr_timestamp)
 
     # Check if weather data isn't empty
     if weather_data != "":

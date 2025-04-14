@@ -62,7 +62,7 @@ class CustomSatellites:
     data : poliastro.twobody.Orbit type
         All information about the initial orbit of the satellite.
     epoch : poliastro.util.Time type
-        Initial epoch of the satellite (format=jd, scale=tdb).
+        Initial epoch of the satellite (format=jd, scale=tdb).  (Julian date is the default)
     main_body : str
         Name of the host celestial body (for Keplerian orbit) [Supports: Earth, Moon, Mars, Sun]
     third_body : str

@@ -24,8 +24,10 @@ CONTENTS:       TLE CONSTELLATION FUNCTIONS/ (STARTS AT 45)
 
 import numpy as np
 import jenkspy
-from .mobility_utils import *
 from .lunar_dyn_utils import *
+import mobility.lunar_dyn_utils as lunar_dyn
+from .mobility_utils import *
+import mobility.mobility_utils as mobil_utl
 
 # =================================================================================== #
 # -------------------------- TLE CONSTELLATION FUNCTIONS ---------------------------- #
@@ -230,8 +232,11 @@ def sort_satellites_in_orbit(
     visited_sats.append(first_sat.name)
 
     # Change epoch type based on main_body
-    if first_sat.get_body_str() != 'Earth':
+    if get_main_body_str(first_sat) != 'Earth':
         t = first_sat.epoch   #changes the type to astropy Time object
+        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+    else:
+        distance_between_two_satellites = mobil_utl.distance_between_two_satellites
 
     # Iterate through the satellites in the orbit and find the next corresponding satellite with the minimum distance
     for _ in range(len(satellites_in_orbit)):

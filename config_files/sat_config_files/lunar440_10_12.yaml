@@ -3,8 +3,8 @@
 # Configuration for <Constellation_name>
 TotalSatCnt: 440
 TotalGSCnt: 5
-ConnectivityMatrixPath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix/connectivity/
-RoutingFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix/routing/
+ConnectivityMatrixPath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix2/connectivity/
+RoutingFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix2/routing/
 EpochIntervalDuration: 30
 EpochIntervalCount: 120
 EpochStartYear: 2024
@@ -30,5 +30,5 @@ shells:
         body: Moon
         perturber: Earth
 GroundStationFile: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/gs_files/lunar_gs.txt
-OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar/
+OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix2/
 TLEFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/

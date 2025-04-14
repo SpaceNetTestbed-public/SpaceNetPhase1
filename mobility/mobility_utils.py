@@ -1,12 +1,12 @@
-from skyfield.api import wgs84, load
+from skyfield.api import wgs84, load, EarthSatellite
 import math
 import threading
 
 import sys
 sys.path.append("../")
 from link.link_utils import *
-from .lunar_dyn_utils import *
 import mobility.lunar_dyn_utils as lunar_dyn
+import link.link_utils as link
 
 def calc_max_gsl_length(
                         sat_config,
@@ -89,15 +89,17 @@ def calc_distance_gs_sat_thread(
     """
 
     ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
-    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
-        distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites:
+        _distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
+    elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
+        _distance_between_ground_station_satellite = distance_between_ground_station_satellite
 
     # Iterate over each ground station
     for gs in ground_stations:
         # Iterate over the range of satellite indices
         for sid in range(len(satellites_by_index)):
             # Calculate the distance between the current ground station and satellite
-            distance_m = distance_between_ground_station_satellite(gs, satellites_by_name[str(satellites_by_index[sid])], time_t)
+            distance_m = _distance_between_ground_station_satellite(gs, satellites_by_name[str(satellites_by_index[sid])], time_t)
             
             # Check if the calculated distance is within the maximum GSL length
             if distance_m <= max_gsl_length_m:
@@ -237,10 +239,12 @@ def find_adjacent_orbit_sat(
     Returns:
         nearest_sat_in_adj_plane (object): satellite in the adjacent plane nearest to the original satellite
     """
-    
+    global threshold
     ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
-    if type(origin_sat)==CustomSatellites:
-        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+    if type(origin_sat)==lunar_dyn.CustomSatellites:
+        _distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+    elif type(origin_sat)==EarthSatellite:
+        _distance_between_two_satellites = distance_between_two_satellites
 
     # Get the list of satellites in the specified adjacent plane
     adj_plane_sats = satellites_sorted_in_orbits[adj_plane]
@@ -253,10 +257,10 @@ def find_adjacent_orbit_sat(
     for i in range(len(adj_plane_sats)):
         
         # Calculate the distance between the original satellite and the current satellite in the adjacent plane
-        distance = distance_between_two_satellites(origin_sat, adj_plane_sats[i], t)
+        distance = _distance_between_two_satellites(origin_sat, adj_plane_sats[i], t)
 
         # Check if the calculated distance is smaller than both the current minimum distance and a threshold value
-        if distance < min_distance and distance < 716000:
+        if distance < min_distance and distance < threshold:
             min_distance = distance # update the minimum distance
             nearest_sat_in_adj_plane = adj_plane_sats[i] # set the current adj. plane sat as the nearest to the original sat
 
@@ -300,10 +304,14 @@ def mininet_add_ISLs(
     Returns:
         connectivity_matrix (list): updated connectivity matrix, now including ISLs
     """
-
+    global threshold
     ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
-    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
-        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites:
+        _distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+        distance_threshold("Lunar")
+    elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
+        _distance_between_two_satellites = distance_between_two_satellites
+        distance_threshold("Earth")
 
     # Initialize the total number of satellites
     total_sat_now = 0
@@ -335,7 +343,7 @@ def mininet_add_ISLs(
                     current_sat_same_orbit = satellites_by_name[current_sat_same_orbit_name]
 
                     # Intra-orbit connection (Connection to all same orbit sats within threshold)
-                    if distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < 716000:
+                    if _distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < threshold:
                         connectivity_matrix[sat][sat_same_orbit] = 1
                         connectivity_matrix[sat_same_orbit][sat] = 1
                     
@@ -368,7 +376,7 @@ def mininet_add_ISLs(
             max_isl_conn = 80
             
             # Setting maximum ISL length
-            max_isl_search_length = int(716000/2)
+            max_isl_search_length = int(threshold/2)
 
             numsats_per_orb = [len(orbs) for orbs in satellites_sorted_in_orbits]
             
@@ -654,7 +662,7 @@ def last_visible_satellite(
     """
 
     ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
-    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites:
         distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
 
     # Time step for each iteration
@@ -823,7 +831,7 @@ def M_gs_sat_association_criteria_BasedOnDistance(
                 connectivity_matrix[sid_id][num_of_satellites+gid] = 1
                 connectivity_matrix[num_of_satellites+gid][sid_id] = 1
 
-                gsl_snr[gid] = calc_gsl_snr_given_distance(best_distance_m)
+                gsl_snr[gid] = link.calc_gsl_snr_given_distance(best_distance_m)
                 gsl_latency[gid] = best_distance_m/299792458            #speed of light
 
         # if chosen_sid != -1:
@@ -873,9 +881,13 @@ def calculate_link_characteristics_for_gsls_isls(
     """
 
     ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
-    if type(satellites_by_name[satellites_by_index[0]])==CustomSatellites:
-        distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
-        distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites:
+        _distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+        _distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
+    elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
+        pass
+        _distance_between_two_satellites = distance_between_two_satellites
+        _distance_between_ground_station_satellite = distance_between_ground_station_satellite
     
     # Initialize matrices for latency and throughput
     matrix_size = len(satellites_by_index)+len(ground_stations)
@@ -894,17 +906,17 @@ def calculate_link_characteristics_for_gsls_isls(
         for j in range(len(connectivity_matrix[i])):
             # ISL between two satellites
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j < len(satellites_by_index):
-                distance_meters             = distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
+                distance_meters             = _distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light  (Units in ms)
                 throughput_matrix[i][j]     = 500            #20Gbps
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] == 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):
-                distance_meters             = distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
+                distance_meters             = _distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
-                snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
+                snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                 channel_width               = channel_bandwidth_downlink
                 throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
                 if throughput_matrix[i][j] > 500:
@@ -912,7 +924,7 @@ def calculate_link_characteristics_for_gsls_isls(
 
                 # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
-                    snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
+                    snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
                     channel_width               = channel_bandwidth_downlink
                     throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
                     if throughput_matrix[i][j] > 500:
@@ -920,10 +932,10 @@ def calculate_link_characteristics_for_gsls_isls(
             
             # GSL between satellite and ground station
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j >= len(satellites_by_index):
-                distance_meters             = distance_between_ground_station_satellite(ground_stations[j-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[i])], t)
+                distance_meters             = _distance_between_ground_station_satellite(ground_stations[j-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[i])], t)
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3           #speed of light
-                snr                         = calc_gsl_snr(satellites_by_name[str(satellites_by_index[i])], ground_stations[j-len(satellites_by_index)], t, distance_meters, "downlink")
+                snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[i])], ground_stations[j-len(satellites_by_index)], t, distance_meters, "downlink")
                 throughput_matrix[i][j]     = density*channel_bandwidth_downlink*(math.log(1+snr)/math.log(2))
                 if throughput_matrix[i][j] > 500:
                     throughput_matrix[i][j] = 500
@@ -934,6 +946,25 @@ def calculate_link_characteristics_for_gsls_isls(
                 "throughput_matrix": throughput_matrix,
                 "distance_matrix": distance_matrix
             }
+
+
+def get_main_body_str(sat):
+
+    if type(sat) == EarthSatellite:
+        return "Earth"
+    elif type(sat) == lunar_dyn.CustomSatellites:
+        return sat.get_body_str()
+    else:
+        return ""
+    
+
+def distance_threshold(flag):
+    global threshold
+
+    if flag=="Earth":
+        threshold = 5016000  #m
+    elif flag=="Lunar":
+        threshold = 716000  #m
 
 ###################################################
 ###################################################

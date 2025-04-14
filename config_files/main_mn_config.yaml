@@ -1,6 +1,6 @@
 # Main configuration script for the SpaceNet Mininet Simulator
 ConstellationName: lunar440_10_12  #starlink2000_5_12 # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
-OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar
+OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_lunar_fix2
 DeleteAppResults: False
 Verbose: True
 UseWeatherData: True  #Relevant for Earth GS
@@ -19,7 +19,7 @@ CLIIntervalCount: 0
 # Phase I Settings
 # Configuration for terrestrial-to-terrestrial (t2t) links
 RouteWeight: latency  # 'latency', 'distance', 'capacity', 'hops' (default='hops')
-TopoCrit: 0           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
+TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
 t2t_gateway_kmz_type: local # Options- local, link
 t2t_gateway_kmz_path: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
 t2t_dict_output_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json
