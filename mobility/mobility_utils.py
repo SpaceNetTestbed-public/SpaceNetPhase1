@@ -24,17 +24,6 @@ def calc_max_gsl_length(
     
     # Initialize return variable
     max_gsl_length_m = -1 
-    
-    # Check for starlink operator
-    # if operator_name == "starlink":
-        # Set a specific value for max GSL length
-        # max_gsl_length_m = 2089686.4181956202 # same number used in Hypatia code, further reasoning behind this exact value is unknown
-        # (additionally, the above value does not match the value one would get using the algorithm in the else case, but applied to a starlink case)
-        
-        # return max_gsl_length_m
-    
-    # Max GSL length for non-starlink operators
-    # else:
 
     # Calculate satellite cone radius based on altitude and elevation angle
     satellite_cone_radius = (sat_config["altitude"])/math.tan(math.radians(sat_config["elevation_angle"]))
@@ -263,9 +252,6 @@ def find_adjacent_orbit_sat(
         if distance < min_distance and distance < threshold:
             min_distance = distance # update the minimum distance
             nearest_sat_in_adj_plane = adj_plane_sats[i] # set the current adj. plane sat as the nearest to the original sat
-
-    # if origin_sat.name == "STARLINK-1215":
-    #     print(min_distance*1e-3, nearest_sat_in_adj_plane.name)
 
     # Return the name of the nearest satellite in the adjacent plane
     return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None

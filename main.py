@@ -65,8 +65,6 @@ def topology_generation(inc, sat_config,
         satellites_by_index = arranged_sats["satellites by index"]
         satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
         satellites_by_name = global_satellites_by_name
-        # sat1 = satellites_by_name[satellites_by_index[22]]
-        # sat2 = satellites_by_name[satellites_by_index[23]]
 
         # Convert the updated time to UTC and Unix timestamp
         time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
@@ -383,65 +381,6 @@ def main():
             
             topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, cpu_time_path)
             
-            
-            """
-            # Update the time
-            indx += 1
-
-            # Get the source and destination nodes
-            source_node         = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
-            destination_node    = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
-            optimal_path_nodes  = [source_node, destination_node]
-
-            # Convert the updated time to UTC and Unix timestamp
-            time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
-            y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
-
-            # Update the size of the connectivity matrix
-            conn_mat_size = num_of_satellites + num_of_ground_stations
-
-            # Initialize the connectivity matrix
-            connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
-
-            # Add ISLs to the connectivity matrix
-            connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
-
-            # Add GSLs to the connectivity matrix
-            connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
-
-            # Calculate the link characteristics for GSLs and ISLs
-            links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
-
-            # Add t2t links to the connectivity matrix, if enabled
-            if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
-                connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
-
-            # Save the topology
-            if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-                os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-            save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
-
-            # Pre-compute the routing tables
-            # Add flag to include ground_stations in route calculations if using t2t links 
-            if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
-                global route_to_gs
-                route_to_gs = True
-                
-            if find_optimal_routes:
-                all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes, route_to_gs)
-            else:
-                all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None, route_to_gs)
-
-            # Save the routes
-            if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-                os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-            save_routes(all_possible_routes, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), routing_file_path)
-
-            # Save the optimal routes between provided src/dest
-            if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
-                os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
-            save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
-            """
     
     """Checking Link changes between each interval (10sec)"""
     #global CONN_mat_store
