@@ -18,13 +18,15 @@ EpochStartSecond: <TLE_start_second>
 Debug: <debug output messages, 0=false or 1=true>
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
 TopologyISL: grid
-shell1:
-    name: shell1
-    orbits: <number_of_orbits>
-    sat_per_orbit: <number_of_sats_per_orbit>
-    altitude: <operating geodetic altitude>
-    elevation_angle: <ground-to-sat line of sight>
-    inclination: <inclination of shell>
+shells:
+    shell1:
+        name: shell1
+        orbits: <number_of_orbits>
+        sat_per_orbit: <number_of_sats_per_orbit>
+        altitude: <operating geodetic altitude>
+        elevation_angle: <ground-to-sat line of sight>
+        inclination: <inclination of shell>
+        body: <Celestial body>
 GroundStationFile: /home/spacenet/Desktop/spacenet_files/input/gs_files/<ground_station_filename>
 OutputFilePath: /home/spacenet/simulator/dynamic-topology-generator/output/
 TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
