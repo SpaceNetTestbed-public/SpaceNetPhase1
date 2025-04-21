@@ -6,6 +6,7 @@ from tqdm import tqdm
 from utils import *
 import numpy as np
 import re
+import time
 from mobility.read_live_tles import *
 from mobility.mobility_utils import *
 from mobility.lunar_dyn_utils import *
@@ -13,6 +14,7 @@ from mobility.read_gs import *
 from routing.routing_utils import *
 from routing.constellation_routing import *
 from utils.utils import *
+from utils.generate_TLE_main import *
 from library import spacenet_yaml_config
 from utils.gateway_utils import *
 from concurrent.futures import ProcessPoolExecutor as ProcessExecutor
@@ -31,15 +33,15 @@ global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
 run_resource_logger         = False
+link_changes_save           = True
 
 # =================================================================================== #
 # ---------------------------------- PARSE VARS ------------------------------------- #
 # =================================================================================== #
 
 config_file_path            = "config_files/"
-config_file_name            = "main_mn_config.yaml"
+config_file_name            = "main_config.yaml"
 sat_config_sub_path         = "sat_config_files/"
-
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
@@ -82,7 +84,7 @@ def topology_generation(inc, sat_config,
         connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
 
         # Add GSLs to the connectivity matrix
-        connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, sat_config["AssociationCritGSL"], time_utc_inc, sat_config, operator_name)
+        connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, main_config["AssociationCritGSL"], time_utc_inc, sat_config, main_config, operator_name)
 
         # Calculate the link characteristics for GSLs and ISLs
         links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
@@ -100,7 +102,6 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size)
         else:
             connectivity_matrix, links_characteristics = extract_connectivity(topfile_path, conn_mat_size + len(t2t_dict))
-        
         """
         global CONN_mat_store
         CONN_mat_store[inc] = [row[:num_of_satellites] for row in connectivity_matrix[:num_of_satellites]]   # Just ISLs
@@ -153,22 +154,24 @@ def main():
     # Set global variable
     global criterion
     global CONN_mat_store
+    global OPTIM_ROUTE_NODES
     criterion = 2 # default
     CONN_mat_store = {}
+    OPTIM_ROUTE_NODES = {}
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
     operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
 
     # Path configuration
-    output_filepath             = sat_config["OutputFilePath"]
+    output_filepath             = main_config["OutputFilePath"]
     use_weather_data            = bool(main_config["UseWeatherData"] and operator_name.lower() == 'starlink') if "UseWeatherData" in main_config else True  #Weather only used for Earth cases
     run_resource_logger         = bool(main_config["MonitorResource"]) if "MonitorResource" in main_config else False
     if output_filepath[-1] == "/":
         output_filepath = output_filepath[:-1] # Remove the last slash if it exists
-    gs_file_path                = sat_config["GroundStationFile"]
+    gs_file_path                = main_config["GroundStationFile"]
     tle_file_path               = sat_config["TLEFilePath"]
-    connectivity_matrix_path    = output_filepath+"/connectivity_matrix/"
+    connectivity_matrix_path    = output_filepath+"/connectivity/"
     routing_file_path           = output_filepath+"/routing/"
     sat_orbit_file_path         = output_filepath+"/satellites_orbits/"
     node_index_file_path        = output_filepath+"/node_indices/"
@@ -189,29 +192,38 @@ def main():
         time.sleep(10)
 
     # Get the source and destination nodes
-    source_node         = int(main_config["SourceDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
-    destination_node    = int(main_config["DestDeviceName"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
+    source_node         = int(main_config["SourceNode"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
+    destination_node    = int(main_config["DestNode"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
     optimal_path_nodes  = [source_node, destination_node]
 
     # Load the timescale and initialize variables
     ts = load.timescale()
     inc = 0
-    time_resolution_in_seconds = sat_config["EpochIntervalDuration"]
-    simulation_length = time_resolution_in_seconds * sat_config["EpochIntervalCount"]
-
+    time_resolution_in_seconds = sat_config["Sim_Length"]["TimeStepDuration"]
+    simulation_length = time_resolution_in_seconds * sat_config["Sim_Length"]["TimeStepCount"]
+    
+    # Start CPU clock timer
+    cpu_clock_tot_t0 = time.perf_counter_ns()
+    
     # Split the start time from the configurations into individual components
     epoch_start = (
-                    sat_config["EpochStartYear"],
-                    sat_config["EpochStartMonth"],
-                    sat_config["EpochStartDay"],
-                    sat_config["EpochStartHour"],
-                    sat_config["EpochStartMinute"],
-                    sat_config["EpochStartSecond"]
+                    sat_config["Sim_Date_Time"]["StartYear"],
+                    sat_config["Sim_Date_Time"]["StartMonth"],
+                    sat_config["Sim_Date_Time"]["StartDay"],
+                    sat_config["Sim_Date_Time"]["StartHour"],
+                    sat_config["Sim_Date_Time"]["StartMinute"],
+                    sat_config["Sim_Date_Time"]["StartSecond"]
                   )
 
     # Convert the start time to UTC and Unix timestamp
     time_utc = ts.utc(*map(int, epoch_start))
     time_timestamp = convert_time_utc_to_unix(time_utc)
+
+    # Determine if TLE file needs to be generated and, if so, generate TLE file
+    generate_TLE         = bool(sat_config["generate_TLE"]) if "generate_TLE" in sat_config else False
+    if generate_TLE:
+        print("\n.......... Generating Constellation TLEs")
+        generate_TLE_main(sat_config)
 
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
@@ -220,8 +232,8 @@ def main():
     print(".......... Operator Name: \t\t", operator_name)
     print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(time_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
     print(".......... End Epoch: \t\t\t", datetime.fromtimestamp(int(time_timestamp)+int(simulation_length)).strftime('%B %d, %Y %H:%M:%S UTC'))
-    print(".......... Simulation Step-Size: \t", sat_config["EpochIntervalDuration"], "s")
-    print(".......... Simulation Interval Count: \t", sat_config["EpochIntervalCount"])
+    print(".......... Simulation Step-Size: \t", sat_config["Sim_Length"]["TimeStepDuration"], "s")
+    print(".......... Simulation Interval Count: \t", sat_config["Sim_Length"]["TimeStepCount"])
     print(".......... Simulation Length: \t\t", simulation_length, "s") 
     print(".......... TLE File: \t\t\t", path_of_recent_TLE, "\n")
 
@@ -268,7 +280,7 @@ def main():
     for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
         orb_data = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shells"][sh]["orbits"], itr, sat_config["shells"][sh]["inclination"], sat_config["shells"][sh]["altitude"])
         orbital_data.update(orb_data)
-    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path) #Globally tracked
+    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, main_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path) #Globally tracked
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
@@ -280,7 +292,7 @@ def main():
         num_of_terrestrials = len(t2t_dict) + num_assigned_gs
 
     # Print debug information if enabled in the configurations
-    if sat_config["Debug"] == 1:
+    if main_config["Debug"] == 1:
         print(".......... Total number of satellites = ", num_of_satellites)
         print(".......... Total number of ground stations = ", num_of_ground_stations)
         print(".......... Total number of terrestrial nodes = ", num_of_terrestrials)
@@ -310,7 +322,7 @@ def main():
     cpu_clock_tot_t0 = time.perf_counter_ns()
 
     # Save satellite and ground station indices
-    save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, tle_timestamp, operator_name, t2t_dict)
+    save_node_index_and_terrestrial_info(satellites_by_index, ground_stations, node_index_file_path, terrestrial_file_path, [str(epoch_start[0]), str(epoch_start[1]), str(epoch_start[2]), str(epoch_start[3]), str(epoch_start[4]), str(float(epoch_start[5]))], operator_name, t2t_dict)
 
     # Remove any existing files
     if os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"):
@@ -383,16 +395,23 @@ def main():
             
     
     """Checking Link changes between each interval (10sec)"""
-    #global CONN_mat_store
     DIFF = [] # Stores only the total number of link changes per timestep difference
     for itr in range(len(CONN_mat_store)):
         if itr>0:
             diff = np.array(CONN_mat_store[time_hist[itr]]) - np.array(CONN_mat_store[time_hist[itr-1]])
             diff_flatten = [ele for row in diff for ele in row if ele != 0]  # While flattening stores only the links that are changed 
-            save_link_changes(len(diff_flatten), itr, str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
+            if link_changes_save:
+                save_link_changes(len(diff_flatten), itr, "All_"+ str(source_node)+"_"+str(destination_node), operator_name, link_change_path)
             DIFF.append(len(diff_flatten))
-    print(DIFF)
-    
+    #print(DIFF)
+
+    """Checking Link variations between each consecutive time interval optimal route"""
+    for itr in range(len(OPTIM_ROUTE_NODES)):
+        if itr>0:
+            print('\n', OPTIM_ROUTE_NODES[time_hist[itr]], OPTIM_ROUTE_NODES[time_hist[itr-1]])
+            comment = comment_route_link_var(OPTIM_ROUTE_NODES[time_hist[itr]], OPTIM_ROUTE_NODES[time_hist[itr-1]])
+            print(comment)
+
     # Stop CPU clock timer and save total time
     try:
         executor.shutdown()

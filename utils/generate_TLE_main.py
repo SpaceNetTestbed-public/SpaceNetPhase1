@@ -20,7 +20,7 @@ import os
 import time
 import numpy as np
 import calendar
-import generate_fake_TLE as gft
+from utils import generate_fake_TLE as gft
 
 # =================================================================================== #
 # -------------------------------- MAIN FUNCTION ------------------------------------ #
@@ -123,18 +123,28 @@ def basic_generate_fake_TLE(
 # ----------------------------------- RUN SIM --------------------------------------- #
 # =================================================================================== #
 
-if __name__ == "__main__":
+def generate_TLE_main (
+                            sat_config : dict
+
+                        ) :
 
 
     # Settings
-    altitude            = 540.
-    inclination         = 53.2
-    tot_num_sats        = 1584
-    num_orbits          = 72
-    num_sat_per_orbit   = int(tot_num_sats/num_orbits)
+    altitude            = sat_config["shell1"]["altitude"]
+    inclination         = sat_config["shell1"]["inclination"]
+    num_orbits          = sat_config["shell1"]["orbits"]
+    num_sat_per_orbit   = sat_config["shell1"]["sat_per_orbit"]
+    tot_num_sats        = int(num_orbits*num_sat_per_orbit)
+    ipp_increment       = sat_config["shell1"]["ipp_increment"] # set to zero for no IPP Angle, otherwise set to a positive integer
+    pattern             = sat_config["shell1"]["pattern"]
 
     # Date/Time input
-    datetime    = (2024, 9, 27, 22, 15, 6) # year, month, day, hour, minute, second
+    datetime    = (sat_config["Sim_Date_Time"]["StartYear"],
+                    sat_config["Sim_Date_Time"]["StartMonth"],
+                    sat_config["Sim_Date_Time"]["StartDay"], 
+                    sat_config["Sim_Date_Time"]["StartHour"], 
+                    sat_config["Sim_Date_Time"]["StartMinute"], 
+                    sat_config["Sim_Date_Time"]["StartSecond"])
     datetime_s  = calendar.timegm(datetime)
     year_start  = (datetime[0], 1, 1, 0, 0, 0)
     
@@ -155,11 +165,12 @@ if __name__ == "__main__":
     inc_range     = None
 
     # Range of RAAN
-    # raan_range = np.array(range(0, 360, 8)) # number of orbits = 360/range_stepsize
-    raan_range  = np.linspace(0, 360*(1-1/num_orbits), num_orbits)
+    if pattern == "walker_delta":
+        raan_range  = np.linspace(0, 360*(1-1/num_orbits), num_orbits)
+    if pattern == "walker_star":
+        raan_range  = np.linspace(0, 180*(1-1/num_orbits), num_orbits)
 
     # Inter Plane Phase Increment/Angle
-    ipp_increment = 1 # set to zero for no IPP Angle, otherwise set to a positive integer
     ipp_angle = ipp_increment*360/(tot_num_sats)
         # Inter Plane Phase Increment pulled from Walker constellation pattern notation, I:T/P/F
             # I: orbital inclination
@@ -180,10 +191,11 @@ if __name__ == "__main__":
     # -------------------------------------------------------------------------------
     # Write to a file
 
-    with open("../utils/starlink_tles/"+filename, 'a') as file:
+    with open(sat_config["TLEFilePath"]+"starlink_tles/"+filename, 'a') as file:
         for TLE in TLE_sweep:
             file.write(TLE + '\n')
     print("TLE Generated. Count =", len(TLE_sweep), ". No. orbits=", len(raan_range), ". No. sats per orbit=", len(ta_range))
+
     # -------------------------------------------------------------------------------
     
 

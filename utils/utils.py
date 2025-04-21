@@ -17,7 +17,7 @@ CONTENTS:       FILE SYSTEM/ (STARTS AT 80)
                     read_IProute_files_thread(routes, initial_routes)
                     save_topology(connectivity_matrix, links_charateristics, main_configurations, timestamp)
                     save_routes(routes, main_configurations, timestamp)
-                    save_optimal_path(optimal_path, main_configurations, timestap)
+                    save_optimal_path(optimal_path, main_configurations)
 
                 PARSING/ (STARTS AT 275)
                     parse_config_file_yml(filepath, filename)                     
@@ -190,7 +190,8 @@ def save_topology(
                                         to connected pairs of the indices (i, j), i.e. where element == 1
         operator_name (str):            Constellation/operator name
         timestamp (int):                Unix time
-        connectivity_matrix_path (str): Path to output the connectivity matrix files                       
+        connectivity_matrix_path (str): Path to output the connectivity matrix files
+        dt (int):                       Topology granularity                       
 
     Returns:
         Saves the topology as a .txt file.
@@ -266,6 +267,7 @@ def save_routes(
         operator_name (str):            Constellation/operator name
         timestamp (int):                Unix time
         routing_file_path (str):        Path to output the routing files
+        dt (int):                       Topology granularity   
 
     Returns:
         Saves the routes as a .txt file.
@@ -301,6 +303,7 @@ def save_optimal_path(
         timestamp (list):               Unix time as a list
         operator_name (str):            Constellation/operator name
         optimal_file_path (str):        Path to output optimal path files
+        dt (int):                       Topology granularity   
 
     Returns:
         Saves the route as a .txt file.
@@ -321,6 +324,19 @@ def save_optimal_path(
 
     # Close file to minimize memory leaks
     optimal_log.close()
+
+def extract_optim_routes(  
+                            optimal_route_path               : str  
+                        ):
+    # Extracting list of nodes in optimal route from optimal_route files files already generated
+    with open(optimal_route_path, 'r') as lines:
+        for nodes in lines:
+            t_data, route_data  = nodes.split(": ", 1)
+            route_node_list = route_data.split(", ")
+            route_node_list[-1] = route_node_list[-1][:-1]
+            route_node_list = [int(node) for node in route_node_list]
+
+    return route_node_list
 
 def save_optimal_weights(
                         optimal_weights         : list, 
@@ -352,7 +368,7 @@ def save_link_changes(
                         itr                     : int,
                         targetgs                : str,
                         operator_name           : str, 
-                        link_changes_path          : str
+                        link_changes_path       : str
                      ):
     
     # Generate a new file
@@ -424,7 +440,7 @@ def save_node_index_and_terrestrial_info(
                                             ground_stations         : list, 
                                             node_index_file_path    : str,
                                             terrestrial_file_path   : str,
-                                            timestamp               : int,
+                                            timestamp               : list,
                                             operator_name           : str,
                                             t2t_dict                : dict = None
                                         ):
@@ -448,20 +464,20 @@ def save_node_index_and_terrestrial_info(
     # Generate a new file for node indices
     file_path = node_index_file_path+operator_name+"/"
     check_create_path(file_path)
-    file_name = "nodeindex_"+timestamp+".txt"
+    file_name = "nodeindex_"+("_".join(timestamp))+".txt"
     nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
     # Generate a new file for terrestrial information
     file_path2 = terrestrial_file_path+"/"
     check_create_path(file_path2)
-    file_name2 = "terrestrial_"+timestamp+".txt"
+    file_name2 = "terrestrial_"+("_".join(timestamp))+".txt"
     terrestrial_log_write = open(file_path2 + file_name2, "w")
     terrestrial_log_write.close()
 
     # Append to files
-    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
-    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+timestamp+".txt", "a")
+    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+("_".join(timestamp))+".txt", "a")
+    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+("_".join(timestamp))+".txt", "a")
 
     # Iterate over the satellites_by_index
     for sat_indx, sat_alias in satellites_by_index.items():
@@ -469,6 +485,36 @@ def save_node_index_and_terrestrial_info(
 
     # Iterate over ground station list
     for gs in ground_stations:
+        if gs['type'] == 9: # 9 indicates a gateway ground station
+            alias_prefix = "GW-"
+        else:
+            alias_prefix = "CT-"  # all else are designated as customer terminals (ct)
+        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
+        terrestrial_log.write(
+                                str(1+sat_indx+gs['gid']) +
+                                ":"+alias_prefix+str(gs['gid']) +
+                                ":"+str(gs['name']) +
+                                ":"+str(gs['latitude_degrees_str']) +
+                                ":"+str(gs['longitude_degrees_str']) +
+                                "\n"
+                             )
+
+    # If t2t_dict is included, iterate over the dictionary and append endpoint aliases to the file
+    if t2t_dict is not None:
+        alias_prefix = "IE-" # IE indicates an internet endpoint
+        for id in t2t_dict.keys():
+            if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
+                gs_coord = t2t_dict[id]['coordinates']
+                gs_name = str(t2t_dict[id]['friendly_name']) if 'friendly_name' in t2t_dict.keys() else str(t2t_dict[id]['name'])
+                nodeindex_log.write(str(1+sat_indx+t2t_dict[id]['gid'])+":"+alias_prefix+str(t2t_dict[id]['gid'])+"\n")
+                terrestrial_log.write(
+                                        str(1+sat_indx+t2t_dict[id]['gid']) +
+                                        ":"+alias_prefix+str(t2t_dict[id]['gid']) +
+                                        ":"+gs_name +
+                                        ":"+str(gs_coord[0]) +
+                                        ":"+str(gs_coord[1]) +
+                                        "\n"
+                                     )
         if gs['type'] == 9: # 9 indicates a gateway ground station
             alias_prefix = "GW-"
         else:
@@ -523,6 +569,7 @@ def save_cpu_time(
     """
 
     # Generate a new file
+    check_create_path(cpu_time_path+operator_name)
     cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "w")
     
     # Iterate over the optimal path list
@@ -531,7 +578,6 @@ def save_cpu_time(
 
     # Close file to minimize memory leaks
     cpu_clock_log.close()
-
 
 # =================================================================================== #
 # ------------------------------------ PARSING -------------------------------------- #
@@ -829,6 +875,7 @@ def arrange_satellites(
                         orbital_data            : dict, 
                         satellites_by_name      : dict, 
                         sat_config              : dict,
+                        main_config             : dict,
                         operator_name           : str,
                         satellites_by_index     : {},
                         timestamp               : object,
@@ -842,6 +889,7 @@ def arrange_satellites(
         orbital_data (dict):                Extracted orbital parameters for each satellite in TLE for all shells
         satellites_by_name (dict):          Satellite information arranged by name
         sat_config (dict):                  Constellation configuration file
+        main_config (dict):                 Main simulation configuration file
         operator_name (name):               Constellation/operator name
         satellites_by_index (empty dic):    Satellite information arranged by index, given as an empty dictionary
         timestamp (object):                 Skyfield object datetime
@@ -859,7 +907,7 @@ def arrange_satellites(
     f = open(file_path + file_name, "a")
     
     # Debugging purposes
-    if sat_config["Debug"] == 1:
+    if main_config["Debug"] == 1:
         print("..... Phase-1: Constellation Orbits:")
 
     # Initialize satellite names according to constellation naming conversion
@@ -884,12 +932,12 @@ def arrange_satellites(
             satellites_sorted_in_orbits.append(sorted)
             sat_sorted_in_orb_temp.append(sorted)
 
-            # Debugging purposes
-            if sat_config["Debug"] == 1:
-                print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
+        # Debugging purposes
+        if main_config["Debug"] == 1:
+            print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
 
             # Debugging purposes
-            if sat_config["Debug"] == 1:
+            if main_config["Debug"] == 1:
                 for s in sorted:
                     write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
                     f.write(write_this)
@@ -1076,6 +1124,27 @@ def get_sats_by_name(filename: str) -> list:
 
     # Return the list of satellites
     return satellites
+
+def comment_route_link_var(
+                            current_node_list    : list, 
+                            previous_node_list   : list
+                        ) -> str:
+    # Comments on the link variations between consecutive optimal routes
+    ##### Remove source and dest since they dont contribute to changes
+    comments = []
+    curr_list = current_node_list[1:-1]
+    prev_list = previous_node_list[1:-1]
+    if curr_list==prev_list:
+        return "NO changes"
+    else:
+        current_set = set(curr_list)
+        previous_set = set(prev_list)
+        if not current_set.intersection(previous_set):
+            return "Whole path changed"
+        else:
+            extras = current_set.difference(previous_set)
+            extras =  extras.union(previous_set.difference(current_set))
+            return "Link changes : " + str(len(extras))
 
 
 # =================================================================================== #

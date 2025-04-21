@@ -9,6 +9,7 @@ import mobility.lunar_dyn_utils as lunar_dyn
 import link.link_utils as link
 
 def calc_max_gsl_length(
+                        main_config,
                         sat_config,
                         operator_name
                         ):
@@ -513,6 +514,7 @@ def mininet_add_GSLs_parallel(
                               association_criteria, 
                               t, 
                               sat_config,
+                              main_config,
                               operator_name
                               ):
     """
@@ -536,11 +538,11 @@ def mininet_add_GSLs_parallel(
     
     for shells in sat_config["shells"].keys():
         # Retrieve maximum GSL length from config
-        max_gsl_length_m = calc_max_gsl_length(sat_config["shells"][shells], operator_name)
+        max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][shells], operator_name)
 
         # Check if max GSL length is valid
         if max_gsl_length_m == -1:
-            if sat_config["Debug"] == 1:
+            if main_config["Debug"] == 1:
                 print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
                 return
             
@@ -882,10 +884,10 @@ def calculate_link_characteristics_for_gsls_isls(
     distance_matrix = [[0 for _ in range(matrix_size)] for _ in range(matrix_size)]
     
     # Define constants
-    channel_bandwidth_downlink = 240
-    channel_bandwidth_uplink = 60
-    number_of_users_per_cell = 5.0
-    density = 1.0/float(number_of_users_per_cell)
+    channel_bandwidth_downlink = 220 # check spacex/starlink max upload/download speeds
+    channel_bandwidth_uplink = 30
+    # number_of_users_per_cell = 5.0
+    # density = 1.0/float(number_of_users_per_cell)
 
     # Loop through the connectivity matrix to calculate latency and throughput
     for i in range(len(connectivity_matrix)):
@@ -895,26 +897,28 @@ def calculate_link_characteristics_for_gsls_isls(
                 distance_meters             = _distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light  (Units in ms)
-                throughput_matrix[i][j]     = 500            #20Gbps
+                throughput_matrix[i][j]     = channel_bandwidth_downlink            #Mbps
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] == 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):
                 distance_meters             = _distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
-                snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
-                channel_width               = channel_bandwidth_downlink
-                throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
-                if throughput_matrix[i][j] > 500:
-                    throughput_matrix[i][j] = 500
+                snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "uplink")
+                channel_width               = channel_bandwidth_uplink
+                # throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                throughput_matrix[i][j]     = channel_width*(math.log2(1+snr))
+                # if throughput_matrix[i][j] > channel_bandwidth_downlink:
+                    # throughput_matrix[i][j] = channel_bandwidth_downlink
 
                 # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
-                    snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "downlink")
-                    channel_width               = channel_bandwidth_downlink
-                    throughput_matrix[i][j]     = density*channel_width*(math.log(1+snr)/math.log(2))
-                    if throughput_matrix[i][j] > 500:
-                        throughput_matrix[i][j] = 500
+                    snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "uplink")
+                    channel_width               = channel_bandwidth_uplink
+                    # throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                    throughput_matrix[i][j]     = channel_width*(math.log2(1+snr))
+                    # if throughput_matrix[i][j] > channel_bandwidth_downlink:
+                        # throughput_matrix[i][j] = channel_bandwidth_downlink
             
             # GSL between satellite and ground station
             if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j >= len(satellites_by_index):
@@ -922,9 +926,10 @@ def calculate_link_characteristics_for_gsls_isls(
                 distance_matrix[i][j]       = int(distance_meters)
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3           #speed of light
                 snr                         = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[i])], ground_stations[j-len(satellites_by_index)], t, distance_meters, "downlink")
-                throughput_matrix[i][j]     = density*channel_bandwidth_downlink*(math.log(1+snr)/math.log(2))
-                if throughput_matrix[i][j] > 500:
-                    throughput_matrix[i][j] = 500
+                # throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                throughput_matrix[i][j]     = channel_bandwidth_downlink*(math.log2(1+snr))
+                # if throughput_matrix[i][j] > channel_bandwidth_downlink:
+                    # throughput_matrix[i][j] = channel_bandwidth_downlink
 
     # Return latency and throughput matrices
     return {
