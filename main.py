@@ -9,6 +9,7 @@ import re
 import time
 from mobility.read_live_tles import *
 from mobility.mobility_utils import *
+from mobility.lunar_dyn_utils import *
 from mobility.read_gs import *
 from routing.routing_utils import *
 from routing.constellation_routing import *
@@ -66,12 +67,12 @@ def topology_generation(inc, sat_config,
         satellites_by_index = arranged_sats["satellites by index"]
         satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
         satellites_by_name = global_satellites_by_name
-        # sat1 = satellites_by_name[satellites_by_index[22]]
-        # sat2 = satellites_by_name[satellites_by_index[23]]
 
         # Convert the updated time to UTC and Unix timestamp
         time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
         y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
+        if operator_name=='lunar':
+            time_utc_inc = get_current_epoch(inc) #Changes Skyfield.timelib type to astropy Time type
 
         # Update the size of the connectivity matrix
         conn_mat_size = num_of_satellites + num_of_ground_stations
@@ -93,7 +94,7 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
             #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
                 #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
-        
+
         """
         topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
         #print(topfile_path)
@@ -164,7 +165,7 @@ def main():
 
     # Path configuration
     output_filepath             = main_config["OutputFilePath"]
-    use_weather_data            = bool(main_config["UseWeatherData"]) if "UseWeatherData" in main_config else True
+    use_weather_data            = bool(main_config["UseWeatherData"] and operator_name.lower() == 'starlink') if "UseWeatherData" in main_config else True  #Weather only used for Earth cases
     run_resource_logger         = bool(main_config["MonitorResource"]) if "MonitorResource" in main_config else False
     if output_filepath[-1] == "/":
         output_filepath = output_filepath[:-1] # Remove the last slash if it exists
@@ -236,11 +237,18 @@ def main():
     print(".......... Simulation Length: \t\t", simulation_length, "s") 
     print(".......... TLE File: \t\t\t", path_of_recent_TLE, "\n")
 
-    # Load the satellites from the TLE file
-    satellites = load.tle_file(path_of_recent_TLE)
+    # Load the satellites from the TLE file (CHANGE THIS TO TAKE IN MULTIPLE TLES FOR FUTURE CASES (EARTH AND LUNAR TLES IN ONE SIMULATION)) [FIX THIS]
+    if operator_name=='starlink':
+        satellites = load.tle_file(path_of_recent_TLE)
 
-    # Create dictionaries of satellites by name and index
-    satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}
+        # Create dictionaries of satellites by name and index
+        satellites_by_name = {sat.name.split(" ")[0]: sat for sat in satellites}  # entire sats from TLE (Dict FORMAT- 'STARLINK-####' : Skyfield type) (Globally tracked)
+
+    else:
+        ####### IMPORTANT: THIS ONLY WORKS WITH SINGLE-SHELL (POTENTIALLY BREAKS WITH MULTI SHELL) [FIX THIS]
+        main_body = sat_config["shells"]["shell1"]["body"]
+        perturber = sat_config["shells"]["shell1"]["perturber"]
+        satellites_by_name = satellites_from_tle(path_of_recent_TLE, simulation_length, main_body, perturber)  # entire sats from TLE (Dict FORMAT- 'LUNAR-####' : Poliastro Orbit type) (Globally tracked)  
     satellites_by_index = {}
 
     # Read the ground stations from the file specified in the configurations
@@ -266,10 +274,13 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
-        
+
     # Get the orbital data and arrange the satellites in the orbits
-    orbital_data  = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shell1"]["orbits"], sat_config["shell1"]["sat_per_orbit"], sat_config["shell1"]["inclination"], sat_config["shell1"]["altitude"])
-    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, main_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path)
+    orbital_data = {}
+    for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
+        orb_data = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shells"][sh]["orbits"], itr, sat_config["shells"][sh]["inclination"], sat_config["shells"][sh]["altitude"])
+        orbital_data.update(orb_data)
+    arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, main_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path) #Globally tracked
     satellites_by_index = arranged_sats["satellites by index"]
     satellites_sorted_in_orbits = arranged_sats["sorted satellite in orbits"]
 
@@ -325,30 +336,30 @@ def main():
     # Before starting concurrent execution, get weather conditions for all ground stations to avoid excessive/unnecesary API calls
     print(".......... Preemptively getting weather data for all ground stations")
     from link.link_utils import get_weather_info
-    recv_cnt = 0
-    recving_weather_data = True
-    for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
-        if recving_weather_data and use_weather_data:
-            gs_lat = float(ground_station["latitude_degrees_str"])
-            gs_lon = float(ground_station["longitude_degrees_str"])
-            weather_data = get_weather_info(gs_lat, gs_lon, int(time_timestamp))
-            if weather_data != "":
-                ground_station["weather_data"] = weather_data
-                recv_cnt += 1
-                # Wait 1 second to avoid API rate limit
-                if recv_cnt % 25 == 0:
-                    time.sleep(1)
+    if use_weather_data:
+        recv_cnt = 0
+        recving_weather_data = True
+        for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
+            if recving_weather_data and use_weather_data:
+                gs_lat = float(ground_station["latitude_degrees_str"])
+                gs_lon = float(ground_station["longitude_degrees_str"])
+                weather_data = get_weather_info(gs_lat, gs_lon, int(time_timestamp))
+                if weather_data != "":
+                    ground_station["weather_data"] = weather_data
+                    recv_cnt += 1
+                    # Wait 1 second to avoid API rate limit
+                    if recv_cnt % 25 == 0:
+                        time.sleep(1)
+                else:
+                    recving_weather_data = False # Stop trying to get weather data
+                    ground_station["weather_data"] = ""
             else:
-                recving_weather_data = False # Stop trying to get weather data
                 ground_station["weather_data"] = ""
-        else:
-            ground_station["weather_data"] = ""
-    if not use_weather_data:
-        print(".......... User decided not to use weather data for simulation")
-    else:
         print(f".......... Weather data received for {recv_cnt} ground stations")
-    # Save Weather data
-    save_weather_info(ground_stations, [str(epoch_start[0]), str(epoch_start[1]), str(epoch_start[2]), str(epoch_start[3]), str(epoch_start[4]), str(float(epoch_start[5]))], operator_name, weather_info_path)
+        # Save Weather data
+        save_weather_info(ground_stations, [str(epoch_start[0]), str(epoch_start[1]), str(epoch_start[2]), str(epoch_start[3]), str(epoch_start[4]), str(float(epoch_start[5]))], operator_name, weather_info_path)
+    else:
+        print(".......... User decided not to use weather data for simulation")
 
     global global_arranged_sats, global_satellites_by_name # Make these global for multiprocessing, but being used regardless
     global_arranged_sats = arranged_sats
@@ -382,80 +393,6 @@ def main():
             
             topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, cpu_time_path)
             
-            
-            """
-            # Update the time
-            indx += 1
-
-            # Get the source and destination nodes
-            source_node         = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
-            destination_node    = num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
-            optimal_path_nodes  = [source_node, destination_node]
-
-            # Convert the updated time to UTC and Unix timestamp
-            time_utc_inc = ts.utc(*map(int, epoch_start[:-1]), epoch_start[-1]+inc)
-            y, mon, d, h, min, s = convert_time_utc_to_ymdhms(time_utc_inc)
-
-            # Update the size of the connectivity matrix
-            conn_mat_size = num_of_satellites + num_of_ground_stations
-
-            # Initialize the connectivity matrix
-            connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
-
-            # Add ISLs to the connectivity matrix
-            connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
-
-            # Add GSLs to the connectivity matrix
-            connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, main_config["AssociationCritGSL"], time_utc_inc, sat_config, main_config, operator_name)
-
-            # Calculate the link characteristics for GSLs and ISLs
-            links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
-
-            # Add t2t links to the connectivity matrix, if enabled
-            if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
-                connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
-
-            # Save the topology
-            if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-                os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-            save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
-
-            # Pre-compute the routing tables
-            # Add flag to include ground_stations in route calculations if using t2t links 
-            if "Use_t2t" in main_config and bool(main_config["Use_t2t"]) == True:
-                global route_to_gs
-                route_to_gs = True
-                
-            if find_optimal_routes:
-                all_possible_routes, optimal_route = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["latency_matrix"], links_characteristics["distance_matrix"], optimal_path_nodes, route_to_gs)
-            else:
-                all_possible_routes = initial_routing_fw(satellites_by_index, ground_stations, connectivity_matrix, links_characteristics["distance_matrix"], None, route_to_gs)
-
-        # Stop CPU timer
-        dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
-
-        # Save the topology
-        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_topology(connectivity_matrix, 
-                      links_characteristics, 
-                      operator_name, 
-                      str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
-                      connectivity_matrix_path)
-
-        # Save the routes
-        if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
-            os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
-        save_routes(all_possible_routes, 
-                    operator_name, 
-                    str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), 
-                    routing_file_path)
-
-            # Save the optimal routes between provided src/dest
-            if inc == time_hist[0] and os.path.exists(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt"): # Check if file already exists, if so then rewrite
-                os.remove(optimal_file_path+operator_name+"/best_path_"+("_".join([str(y), str(mon), str(d)]))+".txt")
-            save_optimal_path(optimal_route, [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, optimal_file_path)
-            """
     
     """Checking Link changes between each interval (10sec)"""
     DIFF = [] # Stores only the total number of link changes per timestep difference
@@ -480,8 +417,8 @@ def main():
         executor.shutdown()
     except:
         pass
-    cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
-    save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
+    # cpu_clock_tot_dt = (time.perf_counter_ns() - cpu_clock_tot_t0) * 1e-9
+    # save_cpu_time("TOTSIM:"+str(cpu_clock_tot_dt), [str(y), str(mon), str(d), str(h), str(min), str(float(s))], operator_name, cpu_time_path)
 
     # Update progress
     print("\033[0m.......... Phase-2 complete. See the results under: "+output_filepath+"\n\n")

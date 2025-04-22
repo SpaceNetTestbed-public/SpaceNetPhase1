@@ -1,0 +1,31 @@
+(Conditions taken from Lara paper)
+Altitude         - 729 kms
+Eccentricity     - 0.025
+Inclination      - 62 deg
+AOP              - 90 deg
+T.A              - 0 deg
+granularity      - 50000
+PCK model        - 'moon_pa_de421_1900-2050.bpc'
+SH model         - 'jgl150q1.sha'
+
+
+
+Altitude         -  kms
+Eccentricity     - 
+Inclination      -  deg
+AOP              -  deg
+T.A              -  deg
+granularity      - 
+PCK model        - ''
+SH model         - ''
+
+
+
+Altitude         -  kms
+Eccentricity     - 
+Inclination      -  deg
+AOP              -  deg
+T.A              -  deg
+granularity      - 
+PCK model        - ''
+SH model         - 

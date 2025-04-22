@@ -603,7 +603,7 @@ def load_t2t_dict(t2t_settings):
         endpoint_dict_list.append(wonderproxy_dict)
     # Generate gateway dictionary
     print("..........(load_t2t_dict) Loading gateway dictionary...")
-    gateway_dict = load_gateways_from_local_kml(t2t_settings['gateway_kmz_path'])
+    gateway_dict = load_gateways_from_local_kml(t2t_settings['gateway_kmz_path'])   #### Very important: write a logic to take only gateways in t2t_dict even if no endpoints are available!
     # Generate t2t dictionary from endpoint and gateway dictionaries
     print("..........(load_t2t_dict) Generating t2t_dict from endpoint and gateway dictionaries...")
     t2t_dict = genT2tDict(gateway_dict, endpoint_dict_list, t2t_settings['t2t_dict_output_file'])
@@ -680,7 +680,9 @@ def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characterist
             source_id = t2t_dict['conn_mat_index_to_t2t_index'][x]
             dest_id = t2t_dict['conn_mat_index_to_t2t_index'][y]
             latency_matrix[x][y] = t2t_dict[source_id][dest_id] # Add latency value to latency matrix
+            latency_matrix[y][x] = t2t_dict[source_id][dest_id]
             throughput_matrix[x][y] = terrestrial_link_bandwidth # Add throughput value to throughput matrix
+            throughput_matrix[y][x] = terrestrial_link_bandwidth
     else: # Calculate values and update matrices
         t2t_dict['t2t_gw_to_ep_link_list'] = []
         t2t_dict['conn_mat_index_to_t2t_index'] = {}

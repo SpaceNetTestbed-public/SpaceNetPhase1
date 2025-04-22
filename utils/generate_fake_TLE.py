@@ -76,6 +76,8 @@ def tle_format_field(
 # FUNCTION 2 : GENERATE TLE                             #
 # ----------------------------------------------------- #
 def generate_virtual_TLE(
+                            op_name     : str,
+                            main_body   : str,
                             epoch       : np.ndarray,
                             oe          : np.ndarray,
                             iter_num    : int
@@ -110,8 +112,12 @@ def generate_virtual_TLE(
     epoch_str       = tle_format_field(epoch[0], 2, 0, 1) + tle_format_field(epoch[1], 3, 8, None)
     
     # Compute mean motion in rev/day
-    earth_mu        = 398600.435507     # Earth's gravitational parameter, km2s-2
-    nbar            = np.sqrt(earth_mu/oe[0]**3) * (86400./(2*np.pi))    # rev/day
+    if main_body == 'Earth':
+        mu        = 398600.435507     # Earth's gravitational parameter, km3s-2
+    elif main_body == 'Moon':
+        mu        = 4902.8695         # Earth's gravitational parameter, km3s-2
+    
+    nbar            = np.sqrt(mu/oe[0]**3) * (86400./(2*np.pi))    # rev/day
 
     # Compute mean anomaly in deg
     TA              = np.deg2rad(oe[5])
@@ -126,7 +132,7 @@ def generate_virtual_TLE(
     ma_str          = tle_format_field(MA, 3, 4, 0)
 
     # Add other content for Lines 1 & 2 using random/fixed generation
-    sat_title_str   = str("STARLINK-") + str(1000 + iter_num)
+    sat_title_str   = op_name + "-" + str(1000 + iter_num)
     sat_cat_str     = str(int(np.random.uniform(10000, 99999)))
     sat_class_str   = "U"
     intl_desg_str   = "98065A  "

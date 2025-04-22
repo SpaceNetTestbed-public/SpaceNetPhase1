@@ -16,14 +16,16 @@ Sim_Date_Time: # options for simulation starting date & time (testbed will also 
 generate_TLE: false # true/false (if true, will generate TLEs based on following parameters; use false if providing pre-generated TLEs)
 # Constellation Parameters
 # (if generating TLEs, parameters are used to define constellation; if providing TLE, parameters are used to select relevant sats):
-shell1: # if using multiple shells, copy and paste this parameter range and rename 'shell1' to 'shell2', 'shell3', etc.
-    name: shell1
-    orbits: <number_of_orbits>
-    sat_per_orbit: <number_of_sats_per_orbit>   # total number of sats = orbits*sat_per_orbit
-    altitude: <operating geodetic altitude>     # altitude in km
-    inclination: <inclination of shell>         # inclination in degrees
-    pattern: walker_delta                       # options: 'walker_delta' (default), 'walker_star'
-    ipp_increment: 1
+shells:
+    shell1: # if using multiple shells, copy and paste this parameter range and rename 'shell1' to 'shell2', 'shell3', etc.
+        name: shell1
+        orbits: <number_of_orbits>
+        sat_per_orbit: <number_of_sats_per_orbit>   # total number of sats = orbits*sat_per_orbit
+        altitude: <operating geodetic altitude>     # altitude in km
+        inclination: <inclination of shell>         # inclination in degrees
+        pattern: walker_delta                       # options: 'walker_delta' (default), 'walker_star'
+        ipp_increment: 1
+        body: <Celestial body>
 
 # TLE file directory (if generating TLEs, TLE file will save to this directory; if providing TLE, match TLEFilePath to TLE location directory)
 TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
