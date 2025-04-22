@@ -515,36 +515,6 @@ def save_node_index_and_terrestrial_info(
                                         ":"+str(gs_coord[1]) +
                                         "\n"
                                      )
-        if gs['type'] == 9: # 9 indicates a gateway ground station
-            alias_prefix = "GW-"
-        else:
-            alias_prefix = "CT-"  # all else are designated as customer terminals (ct)
-        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
-        terrestrial_log.write(
-                                str(1+sat_indx+gs['gid']) +
-                                ":"+alias_prefix+str(gs['gid']) +
-                                ":"+str(gs['name']) +
-                                ":"+str(gs['latitude_degrees_str']) +
-                                ":"+str(gs['longitude_degrees_str']) +
-                                "\n"
-                             )
-
-    # If t2t_dict is included, iterate over the dictionary and append endpoint aliases to the file
-    if t2t_dict is not None:
-        alias_prefix = "IE-" # IE indicates an internet endpoint
-        for id in t2t_dict.keys():
-            if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
-                gs_coord = t2t_dict[id]['coordinates']
-                gs_name = str(t2t_dict[id]['friendly_name']) if 'friendly_name' in t2t_dict.keys() else str(t2t_dict[id]['name'])
-                nodeindex_log.write(str(1+sat_indx+t2t_dict[id]['gid'])+":"+alias_prefix+str(t2t_dict[id]['gid'])+"\n")
-                terrestrial_log.write(
-                                        str(1+sat_indx+t2t_dict[id]['gid']) +
-                                        ":"+alias_prefix+str(t2t_dict[id]['gid']) +
-                                        ":"+gs_name +
-                                        ":"+str(gs_coord[0]) +
-                                        ":"+str(gs_coord[1]) +
-                                        "\n"
-                                     )
     # Close file to minimize memory leaks
     nodeindex_log.close()
     terrestrial_log.close()

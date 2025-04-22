@@ -27,7 +27,7 @@ def calc_max_gsl_length(
     max_gsl_length_m = -1 
 
     # Calculate satellite cone radius based on altitude and elevation angle
-    satellite_cone_radius = (sat_config["altitude"])/math.tan(math.radians(sat_config["elevation_angle"]))
+    satellite_cone_radius = (sat_config["altitude"])/math.tan(math.radians(main_config["min_elevation_angle"]))
      
     # Calculate max GSL length using cone radius and satellite altitude, convert to meters
     max_gsl_length_m =  (math.sqrt(math.pow(satellite_cone_radius, 2) + math.pow(sat_config["altitude"], 2)))*1000

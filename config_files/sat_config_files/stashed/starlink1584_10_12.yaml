@@ -1,27 +1,35 @@
 Sim_Length:
-    TimeStepDuration: 30
-    TimeStepCount: 120
+    TimeStepDuration: 10
+    TimeStepCount: 12
 Sim_Date_Time:
     StartYear: 2024
     StartMonth: 09
     StartDay: 27
     StartHour: 22
     StartMinute: 15
-    StartSecond: 00
+    StartSecond: 06
 
 generate_TLE: false # true/false (if true, will generate TLEs based on following parameters; use false if providing pre-generated TLEs)
 
 shells:
     shell1:
         name: shell1
-        orbits: 20
+        orbits: 72
         sat_per_orbit: 22
-        altitude: 200
-        inclination: 84.0
+        altitude: 540
+        inclination: 53.2
         pattern: walker_delta
         ipp_increment: 1
-        body: Moon
-        perturber: Earth
+        body: Earth
+    shell2:               
+        name: shell2
+        orbits: 5
+        sat_per_orbit: 46
+        altitude: 560
+        inclination: 97.6
+        pattern: walker_delta
+        ipp_increment: 1
+        body: Earth
 
 # TLE file directory (if generating TLEs, TLE file will save to this directory; if providing TLE, match TLEFilePath to TLE location directory)
 TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
