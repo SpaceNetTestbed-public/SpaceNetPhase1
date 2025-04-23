@@ -602,7 +602,6 @@ def load_t2t_dict(t2t_settings):
         wonderproxy_dict = load_wonderproxy_server_dict(wonderproxy_server_csv_filename=wonderproxy_endpoint_location_file, wonderproxy_latency_csv_filename=wonderproxy_endpoint_latency_file, wonderproxy_dict_filename=wonderproxy_dict_output_file)
         endpoint_dict_list.append(wonderproxy_dict)
     # Generate gateway dictionary
-    print(t2t_settings)
     print("..........(load_t2t_dict) Loading gateway dictionary...")
     gateway_dict = load_gateways_from_local_kml(t2t_settings['gateway_kmz_path'])   #### Very important: write a logic to take only gateways in t2t_dict even if no endpoints are available!
     # Generate t2t dictionary from endpoint and gateway dictionaries
