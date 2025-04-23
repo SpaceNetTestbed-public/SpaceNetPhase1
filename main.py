@@ -336,30 +336,30 @@ def main():
     # Before starting concurrent execution, get weather conditions for all ground stations to avoid excessive/unnecesary API calls
     print(".......... Preemptively getting weather data for all ground stations")
     from link.link_utils import get_weather_info
-    if use_weather_data:
-        recv_cnt = 0
-        recving_weather_data = True
-        for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
-            if recving_weather_data and use_weather_data:
-                gs_lat = float(ground_station["latitude_degrees_str"])
-                gs_lon = float(ground_station["longitude_degrees_str"])
-                weather_data = get_weather_info(gs_lat, gs_lon, int(time_timestamp))
-                if weather_data != "":
-                    ground_station["weather_data"] = weather_data
-                    recv_cnt += 1
-                    # Wait 1 second to avoid API rate limit
-                    if recv_cnt % 25 == 0:
-                        time.sleep(1)
-                else:
-                    recving_weather_data = False # Stop trying to get weather data
-                    ground_station["weather_data"] = ""
+    recv_cnt = 0
+    recving_weather_data = True
+    for ground_station in tqdm(ground_stations, desc=".......... Getting weather data"):
+        if recving_weather_data and use_weather_data:
+            gs_lat = float(ground_station["latitude_degrees_str"])
+            gs_lon = float(ground_station["longitude_degrees_str"])
+            weather_data = get_weather_info(gs_lat, gs_lon, int(time_timestamp))
+            if weather_data != "":
+                ground_station["weather_data"] = weather_data
+                recv_cnt += 1
+                # Wait 1 second to avoid API rate limit
+                if recv_cnt % 25 == 0:
+                    time.sleep(1)
             else:
+                recving_weather_data = False # Stop trying to get weather data
                 ground_station["weather_data"] = ""
+        else:
+            ground_station["weather_data"] = ""
+    if use_weather_data:
         print(f".......... Weather data received for {recv_cnt} ground stations")
-        # Save Weather data
-        save_weather_info(ground_stations, [str(epoch_start[0]), str(epoch_start[1]), str(epoch_start[2]), str(epoch_start[3]), str(epoch_start[4]), str(float(epoch_start[5]))], operator_name, weather_info_path)
     else:
         print(".......... User decided not to use weather data for simulation")
+    # Save Weather data
+    save_weather_info(ground_stations, [str(epoch_start[0]), str(epoch_start[1]), str(epoch_start[2]), str(epoch_start[3]), str(epoch_start[4]), str(float(epoch_start[5]))], operator_name, weather_info_path)
 
     global global_arranged_sats, global_satellites_by_name # Make these global for multiprocessing, but being used regardless
     global_arranged_sats = arranged_sats
