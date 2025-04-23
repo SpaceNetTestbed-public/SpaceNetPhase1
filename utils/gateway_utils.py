@@ -602,6 +602,7 @@ def load_t2t_dict(t2t_settings):
         wonderproxy_dict = load_wonderproxy_server_dict(wonderproxy_server_csv_filename=wonderproxy_endpoint_location_file, wonderproxy_latency_csv_filename=wonderproxy_endpoint_latency_file, wonderproxy_dict_filename=wonderproxy_dict_output_file)
         endpoint_dict_list.append(wonderproxy_dict)
     # Generate gateway dictionary
+    print(t2t_settings)
     print("..........(load_t2t_dict) Loading gateway dictionary...")
     gateway_dict = load_gateways_from_local_kml(t2t_settings['gateway_kmz_path'])   #### Very important: write a logic to take only gateways in t2t_dict even if no endpoints are available!
     # Generate t2t dictionary from endpoint and gateway dictionaries
@@ -617,7 +618,7 @@ def get_t2t_settings(main_config, output_filepath):
     t2t_settings['t2t_output_path'] = t2t_output_path # Save output path seperately in case it is needed for other functions
     t2t_settings['kmz_type'] = main_config["Gateways"]["t2t_gateway_kmz_type"] # local or link
     t2t_settings['gateway_kmz_path'] = main_config["Gateways"]["t2t_gateway_kmz_path"] # either a file path or a url
-    if "t2t_dict_output_file" in main_config and main_config["Gateways"]["t2t_dict_output_file"] != "":
+    if "t2t_dict_output_file" in main_config["Gateways"] and main_config["Gateways"]["t2t_dict_output_file"] != "":
         t2t_settings['t2t_dict_output_file'] = main_config["Gateways"]["t2t_dict_output_file"] 
     else:
         t2t_settings['t2t_dict_output_file'] = None

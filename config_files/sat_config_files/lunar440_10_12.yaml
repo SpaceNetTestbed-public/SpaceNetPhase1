@@ -1,6 +1,6 @@
 Sim_Length:
-    TimeStepDuration: 30
-    TimeStepCount: 120
+    TimeStepDuration: 10
+    TimeStepCount: 12
 Sim_Date_Time:
     StartYear: 2024
     StartMonth: 09
@@ -24,4 +24,4 @@ shells:
         perturber: Earth
 
 # TLE file directory (if generating TLEs, TLE file will save to this directory; if providing TLE, match TLEFilePath to TLE location directory)
-TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
+TLEFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/
