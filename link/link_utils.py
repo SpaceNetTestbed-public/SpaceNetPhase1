@@ -26,6 +26,7 @@ import requests
 import sys
 import logging
 sys.path.append("../")
+from mobility.mobility_utils import *
 
 # Import NTN Channel Model and related classes
 from link.ntn_channel_model import NTNChannelModel, LinkBudget
@@ -42,8 +43,8 @@ api_key                                 = "cab2710f043a0aeedb61b28b3a316146" #Co
 channelFreq_isls                        = 37.0      # GHz
 channelFreq_sat_to_ground               = 12.7      # GHz
 channelFreq_ground_to_sat               = 14.5      # GHz
-channnel_bandwidth_downlink             = 240       # MHz
-channnel_bandwidth_uplink               = 60        # MHz
+channnel_bandwidth_downlink             = 220       # MHz
+channnel_bandwidth_uplink               = 30        # MHz
 polarization_loss                       = 3         # dBi
 misalignment_attenuation_losses         = 0.5       # dB
 starlink_merit_figure                   = 9.2       # dB/K
@@ -278,6 +279,10 @@ def calc_gsl_snr(
     """
     # Initialize variables
     gsl_distance = distance
+    if get_main_body_str(satellite) == "Earth":
+        curr_timestamp = t.tt       # Skyfield.Time
+    else:
+        curr_timestamp = t.value    # Astropy.Time
 
     # Get ground station latitude and longitude
     lat_gs = float(ground_station["latitude_degrees_str"])
@@ -306,8 +311,8 @@ def calc_gsl_snr(
             weather_data = ground_station['weather_data']
         else:
             # Need init_timestamp from satellite or t
-            init_timestamp = int(t) if isinstance(t, (int, float)) else int(satellite.get("init_timestamp", t))
-            weather_data = get_weather_info(lat_gs, lon_gs, init_timestamp)
+            # init_timestamp = int(t) if isinstance(t, (int, float)) else int(satellite.get("init_timestamp", t))
+            weather_data = get_weather_info(lat_gs, lon_gs, curr_timestamp)
 
         # Weather attenuation calculation
         weather_attenuation = 0
