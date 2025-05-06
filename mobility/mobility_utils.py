@@ -5,7 +5,7 @@ import numpy as np
 import sys
 sys.path.append("../")
 from link.link_utils import *
-from DoTD import DoTD_History
+from mobility.DoTD import DoTD_History
 
 def calc_max_gsl_length(
                         sat_config,
@@ -647,7 +647,7 @@ def mininet_add_ISLs(
     elif isl_config == "DOTD":
         M = len(satellites_by_index)
         dotd.step()
-        link_characterstics = calculate_link_characteristics_for_gsls_isls(satellites_by_index, satellites_by_name, t)
+        link_characterstics = calculate_link_charateristics(satellites_by_index, satellites_by_name, t)
         latency_matrix    = np.array(link_characterstics["latency_matrix"])
         throughput_matrix = np.array(link_characterstics["throughput_matrix"]) / 1000
         distance_matrix   = latency_matrix / 1000 * 299792458.0
@@ -1163,6 +1163,87 @@ def M_gs_sat_association_criteria_BasedOnDistance(
     return connectivity_matrix
 
 # removed M_gs_sat_association_criteria_BasedOnDistance_alan, as it was not being used in any file or function
+
+def calculate_link_charateristics(
+                                                satellites_by_index, 
+                                                satellites_by_name, 
+                                                t
+                                                ):
+    """
+    Calculates latency and throughput matrices for the network defined by the given connectivity matrix
+
+    Args:
+        connectivity_matrix (list): 2D matrix representing the network connectivity between satellites, as well as ground stations
+        satellites_by_index (dict): satellites sorted by index
+        satellites_by_name (dict): satellites sorted by name
+        ground_stations (dict): list of ground stations
+        t (datetime): time corresponding to current satellite positions
+        
+    Returns:
+        latency_matrix (??): ??
+        throughput_matrix (??): ??
+
+    """
+
+
+    matrix_size = len(satellites_by_index)
+    channelFreq_isls = 37.0  # GHz
+    polarization_loss = 4.5  # dBi
+    misalignment_attenuation_losses = 0.5  # dB
+    satellite_eirp = 80.9  # dBm
+    satellite_receive_antenna_gain = 40.0  # dBi
+    channel_bandwidth = 12000  # MHz
+    c = 299792458.0  # speed of light in m/s
+    boltzmann_constant = 1.38064852e-23  # Boltzmann constant
+
+    # Initialize distance matrix using a function that calculates distances between satellites
+    
+    M = len(satellites_by_index)
+    # print("here")
+    # distance_matrix = parallel_distance_matrix(satellites_by_index, satellites_by_name, t, num_workers=1000)
+    # print("done")
+    distance_matrix = np.zeros((matrix_size, matrix_size))
+    for i in range(M):
+        for j in range(M):
+            if i != j:
+                distance_matrix[i, j] = distance_between_two_satellites(
+                    satellites_by_name[str(satellites_by_index[i])],
+                    satellites_by_name[str(satellites_by_index[j])],
+                    t
+                )
+
+    # Latency calculation: (distance / speed of light) * 1000 (to convert to ms)
+    latency_matrix = (distance_matrix / c) * 1000
+
+    # Free Space Path Loss (FSPL) in dB
+    fspl_matrix = 20 * np.log10(distance_matrix) + 20 * np.log10(channelFreq_isls * 1e9) - 147.55
+
+    # Received Signal Strength (RSS) in dBm
+    rss_dBm_matrix = satellite_eirp - 2 + satellite_receive_antenna_gain - fspl_matrix - polarization_loss - misalignment_attenuation_losses - 1.0
+
+    # RSS in Watts
+    rss_watt_matrix = 10 ** ((rss_dBm_matrix - 30) / 10)
+
+    # Noise power in Watts (200 Kelvin as system noise temperature)
+    noise_watt = 200 * boltzmann_constant * channel_bandwidth * 1e6
+
+    # Signal-to-Noise Ratio (SNR)
+    snr_matrix = rss_watt_matrix / noise_watt
+
+    # Channel Capacity using Shannon's theorem, in Mbps
+    capacity_matrix = channel_bandwidth * np.log2(1 + snr_matrix) / 1e3 #TODO: 1e6 is True I guess
+
+    # Handle infinite capacity values (set to 0)
+    capacity_matrix[np.isinf(capacity_matrix)] = 0
+
+    throughput_matrix = capacity_matrix.tolist()
+    latency_matrix = latency_matrix.tolist()
+
+    # Return latency and throughput matrices
+    return {
+                "latency_matrix": latency_matrix,
+                "throughput_matrix": throughput_matrix
+            }
 
 def calculate_link_characteristics_for_gsls_isls(
                                                 connectivity_matrix, 

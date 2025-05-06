@@ -10,8 +10,8 @@ class DoTD_History:
         self.S_max = np.zeros((self.T+1))
         self.L_max = np.zeros((self.T+1))
         self.t = 0
-        self.w1 = 0
-        self.w2  = 0
+        self.w1 = 0.4
+        self.w2  = 0.4
         self.w3 = 1-(self.w1 + self.w2)
 
     def step(self):
