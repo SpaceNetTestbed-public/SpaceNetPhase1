@@ -155,7 +155,7 @@ def main():
     global criterion
     global CONN_mat_store
     global OPTIM_ROUTE_NODES
-    criterion = 2 # default
+    criterion = 0 # default
     CONN_mat_store = {}
     OPTIM_ROUTE_NODES = {}
 

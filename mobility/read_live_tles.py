@@ -247,10 +247,22 @@ def real_tle_filter(operator_name, orbits_inclination, orbits_altitude):
             thresh2 = -0.9
             thresh3 = 3.0624
             thresh4 = 2.0524
+        else:
+            thresh1 = 0.1
+            thresh2 = -0.1
+            thresh3 = 1
+            thresh4 = -1
+
 
     elif operator_name=='lunar':
         thresh1 = 1
         thresh2 = -1
+        thresh3 = 1
+        thresh4 = -1
+    
+    else:
+        thresh1 = 0.1
+        thresh2 = -0.1
         thresh3 = 1
         thresh4 = -1
 

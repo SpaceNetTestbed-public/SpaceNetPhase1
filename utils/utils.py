@@ -847,7 +847,7 @@ def arrange_satellites(
                         sat_config              : dict,
                         main_config             : dict,
                         operator_name           : str,
-                        satellites_by_index     : {},
+                        satellites_by_index     : dict,
                         timestamp               : object,
                         tle_timestamp           : str,
                         sat_orbit_file_path     : str

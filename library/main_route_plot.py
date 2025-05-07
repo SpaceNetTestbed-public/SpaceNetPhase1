@@ -15,6 +15,14 @@ from mpl_toolkits.basemap import Basemap
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
+def no_zeropadding(timestamp):
+
+    data = timestamp.split("_")
+    removed_padding = [d.strip("0") for d in data]
+    timestamp_withoutpadding = "_".join(removed_padding)
+
+    return timestamp_withoutpadding
+
 # ================================================================================================
 # >>> SCRIPT CONTROL - EDIT HERE <<<
 # ================================================================================================
@@ -28,12 +36,13 @@ make_gif                = True   # Makes gif of all the timestep plots in this f
 lon0_3d                 = -140  #-80    #-100   #5  #-35 
 lat0_3d                 = 5      #20   #30
 timestamp               = "2025_3_17_12_24_14"
+timestamp_nopadding     = no_zeropadding(timestamp)
 output_pathname         = "aiaa_journal/hi_late/sydney"
-gs_filepath             = open('/home/spacenet/Desktop/jack_results/'+output_pathname+'/terrestrial_info/terrestrial_'+timestamp+'.0.txt', 'r')
+gs_filepath             = open('/home/spacenet/Desktop/jack_results/'+output_pathname+'/terrestrial_info/terrestrial_'+timestamp_nopadding+'.0.txt', 'r')
 tle_file                = open('/home/spacenet/Desktop/jacktles/alt500km/inc75/starlink_tles/starlink_1742212800', 'r')
 optimal_route_filepath  = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
 conn_filepath           = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/connectivity/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/node_indices/starlink/nodeindex_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/node_indices/starlink/nodeindex_'+timestamp_nopadding+'.0.txt'
 orb_sat_txt             = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
 gif_name                = 'gif_hi_late_sydney'
 ################### Folder Paths ######################
