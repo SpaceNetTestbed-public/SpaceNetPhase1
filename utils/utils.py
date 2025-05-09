@@ -5,7 +5,9 @@ SpaceNet Utils/
 AUTHOR:         Mohamed M. Kassem, Ph.D.
                 University of Surrey
 
-EDITOR:         Bruce Barbour
+EDITORS:        Bruce Barbour
+                Virginia Tech
+                S Aryan
                 Virginia Tech
 
 DESCRIPTION:    This Python script supplies the primary utility functions for the SpaceNet simulator.
@@ -210,9 +212,9 @@ def save_topology(
     # Iterate over the connectivity matrix list
     for i in range(len(connectivity_matrix)):
         for j in range(len(connectivity_matrix[i])):
-            if connectivity_matrix[i][j] == 1:
+            if connectivity_matrix[i][j] >= 1:   # >= 1 would save all the links that has congestion values that are usually greater than 1
                 if i!=j and (i, j) not in existing_links:
-                   write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+"\n"
+                   write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["congestion_latency_mix_matrix"][i][j],2))+"\n"
                    #write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["distance_matrix"][i][j],2))+"\n"
                    f.write(write_this)
                    existing_links.append((i, j))
@@ -248,6 +250,49 @@ def extract_connectivity(
 
     return connectivity_matrix, link_characteristics
             
+
+def save_topology_graph(
+                    connectivity_matrix         : list,
+                    operator_name               : str, 
+                    timestamp                   : int,
+                    topology_graph_path         : str
+                 ):
+    """
+    Saves the topology graph metrics used for routing (Values in the connectivity matrix) for each link in the topology. (Very useful if simulating congestion model)
+
+    Args:
+        connectivity_matrix (list):     Two-dimensional matrix list of sat/gs connections, where each row index (i) corresponds 
+                                        a single sat/gs in the sorted list and each column index (j) are each of the sat/gs in the sorted list. 
+                                        Any elements of the indexpair (i, j) that are 1 is a connected pair. Discludes loopback.
+        operator_name (str):            Constellation/operator name
+        timestamp (int):                Unix time
+        connectivity_matrix_path (str): Path to output the connectivity matrix files                    
+
+    Returns:
+        Saves the topology as a .txt file.
+    """
+
+    # Initialize list
+    existing_links = []
+
+    # Generate a new file
+    file_path = topology_graph_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "topology_graph_"+timestamp+".txt"
+    f = open(file_path + file_name, "a")
+
+    # Iterate over the connectivity matrix list
+    for i in range(len(connectivity_matrix)):
+        for j in range(len(connectivity_matrix[i])):
+            if connectivity_matrix[i][j] >= 1:   # >= 1 would save all the links that has congestion values that are usually greater than 1
+                if i!=j and (i, j) not in existing_links:
+                   write_this = str(i)+","+str(j)+"\t\t\t\t\t\t"+str(connectivity_matrix[i][j])+"\n"
+                   f.write(write_this)
+                   existing_links.append((i, j))
+    
+    # Close file to minimize memory leaks
+    f.close()
+
 
 
 def save_routes(

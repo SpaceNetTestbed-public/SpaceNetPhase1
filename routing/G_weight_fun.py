@@ -4,6 +4,8 @@ SpaceNet Graph Weight Function
 
 AUTHOR:         Bruce Barbour
                 Virginia Tech
+EDITED:         S Aryan
+                Virginia Tech
 
 DESCRIPTION:    This Python script weighting functions for the topology graphs.
 
@@ -49,7 +51,7 @@ def G_purely_ISLs(
         for j in range(len(connectivity_matrix[i])):
             
             # Check for a connection
-            if connectivity_matrix[i][j] == 1:
+            if connectivity_matrix[i][j] >= 1: # Takes care of congestion and no congestion
 
                 # Check if 'i' or 'j' indices are a terrestrial node
                 if i >= num_sat or j >= num_sat:
@@ -124,7 +126,7 @@ def topology_G(
             for j in range(num_nodes - num_sat):
                 adj_i = i + num_sat
                 adj_j = j + num_sat
-                if connectivity_matrix[adj_i][adj_j] == 1:
+                if connectivity_matrix[adj_i][adj_j] >= 1:  # Takes care of congestion and no congestion
                     topology_G.add_edge(adj_i, adj_j, weight=int(metrics[adj_i][adj_j]*1e3))
 
     # SATELLITE OR ISTN ONLY =================================================================================
@@ -142,7 +144,7 @@ def topology_G(
             # Mixed (ISL + Ground links)
             for i in range(num_nodes):
                 for j in range(len(connectivity_matrix[i])):
-                    if connectivity_matrix[i][j] == 1:
+                    if connectivity_matrix[i][j] >= 1:  # Takes care of congestion and no congestion
                         topology_G.add_edge(i, j, weight=int(metrics[i][j]*1e3))
 
     # Return weighted graph

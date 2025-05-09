@@ -56,6 +56,7 @@ def topology_generation(inc, sat_config,
                         routing_file_path,  
                         optimal_file_path,
                         optimal_weight_path,
+                        topology_graph_path,
                         cpu_time_path):
         
         # Start CPU timer
@@ -78,22 +79,23 @@ def topology_generation(inc, sat_config,
         conn_mat_size = num_of_satellites + num_of_ground_stations
 
         # Initialize the connectivity matrix
-        connectivity_matrix = [[0 for _ in range(conn_mat_size)] for r in range(conn_mat_size)]
+        connectivity_matrix, links_characteristics = initializer(conn_mat_size)
         
         # Add ISLs to the connectivity matrix
-        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "SAME_ORBIT_AND_GRID_ACROSS_ORBITS", time_utc_inc)
+        connectivity_matrix = mininet_add_ISLs(connectivity_matrix, satellites_sorted_in_orbits, satellites_by_name, satellites_by_index, "MODIFIED_PLUS_GRID", time_utc_inc)
 
         # Add GSLs to the connectivity matrix
         connectivity_matrix = mininet_add_GSLs_parallel(connectivity_matrix, satellites_by_name, satellites_by_index, ground_stations, 2, main_config["AssociationCritGSL"], time_utc_inc, sat_config, main_config, operator_name)
 
-        # Calculate the link characteristics for GSLs and ISLs
-        links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
-
         # Add t2t links to the connectivity matrix, if enabled
         if "TopoCrit" in main_config and int(main_config["TopoCrit"]) > 0:
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
-            #if inc == time_hist_initial: # Have first timestep update the node index file with Internet Endnodes (they have not yet been added)
-                #update_node_index(t2t_dict, node_index_file_path, tle_timestamp, operator_name) # Update the node index file with Internet Endnodes (they have not yet been added)
+
+        # Spreads congestion over NTN topology (Updates connectivity matrix values)
+        connectivity_matrix = congestion_distribution(num_of_satellites, connectivity_matrix, ground_stations, congestion_flag)
+
+        # Calculate the link characteristics for GSLs and ISLs
+        links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, links_characteristics, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
 
         """
         topfile_path = connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"
@@ -115,9 +117,11 @@ def topology_generation(inc, sat_config,
                 metrics = links_characteristics["throughput_matrix"]
             elif metric_type == "distance":
                 metrics = links_characteristics["distance_matrix"]
+            elif metric_type == "congestion":
+                metrics = links_characteristics["congestion_latency_mix_matrix"]
             elif metric_type == "hops":
                 metrics = None
-        
+
         # Pre-compute the routing tables
         if find_optimal_routes:
             all_possible_routes, optimal_route, net_optimal_weight = initial_routing_fw(satellites_by_index, connectivity_matrix, metrics, optimal_path_nodes, criterion)
@@ -132,6 +136,11 @@ def topology_generation(inc, sat_config,
             os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
         save_topology(connectivity_matrix, links_characteristics, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), connectivity_matrix_path)
         
+        # Save the topology graph
+        if os.path.exists(topology_graph_path+operator_name+"/topology_graph_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
+            os.remove(topology_graph_path+operator_name+"/topology_graph_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
+        save_topology_graph(connectivity_matrix, operator_name, str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s)), topology_graph_path)
+
         # Save the routes
         if os.path.exists(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(routing_file_path+operator_name+"/routes_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
@@ -155,6 +164,7 @@ def main():
     global criterion
     global CONN_mat_store
     global OPTIM_ROUTE_NODES
+    global congestion_flag
     criterion = 0 # default
     CONN_mat_store = {}
     OPTIM_ROUTE_NODES = {}
@@ -178,6 +188,7 @@ def main():
     terrestrial_file_path       = output_filepath+"/terrestrial_info/"
     optimal_file_path           = output_filepath+"/optimal_routes/"
     optimal_weight_path         = output_filepath+"/optimal_weights/"
+    topology_graph_path         = output_filepath+"/topology_graph/"
     link_change_path            = output_filepath+"/link_changes/"
     weather_info_path           = output_filepath+"/weather_info/"
     cpu_time_path               = output_filepath+"/cpu_time/"
@@ -191,10 +202,21 @@ def main():
         atexit.register(lambda: os.kill(resource_log_process.pid, signal.SIGTERM))
         time.sleep(10)
 
+    shell_data = sat_config["shells"]
+    sat_num_from_config = 0
+    for sh in shell_data.values():
+        sat_num_from_config = sat_num_from_config + sh["orbits"]*sh["sat_per_orbit"]
+
     # Get the source and destination nodes
     source_node         = int(main_config["SourceNode"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Source"])))
     destination_node    = int(main_config["DestNode"]) #num_of_satellites + int(''.join(filter(str.isdigit, sat_config["Destination"])))
-    optimal_path_nodes  = [source_node, destination_node]
+    optimal_path_nodes  = [sat_num_from_config+source_node, sat_num_from_config+destination_node]
+
+    # Cheking for default congestion demands
+    if main_config["RouteWeight"] == "congestion":
+        congestion_flag = 1
+    else:
+        congestion_flag = 0
 
     # Load the timescale and initialize variables
     ts = load.timescale()
@@ -214,6 +236,10 @@ def main():
                     sat_config["Sim_Date_Time"]["StartMinute"],
                     sat_config["Sim_Date_Time"]["StartSecond"]
                   )
+    
+    # Read the ground stations from the file specified in the configurations
+    ground_stations = read_gs(gs_file_path)
+    num_assigned_gs = len(ground_stations)
 
     # Convert the start time to UTC and Unix timestamp
     time_utc = ts.utc(*map(int, epoch_start))
@@ -235,7 +261,9 @@ def main():
     print(".......... Simulation Step-Size: \t", sat_config["Sim_Length"]["TimeStepDuration"], "s")
     print(".......... Simulation Interval Count: \t", sat_config["Sim_Length"]["TimeStepCount"])
     print(".......... Simulation Length: \t\t", simulation_length, "s") 
-    print(".......... TLE File: \t\t\t", path_of_recent_TLE, "\n")
+    print(".......... TLE File: \t\t\t", path_of_recent_TLE)
+    print(".......... Ground Stations: \t\t", ground_stations[source_node]['name'], '-->', ground_stations[destination_node]['name'])
+    print(".......... Congestion: \t\t\t", str(bool(congestion_flag)), "\n")
 
     # Load the satellites from the TLE file (CHANGE THIS TO TAKE IN MULTIPLE TLES FOR FUTURE CASES (EARTH AND LUNAR TLES IN ONE SIMULATION)) [FIX THIS]
     if operator_name=='starlink':
@@ -250,10 +278,6 @@ def main():
         perturber = sat_config["shells"]["shell1"]["perturber"]
         satellites_by_name = satellites_from_tle(path_of_recent_TLE, simulation_length, main_body, perturber)  # entire sats from TLE (Dict FORMAT- 'LUNAR-####' : Poliastro Orbit type) (Globally tracked)  
     satellites_by_index = {}
-
-    # Read the ground stations from the file specified in the configurations
-    ground_stations = read_gs(gs_file_path)
-    num_assigned_gs = len(ground_stations)
 
     # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
     t2t_dict = None
@@ -274,7 +298,9 @@ def main():
         print(f".......... T2T dictionary loaded: Adding {num_gateways} Gateways to ground stations; {num_endpoints} Endpoints loaded.\n")
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
-
+    req_gs = geographic_hotspots(ground_stations, "US+Canada")
+    print(req_gs)
+    exit()
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data = {}
     for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
@@ -384,6 +410,7 @@ def main():
                                              [routing_file_path]*len(time_hist),
                                              [optimal_file_path]*len(time_hist),
                                              [optimal_weight_path]*len(time_hist),
+                                             [topology_graph_path]*len(time_hist),
                                              [cpu_time_path]*len(time_hist)),
                                 total=len(time_hist), desc=r'.......... Computing network'))
     else:
@@ -391,7 +418,7 @@ def main():
         # Loop over the time history, update the topology and save it in a file
         for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
             
-            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, cpu_time_path)
+            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, topology_graph_path, cpu_time_path)
             
     
     """Checking Link changes between each interval (10sec)"""
