@@ -299,8 +299,7 @@ def main():
         ground_stations, t2t_dict = add_gateway_gs(ground_stations, t2t_dict) # Add gateways to ground stations (t2t_dict is updated with gid values for gateways and endpoints)
         criterion = int(main_config["TopoCrit"])
     req_gs = geographic_hotspots(ground_stations, "US+Canada")
-    print(req_gs)
-    exit()
+
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data = {}
     for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
