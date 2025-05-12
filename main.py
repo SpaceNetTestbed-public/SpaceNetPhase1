@@ -28,7 +28,7 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
-use_multiprocessing         = False
+use_multiprocessing         = True
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
@@ -392,7 +392,7 @@ def main():
     if use_multiprocessing:
         print(f".......... Using multi-process execution for topology generation.\n.......... Operation started {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         # Execute simulation process
-        with ProcessExecutor(max_workers=4) as executor:
+        with ProcessExecutor(max_workers=20) as executor:
             results = list(tqdm(executor.map(topology_generation,
                                              time_hist,
                                              [sat_config]*len(time_hist),

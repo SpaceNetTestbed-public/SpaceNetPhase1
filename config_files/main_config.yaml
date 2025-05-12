@@ -3,7 +3,7 @@ ConstellationName: starlink1584_10_12  # Name must match constellation config fi
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local directory
-OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/congestion_USCanada/
+OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/Acta/test_2
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
@@ -13,7 +13,7 @@ SourceNode: 25  #Union-WVa
 DestNode: 16    #Madrid
 
 # Routing Algorithm Options
-RouteWeight: congestion  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
+RouteWeight: latency  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
 
 # Ground Station Options
 GroundStationFile: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/gs_files/gs_default.txt
