@@ -4,9 +4,28 @@
 
 ## Getting started
 
+To run a basic experiment on the default constellation (Starlink) follow these steps:
+- [Make sure your files exists](#checking-your-files)
+- Run main.py file 
+
+To design your own custom experiment on an arbitrary starlink TLE:
+- Run `sh get_tles.sh` to extract an actual TLE or generate a custom TLE by [setting up the TLE generator](#TLE-generator). Store this TLE file at your desired location or the default location (utils/starlink_tles/) 
+- [Make sure your files exists](#checking-your-files)
+- Run main.py file
+
 To make it easy for you to get started with GitLab, here's a list of recommended next steps.
 
 Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+
+## Checking your files
+A successful experiment runs when all the supporting files are located correctly. Look for the following files:
+- Your constellation configuration file (constel_config) at config_files/sat_config_files/
+- Your constel_config mentioned in the main_config.yaml at config_files/
+- Your TLE file with correct filename (unix timestamp) corresponding to your experiment's datetime at utils/starlink_tles/ or TLE location at your constel_config.
+- Mention the location of your ground station file in the main_config.yaml or keep it unchanged to the default location.
+
+## TLE generator
+The testbed can generate custom constellation and can even emulate network topology over it. To make your own built, its as simple as dfining your shell
 
 ## Add your files
 
