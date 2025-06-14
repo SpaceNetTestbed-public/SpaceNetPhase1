@@ -6,18 +6,34 @@
 
 To run a basic experiment on the default constellation (Starlink) follow these steps:
 - [Make sure your files exists](#checking-your-files)
+- [Tune the parameters for your experiment](#table-of-parameters)
 - Run main.py file 
 
 To design your own custom experiment on an arbitrary starlink TLE:
 - Run `sh get_tles.sh` to extract an actual TLE or generate a custom TLE by [setting up the TLE generator](#tle-generator). Store this TLE file at your desired location or the default location (utils/starlink_tles/) 
 - [Make sure your files exists](#checking-your-files)
+- [Tune the parameters for your experiment](#table-of-parameters)
 - Run main.py file
+
+## Table of parameters
+Important parameters that the users can toggle specific to their testbed experiments:
+
+| Parameters  | Options | Definition |
+| ------------- | ------------- | ------------- |
+| ConstellationName  | string value  | constel_config filename  |
+| Debug  | 0/1  | Verbose mode  |
+| SourceNode, DestNode  | string value  | ground station names in str  |
+| RouteWeight  | latency/distance/capacity/congesition  | Routing strategy  |
+| AssociationCritGSL  | BASED_ON_DISTANCE_ONLY_MININET  | Ground Station Link conneciton strategy  |
+| UseWeatherData  | 0/1  | Using weather information  |
+| TopoCrit  | 0,1 or 2  | Enabling/disabling ISTN  |
+| generate_TLE  | true/false  | generates custom TLE  |
 
 ## Checking your files
 A successful experiment runs when all the supporting files are located correctly. Look for the following files:
 - Your constellation configuration file (constel_config) at `config_files/sat_config_files/`
 - Your constel_config mentioned in the main_config.yaml at `config_files/`
-- Your TLE file with correct filename (unix timestamp) corresponding to your experiment's datetime at `utils/starlink_tles/` or TLE location at your constel_config.
+- Your TLE file with correct filename (unix timestamp) corresponding to your experiment's datetime at `utils/starlink_tles/` or TLE location at your constel_config. If it doesn't exist then you can also [generate TLEs](#tle-generator) from scratch.
 - Mention the location of your ground station file in the main_config.yaml or keep it unchanged to the default location.
 
 ## TLE generator
