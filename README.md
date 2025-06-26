@@ -59,3 +59,15 @@ t2t_wonderproxy_dict_output_file: location to save the Endpoint dictionary after
 
 ## Project status
 If your system runs out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
+## Tracking Branches
+| Branches  | Maintainers | Description |
+| ------------- | ------------- | ------------- |
+| main  | Everyone  | main branch of Phase1, this is used to mirror over SpaceNet's public repository (most updated) |
+| dev-aryan  | suryaryan  | Xploror main dev branch $$\color{gray}(not\ synced\ -\ ecd30492)$$  |
+| dev-aryan-beta  | suryaryan  | Xploror experimental dev branch $$\color{gray}(not\ synced\ -\ fbf9483f)$$ |
+| bbarbour_jp  | Bruce Barbour  | Bruce journal development branch  |
+| IEEE_Access_2024  | Bruce Barbour  | Stable version for IEEE Access 2024 results  |
+| t2t_links  | Bruce Barbour, Alexander Lee Kedrowitsch  | Depriciated (inactive 10 months+)  |
+| dev-alex-interface-orientation  | Alexander Lee Kedrowitsch  | Depriciated (inactive 10 months+)  |
+
