@@ -160,7 +160,7 @@ class CustomSatellites:
             to_format (dict): Desirable format
 
         Returns:
-            max_gsl_length_m (float): maximum gs-sat link length (in meters)
+            epoch in desirable format
         """
 
         if to_format=='datetime':
@@ -195,9 +195,130 @@ class CustomSatellites:
                             EpochsArray(self.data.epoch + tp, method=CowellPropagator(rtol=rtol, f=total_dynamics)),
                             )
             
-        
+########################################################################################################################################        
     
 
+def check_gsl_connection(
+                        current_gs,
+                        current_sat,
+                        time,
+                        main_config
+                        ):
+    """
+    Calculates the maximum Ground Station-to-Satellite Link (GSL) length
+
+    Args:
+        main_configurations (dict): simulation definitions from the YAML configuration file
+
+    Returns:
+        max_gsl_length_m (float): maximum gs-sat link length (in meters)
+    """
+    
+    # Initialize return variable 
+    check = False
+
+    main_body = current_sat.main_body
+    sat_vec = get_sat_MERxyz(current_sat, time)
+    gs_vec = get_gs_MERxyz(current_gs, main_body)
+    distance_m = np.linalg.norm(sat_vec - gs_vec)
+
+    # Calculate gs within satellite's range
+    theta = np.arccos(np.dot(gs_vec - sat_vec, -sat_vec)/(np.linalg.norm(sat_vec)*distance_m))
+
+    # Calculate same satellite within this gs's range
+    eps = np.arccos(np.dot(sat_vec - gs_vec, gs_vec)/(np.linalg.norm(gs_vec)*distance_m))
+
+    if theta<=float(main_config["satellite_FOV"])*np.pi/180 and eps>=float(main_config["min_elevation_angle"])*np.pi/180:
+        check = True
+    else:
+        check = False
+    
+    return check, distance_m
+
+
+def calc_elfo_gs_sat_thread(
+                                ground_stations, 
+                                satellites_by_name, 
+                                satellites_by_index, 
+                                time_t, 
+                                main_config, 
+                                sat_config, 
+                                ground_station_satellites_in_range
+                                ):
+    """
+    Determines which ground stations are in range of each satellite.
+
+    Args:
+        ground_stations (dict): list of ground stations
+        satellites_by_name (dict): satellites sorted by name
+        satellites_by_index (dict): satellites sorted by index
+        time_t (datetime): timestamp corresponding to current satellite locations
+        max_gsl_length_m (float): maximum gs-sat link length (in meters)
+        ground_station_satellites_in_range (dict): list containing gs identifiers, sat indices, and distances in between
+
+    Returns:
+        ground_station_satellites_in_range (dict): list containing gs identifiers, sat indices, and distances in between, including newly appended data
+
+    """
+
+    # Iterate over each ground station
+    for gs in ground_stations:
+        # Iterate over the range of satellite indices
+        for sid in range(len(satellites_by_index)):
+            # Calculate the distance between the current ground station and satellite
+            is_visible, distance_m = check_gsl_connection(gs, satellites_by_name[str(satellites_by_index[sid])], time_t, main_config)
+            
+            # Check if the calculated distance is within the maximum GSL length
+            if is_visible:
+                # If in range, append a tuple to the result list
+                ground_station_satellites_in_range.append((distance_m, sid, gs["gid"]))
+
+    # Return the list of valid ground station-satellite pairs
+    return ground_station_satellites_in_range
+
+
+def get_gs_MERxyz(
+                    ground_station,
+                    main_body
+                    ):
+
+    gs_lat = float(ground_station["latitude_degrees_str"])*np.pi/180   #rad
+    gs_lon = float(ground_station["longitude_degrees_str"])*np.pi/180  #rad
+    gs_R = main_body.R_mean.to_value(u.m) + ground_station["elevation_m_float"]  #m
+    gs_MER_xyz = list(spherical_to_cartesian(gs_R, gs_lat, gs_lon))
+    gs_MER_xyz = [ele.value for ele in gs_MER_xyz] #m
+    return gs_MER_xyz
+
+
+def get_sat_MERxyz(
+                    satellite,
+                    current_epoch
+                    ):
+
+    sat_ephem = satellite.get_ephem()
+    rr, vv = sat_ephem.rv(current_epoch)
+    rr = rr.to_value(u.m)   #Cartesian ICRS
+    rr_PA = frame_conversions(current_epoch, rr, 'ICRS', 'PA')
+    sat_MER_xyz = frame_conversions(current_epoch, rr_PA, 'PA', 'MER')
+    return sat_MER_xyz
+
+
+def store_sat_xyzcoords(
+                    satellites_by_name,
+                    satellites_by_index,
+                    current_time
+                    ):
+    
+    coord_x = []
+    coord_y = []
+    coord_z = []
+    for sid in range(len(satellites_by_index)):
+        sat_vec = get_sat_MERxyz(satellites_by_name[str(satellites_by_index[sid])], current_time)
+        coord_x.append(sat_vec[0])
+        coord_y.append(sat_vec[1])
+        coord_z.append(sat_vec[2])
+    coords = [coord_x, coord_y, coord_z]
+    return coords
 
 
 def distance_between_ground_station_satellite(
@@ -338,6 +459,14 @@ def load_harmonics():
         lunar_harmonics_arr[1] = np.zeros((len(lunar_harmonics_arr[1]),len(lunar_harmonics_arr[1][0])))
 
 
+def get_current_states(sat, time):
+    ### Gives position and velocity w.r.t Current frame (most probably MoonICRS) at timstamp 'time'
+
+    sat_ephem = sat.get_ephem()
+    pos, vel = sat_ephem.rv(time)
+
+    return pos.to_value(u.km), vel.to_value(u.km/u.s)
+
 def get_current_epoch(
                     t: float
                      ):
@@ -348,9 +477,7 @@ def get_current_epoch(
 
 
 def get_value(property):
-    """
-    FILL THIS ASAP!
-    """
+
     body = pbodies.Moon
     GM = body.k.to_value(u.km**3 / u.s**2)
     radius = body.R_mean.to_value(u.km)

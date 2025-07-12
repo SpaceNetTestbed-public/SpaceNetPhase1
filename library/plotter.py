@@ -40,33 +40,34 @@ from mpl_toolkits.basemap import Basemap
 # >>> SCRIPT CONTROL - EDIT HERE <<<
 # ================================================================================================
 time_index              = 0
-plot_GSs                = False
+plot_GSs                = True
 plot_only_optimal       = False
+show_optimal            = False   #If false it would not plot the optimal path (doesn't work if make_gif = True)
 plot_in_3D              = True
-plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
+plot_debug              = True   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
-make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = 50 #30  
-lat0_3d                 = -15 #-35      
-ll                      = [0.5, 0.5]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
-ur                      = [0.5, 0.5]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
-timestamp               = "2024_09_27_22_15_6"
+make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
+lon0_3d                 = 70 #30  
+lat0_3d                 = 45 #-35      
+ll                      = [0.2, 0.2]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
+ur                      = [0.2, 0.2]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
+timestamp               = "2024_09_27_22_15_16"
 tle_unix_timestamp      = "1727475306"
-outputfolder_name       = "Earth"
+outputfolder_name       = "testing_Acta"
 operator_name           = "starlink"
-gif_name                = 'gif_earth2'
-number_of_orbits        = 72+5
-_timespan               = 120 #Important to change if doesnt match Phase1 settings
+gif_name                = 'gif_test'
+number_of_orbits        = 77
+_timespan               = 120  #1800 #Important to change if doesnt match Phase1 settings
 gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/terrestrial_info/terrestrial_'+tle_unix_timestamp+'.txt', 'r')
 tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+tle_unix_timestamp, 'r')
 optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/optimal_routes/'+operator_name+'/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/connectivity_matrix/'+operator_name+'/topology_'+timestamp+'.0.txt'
+conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/connectivity/'+operator_name+'/topology_'+timestamp+'.0.txt'
 node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/node_indices/'+operator_name+'/nodeindex_'+tle_unix_timestamp+'.txt'
 orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/satellites_orbits/orbits_satellites.txt'
 ################### Folder Paths ######################
-conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/connectivity_matrix/'+operator_name+'/'
+conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/connectivity/'+operator_name+'/'
 opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/output_'+outputfolder_name+'/optimal_routes/'+operator_name+'/'
-gif_path                = '/home/suryaryan/GIFS/Earth2/'
+gif_path                = '/home/suryaryan/GIFS/testing_Acta/'
 #######################################################
 Main_body = 'Moon'
 Third_body = 'Earth'
@@ -74,6 +75,8 @@ ref = 1 #1263  # index of satellite to be debugged for ISLs (Only use with plot_
 shell_color = {1584:"orange",1814:"green"}
 #shell_color = {440:"orange"}
 default_projection_for_moon = "ortho"
+
+###### To plot only terrestrial node: plot_only_optimal=True, show_optimal=False, plot_GSs=True, make_gif=False
 
 
 ts = load.timescale()
@@ -269,6 +272,7 @@ def debugging_section(sat_orbit_index, sat_index_orbit):
     # ================================================================================================
     # DEFINE CURRENT TIME INDEX
     # ================================================================================================
+    global t_current
     if operator_name.upper() == 'STARLINK':
         t_current   = ts.from_datetime(dt_hist)
     elif operator_name.upper() == 'LUNAR':
@@ -424,7 +428,6 @@ def final_plotting(optimal_route_at_epoch, count):
                 else:
                     plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats, edgecolors=coloring_shell_sats, zorder=20)
                     plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
-                    #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
 
     ####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
     if plot_debug:
@@ -465,7 +468,7 @@ def final_plotting(optimal_route_at_epoch, count):
     ######################################################### DEBUGGING ZONE ENDS ###################################
 
     # PLOT ALL GROUND STATIONS
-    optimal_route_at_t          = optimal_routes[time_index]
+    optimal_route_at_t          = optimal_route_at_epoch
     gs0                         = node_info_topology_at_t[optimal_route_at_t[0]]
     gs1                         = node_info_topology_at_t[optimal_route_at_t[-1]]
     optimal_endpoints           = [gs0, gs1]
@@ -483,59 +486,60 @@ def final_plotting(optimal_route_at_epoch, count):
                 node_lon, node_lat = node_info[1:]
                 x, y = m(node_lon, node_lat)
                 plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
-                #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
+                # plt.text(x-300000, y+50000, node_assigned_alias, fontsize=9, color='purple', zorder=100)
     handles, labels = plt.gca().get_legend_handles_labels()
     sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
     gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
 
     # PLOT OPTIMAL ROUTE
-    optimal_lon = np.array([0., ] * len(optimal_route_at_t))
-    optimal_lat = np.array([0., ] * len(optimal_route_at_t))
-    for indx, optimal_node in enumerate(optimal_route_at_t):
-        optimal_node_info   = node_info_topology_at_t[optimal_node]
-        optimal_lon[indx]   = optimal_node_info[1]
-        optimal_lat[indx]   = optimal_node_info[2]
-        x, y = m(optimal_lon[indx], optimal_lat[indx])
-        plt.scatter(x, y, s=20, marker='X', facecolors='k', edgecolors='k', zorder=4, linewidth=2)
-        #plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=4)
+    if show_optimal:
+        optimal_lon = np.array([0., ] * len(optimal_route_at_t))
+        optimal_lat = np.array([0., ] * len(optimal_route_at_t))
+        for indx, optimal_node in enumerate(optimal_route_at_t):
+            optimal_node_info   = node_info_topology_at_t[optimal_node]
+            optimal_lon[indx]   = optimal_node_info[1]
+            optimal_lat[indx]   = optimal_node_info[2]
+            x, y = m(optimal_lon[indx], optimal_lat[indx])
+            plt.scatter(x, y, s=20, marker='X', facecolors='k', edgecolors='k', zorder=4, linewidth=2)
+            #plt.text(x, y+0.3, optimal_node_info[0], fontsize=7, zorder=4)
 
-    # Define colors for different types of connections
-    colors = {'sat-sat': 'blue', 'sat-gs': 'green', 'gs-gs': 'red'}
-    blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
-    green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
-    red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
-    handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
-    labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+        # Define colors for different types of connections
+        colors = {'sat-sat': 'blue', 'sat-gs': 'green', 'gs-gs': 'red'}
+        blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
+        green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
+        red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
+        handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
+        labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
 
-    # Iterate over pairs of nodes in the optimal route
-    for i in range(len(optimal_route_at_t) - 1):
-        
-        # Assign node for comparison
-        node1 = optimal_route_at_t[i]
-        node2 = optimal_route_at_t[i+1]
+        # Iterate over pairs of nodes in the optimal route
+        for i in range(len(optimal_route_at_t) - 1):
+            
+            # Assign node for comparison
+            node1 = optimal_route_at_t[i]
+            node2 = optimal_route_at_t[i+1]
 
-        # Check if nodes are terrestrial nodes
-        node1_gs = any(gs_type in node1 for gs_type in gs_alias_list)
-        node2_gs = any(gs_type in node2 for gs_type in gs_alias_list)
+            # Check if nodes are terrestrial nodes
+            node1_gs = any(gs_type in node1 for gs_type in gs_alias_list)
+            node2_gs = any(gs_type in node2 for gs_type in gs_alias_list)
 
-        # Determine the type of connection
-        if node1_gs and node2_gs:
-            color = colors['gs-gs']
-        elif node1_gs or node2_gs:
-            color = colors['sat-gs']
-        else:
-            color = colors['sat-sat']
+            # Determine the type of connection
+            if node1_gs and node2_gs:
+                color = colors['gs-gs']
+            elif node1_gs or node2_gs:
+                color = colors['sat-gs']
+            else:
+                color = colors['sat-sat']
 
-        # Plot the line with the chosen color
-        x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
-        plt.plot(x, y, '--', linewidth=4.5, c=color, zorder=1)
+            # Plot the line with the chosen color
+            x, y = m([optimal_lon[i], optimal_lon[i+1]], [optimal_lat[i], optimal_lat[i+1]])
+            plt.plot(x, y, '--', linewidth=4.5, c=color, zorder=1)
 
     # PLOT INFORMATION
     #plt.title('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist[time_index])+') (hops='+str(len(optimal_route_at_t)-1)+')')
     print('FW Algorithm: '+str(total_num_sat)+' nodes (time: '+str(dt_hist)+') (hops='+str(len(optimal_route_at_t)-1)+')')
     #plt.xlabel('Longitude')
     #plt.ylabel('Latitude')
-    plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
+    #plt.title('Timestep: ' + timestamp + ' |  # of Hops: ' + str(len(optimal_route_at_epoch)-1) + ' | # of involved orbits: ' + str(len(optimal_orbits)) + ' | Non "+ grid" sats: ' + str(count))
     #plt.legend(fancybox=True, framealpha=1, handles=handles, labels=labels, loc='upper left').set_zorder(100)
     plt.tight_layout()
     plt.show()
@@ -558,10 +562,10 @@ def gif_creator():
     # conn_sorted_path.pop(-1)
     # conn_sorted_path.pop(-1)
 
-    # conn_sorted_path.insert(0, conn_sorted_path[5])
-    # conn_sorted_path.pop(6)
-    # conn_sorted_path.insert(6, conn_sorted_path[9])
-    # conn_sorted_path.pop(-1)
+    conn_sorted_path.insert(0, conn_sorted_path[5])
+    conn_sorted_path.pop(6)
+    conn_sorted_path.insert(6, conn_sorted_path[-1])
+    conn_sorted_path.pop(-1)
 
     # conn_sorted_path.insert(6, conn_sorted_path[11])
     # conn_sorted_path.pop(12)
@@ -607,10 +611,10 @@ def gif_creator():
     # optroute_sorted_path.pop(-1)
     # optroute_sorted_path.pop(-1)
     
-    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
-    # optroute_sorted_path.pop(6)
-    # optroute_sorted_path.insert(6, optroute_sorted_path[9])
-    # optroute_sorted_path.pop(-1)
+    optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    optroute_sorted_path.pop(6)
+    optroute_sorted_path.insert(6, optroute_sorted_path[-1])
+    optroute_sorted_path.pop(-1)
 
     # optroute_sorted_path.insert(6, optroute_sorted_path[11])
     # optroute_sorted_path.pop(12)
