@@ -13,13 +13,13 @@ import sys
 sys.path.append("../")
 import numpy as np
 from link.link_utils import *
+from utils.utils import *
 import mobility.lunar_dyn_utils as lunar_dyn
 import link.link_utils as link
 
 def calc_max_gsl_length(
                         main_config,
-                        sat_config,
-                        operator_name
+                        sat_config
                         ):
     """
     Calculates the maximum Ground Station-to-Satellite Link (GSL) length
@@ -67,7 +67,8 @@ def calc_distance_gs_sat_thread(
                                 satellites_by_name, 
                                 satellites_by_index, 
                                 time_t, 
-                                max_gsl_length_m, 
+                                main_config, 
+                                sat_config, 
                                 ground_station_satellites_in_range
                                 ):
     """
@@ -92,10 +93,22 @@ def calc_distance_gs_sat_thread(
     elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
         _distance_between_ground_station_satellite = distance_between_ground_station_satellite
 
+    sat_idx_list = total_sat_shell_listing(sat_config)
+
     # Iterate over each ground station
     for gs in ground_stations:
+        shell = 0
         # Iterate over the range of satellite indices
         for sid in range(len(satellites_by_index)):
+            while sid>sat_idx_list[shell]:
+                shell = shell + 1
+            max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][list(sat_config["shells"].keys())[shell]])
+            # Check if max GSL length is valid
+            if max_gsl_length_m == -1:
+                if main_config["Debug"] == 1:
+                    print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
+                    return
+
             # Calculate the distance between the current ground station and satellite
             distance_m = _distance_between_ground_station_satellite(gs, satellites_by_name[str(satellites_by_index[sid])], time_t)
             
@@ -280,23 +293,26 @@ def find_adjacent_orbit_sat_interface(
     ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
     if type(origin_sat)==lunar_dyn.CustomSatellites:
         _distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+        _get_current_states = lunar_dyn.get_current_states
     elif type(origin_sat)==EarthSatellite:
         _distance_between_two_satellites = distance_between_two_satellites
+        _get_current_states = get_current_states
     
     import numpy as np
-    interface_FOV =110*np.pi/180  #Interface half-angle
-    geo_origin = origin_sat.at(t)
-    origin_radial = geo_origin.position.km/np.linalg.norm(geo_origin.position.km)
-    origin_heading = geo_origin.velocity.km_per_s/np.linalg.norm(geo_origin.velocity.km_per_s)
+    interface_FOV =110*np.pi/180  #Interface half-angle (hyperparam)
+    geo_origin_radial, geo_origin_heading = _get_current_states(origin_sat, t)
+    origin_radial = geo_origin_radial/np.linalg.norm(geo_origin_radial)
+    origin_heading = geo_origin_heading/np.linalg.norm(geo_origin_heading)
     interface_direction = direction*np.cross(origin_heading, origin_radial)/np.linalg.norm(np.cross(origin_heading, origin_radial))
-    
+
     adj_plane_sats = satellites_sorted_in_orbits[adj_plane]
 
     potential_sat_list = {}
     distance_list = []
     for i in range(len(adj_plane_sats)):
-        satpos_vector = adj_plane_sats[i].at(t)
-        sat2sat_vector = satpos_vector.position.km - geo_origin.position.km
+        #satpos_vector = adj_plane_sats[i].at(t)
+        satpos_vector, satvel_vector = _get_current_states(adj_plane_sats[i], t)
+        sat2sat_vector = satpos_vector - geo_origin_radial
         sat_sat_vector = sat2sat_vector/np.linalg.norm(sat2sat_vector)
         angle = np.arccos(np.dot(sat_sat_vector, interface_direction))
         if angle<=interface_FOV:
@@ -326,6 +342,22 @@ def get_current_isl_to_sats(
         if link==1:
             satidx_list.append(idx) 
     return satidx_list
+
+
+def compute_store_xyz( 
+                        satellites_by_name, 
+                        satellites_by_index,
+                        coord_csv_path,
+                        operator_name,
+                        t, 
+                        timestamp
+                    ):
+
+    # Storing satellite coordinates for current epoch only for Lunar case
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites:
+        sat_coords = lunar_dyn.store_sat_xyzcoords(satellites_by_name, satellites_by_index, t)
+        save_xyz_2_csv(sat_coords, timestamp, operator_name, coord_csv_path)
+
 
 
 def mininet_add_ISLs(
@@ -655,59 +687,57 @@ def mininet_add_GSLs_parallel(
         connectivity_matrix (list): updated connectivity matrix, now including GSLs
 
     """
-    
-    for shells in sat_config["shells"].keys():
-        # Retrieve maximum GSL length from config
-        max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][shells], operator_name)
 
-        # Check if max GSL length is valid
-        if max_gsl_length_m == -1:
-            if main_config["Debug"] == 1:
-                print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
-                return
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites and sat_config["shells"]["shell1"]["pattern"]=='elfo':
+        _calc_gs_sat_thread = lunar_dyn.calc_elfo_gs_sat_thread
+    elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
+        _calc_gs_sat_thread = calc_distance_gs_sat_thread
+    else:
+        _calc_gs_sat_thread = calc_distance_gs_sat_thread
             
-        # Calculate number of pools and ground stations per thread pool (for parallel execution)
-        number_of_pools = len(ground_stations)/number_of_threads
-        num_of_gs_per_pool = len(ground_stations)/number_of_pools
+    # Calculate number of pools and ground stations per thread pool (for parallel execution)
+    number_of_pools = len(ground_stations)/number_of_threads
+    num_of_gs_per_pool = len(ground_stations)/number_of_pools
 
-        # Initialize list to store results for each pool
-        ground_station_satellites_in_range = [[] for _ in range(int(number_of_pools+1))]
+    # Initialize list to store results for each pool
+    ground_station_satellites_in_range = [[] for _ in range(int(number_of_pools+1))]
 
-        # Create thread list
-        thread_list = []
-        count = 0
+    # Create thread list
+    thread_list = []
+    count = 0
 
-        # Divide ground stations into pools and create threads
-        for i in range(0, len(ground_stations), int(num_of_gs_per_pool)):
-            subgs_list = ground_stations[i:i+int(num_of_gs_per_pool)]
-            thread = threading.Thread(target=calc_distance_gs_sat_thread, args=(subgs_list, satellites_by_name, satellites_by_index, t, max_gsl_length_m, ground_station_satellites_in_range[count]))
-            thread_list.append(thread)
-            count += 1
+    # Divide ground stations into pools and create threads
+    for i in range(0, len(ground_stations), int(num_of_gs_per_pool)):
+        subgs_list = ground_stations[i:i+int(num_of_gs_per_pool)]
+        thread = threading.Thread(target=_calc_gs_sat_thread, args=(subgs_list, satellites_by_name, satellites_by_index, t, main_config, sat_config, ground_station_satellites_in_range[count]))
+        thread_list.append(thread)
+        count += 1
 
-        # Start and join threads for parallel execution
-        for thread in thread_list:
-            thread.start()
-        for thread in thread_list:
-            thread.join()
+    # Start and join threads for parallel execution
+    for thread in thread_list:
+        thread.start()
+    for thread in thread_list:
+        thread.join()
 
-        # Prepare temporary list for association criteria processing
-        ground_station_satellites_in_range_temporary = []
-        for list in ground_station_satellites_in_range:
-            for ls in list:
-                ground_station_satellites_in_range_temporary.append([[ls]])
-        
-        # Chooses a function to reconfigure the connectivity matrix to match the requested association criteria
-        if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET":
-            connectivity_matrix = M_gs_sat_association_criteria_BasedOnDistance(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index))
-            return connectivity_matrix
+    # Prepare temporary list for association criteria processing
+    ground_station_satellites_in_range_temporary = []
+    for list in ground_station_satellites_in_range:
+        for ls in list:
+            ground_station_satellites_in_range_temporary.append([[ls]])
+    
+    # Chooses a function to reconfigure the connectivity matrix to match the requested association criteria
+    if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET":
+        connectivity_matrix = M_gs_sat_association_criteria_BasedOnDistance(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index))
+        return connectivity_matrix
 
-        if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET_ALAN":
-            connectivity_matrix = M_gs_sat_no_association_criteria(connectivity_matrix, ground_station_satellites_in_range_temporary, len(satellites_by_index), satellites_by_index)
-            return connectivity_matrix
+    if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET_ALAN":
+        connectivity_matrix = M_gs_sat_no_association_criteria(connectivity_matrix, ground_station_satellites_in_range_temporary, len(satellites_by_index), satellites_by_index)
+        return connectivity_matrix
 
-        if association_criteria == "BASED_ON_LONGEST_ASSOCIATION_TIME":
-            connectivity_matrix = M_gs_sat_association_criteria_MaxAssociationTime(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index), satellites_by_index, satellites_by_name, max_gsl_length_m, t)
-            return connectivity_matrix
+    if association_criteria == "BASED_ON_LONGEST_ASSOCIATION_TIME": ###### Multi-shell would fail for this criteria [FIX: Incorporate calc_max_gsl_length in the function call below]
+        connectivity_matrix = M_gs_sat_association_criteria_MaxAssociationTime(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index), satellites_by_index, satellites_by_name, data, t)
+        return connectivity_matrix
     
     return -1
 
@@ -1086,7 +1116,7 @@ def congestion_distribution(
                             congestion_flag      : int = 0
                             )-> np.ndarray:
     """
-    Initializes the NetworkX graph and assigns the weighing function.
+    Updates the connection matrix based on levels of congestion.
 
     Args:
         sat_num (int):                      Number of satellites in the connectivity matrix
@@ -1198,6 +1228,15 @@ def get_neighbour_sats(sat_id, connection_matrix, sat_num):
     neighbours = [j for j, val in enumerate(connection_matrix[sat_id]) if val != 0 and j<sat_num]
     return neighbours
 
+
+def get_current_states(sat, time):
+    ### Gives position and velocity w.r.t Skyfield frame at timstamp 'time'
+
+    node = sat.at(time)
+    pos = node.position.km
+    vel = node.velocity.km_per_s
+
+    return pos, vel
 
 
 def get_main_body_str(sat):

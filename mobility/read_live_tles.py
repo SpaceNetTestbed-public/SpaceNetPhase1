@@ -36,7 +36,8 @@ def get_orbital_planes_classifications(
                                         tle_filename                : str, 
                                         constellation               : str, 
                                         number_of_orbits            : int, 
-                                        shell_num                   : int, 
+                                        shell_num                   : int,
+                                        constellation_type          : str, 
                                         orbits_inclination          : float,
                                         orbits_altitude             : float
                                       ) -> dict:
@@ -67,7 +68,7 @@ def get_orbital_planes_classifications(
     Lines = tle_file.readlines()
 
     # Defining thresholds
-    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(constellation, orbits_inclination, orbits_altitude)
+    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(constellation, constellation_type, orbits_inclination, orbits_altitude)
     
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
     for i in range(0, len(Lines), 3):
@@ -222,7 +223,7 @@ def sort_satellites_in_orbit(
     return sorted_sats
 
 
-def real_tle_filter(operator_name, orbits_inclination, orbits_altitude):
+def real_tle_filter(operator_name, constellation_type, orbits_inclination, orbits_altitude):
     """
     INPUT:  operator_name (str)        : Name of the constellation (SUPPORTS: starlink, lunar)
             orbits_inclination (float) : Mean inclination of the shell (in degrees)
@@ -255,10 +256,16 @@ def real_tle_filter(operator_name, orbits_inclination, orbits_altitude):
 
 
     elif operator_name=='lunar':
-        thresh1 = 1
-        thresh2 = -1
-        thresh3 = 1
-        thresh4 = -1
+        if constellation_type=='elfo':
+            thresh1 = 1
+            thresh2 = -1
+            thresh3 = 38*orbits_altitude    #Assuming maximum eccentricity that user would give is 0.95
+            thresh4 = -0.1*orbits_altitude
+        else:
+            thresh1 = 1
+            thresh2 = -1
+            thresh3 = 1
+            thresh4 = -1
     
     else:
         thresh1 = 0.1

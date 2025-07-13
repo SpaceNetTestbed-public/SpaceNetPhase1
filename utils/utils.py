@@ -79,6 +79,7 @@ import sys
 sys.path.append("../")
 from mobility.read_live_tles import *
 from utils.file_utils import *
+import mobility.read_live_tles as rlt
 
 # =================================================================================== #
 # ---------------------------------- FILE SYSTEM ------------------------------------ #
@@ -564,6 +565,24 @@ def save_node_index_and_terrestrial_info(
     nodeindex_log.close()
     terrestrial_log.close()
 
+def save_xyz_2_csv(
+                        coordinate_list         : list, 
+                        timestamp               : int,
+                        operator_name           : str, 
+                        csv_filepath            : str
+                     ):
+    
+    import pandas as pd
+
+    # Generate a new file
+    file_path = csv_filepath+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "xyzcoords_"+("_".join(timestamp))+".csv"
+    xyz_dict = {'X': coordinate_list[0], 'Y': coordinate_list[1], 'Z': coordinate_list[2]}
+    df = pd.DataFrame(xyz_dict)
+    df.to_csv(file_path+file_name)
+
+
 def save_cpu_time(
                     cpu_runtime     : float, 
                     timestamp       : int,
@@ -943,7 +962,7 @@ def arrange_satellites(
                     cn +=1
 
             # Sort the satellites in orbit and append them to list
-            sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
+            sorted = rlt.sort_satellites_in_orbit(satellites_in_orbit, timestamp)
             satellites_sorted_in_orbits.append(sorted)
             sat_sorted_in_orb_temp.append(sorted)
 
@@ -982,6 +1001,16 @@ def arrange_satellites(
     return {"sorted satellite in orbits": satellites_sorted_in_shells,
             "satellites by index": satellites_by_index
             }
+
+
+def total_sat_shell_listing(sat_config):
+
+    sat_index_per_shell = [0]
+    for shell_idx, shell_name in enumerate(sat_config["shells"].keys()):
+        sat_index_per_shell.append(sat_index_per_shell[-1] + sat_config["shells"][shell_name]["orbits"]*sat_config["shells"][shell_name]["sat_per_orbit"])
+    sat_index_per_shell.pop(0)
+    
+    return sat_index_per_shell
 
 
 def reload_tles(

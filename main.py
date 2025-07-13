@@ -57,6 +57,7 @@ def topology_generation(inc, sat_config,
                         optimal_file_path,
                         optimal_weight_path,
                         topology_graph_path,
+                        coord_csv_path,
                         cpu_time_path):
         
         # Start CPU timer
@@ -131,6 +132,11 @@ def topology_generation(inc, sat_config,
         # Stop CPU timer
         dt_it = (time.perf_counter_ns() - t0_it) * 1e-9 # Convert to seconds
         
+        # Save the xyz coordinates (ONLY WORKS WITH LUNAR CASE)
+        if os.path.exists(coord_csv_path+operator_name+"/xyzcoords_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".csv"): # Check if file already exists, if so then rewrite
+            os.remove(coord_csv_path+operator_name+"/xyzcoords_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".csv")
+        compute_store_xyz(satellites_by_name, satellites_by_index, coord_csv_path, operator_name, time_utc_inc, [str(y), str(mon), str(d), str(h), str(min), str(float(s))])
+
         # Save the topology
         if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"): # Check if file already exists, if so then rewrite
             os.remove(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt")
@@ -191,6 +197,7 @@ def main():
     topology_graph_path         = output_filepath+"/topology_graph/"
     link_change_path            = output_filepath+"/link_changes/"
     weather_info_path           = output_filepath+"/weather_info/"
+    coord_csv_path              = output_filepath+"/coord_store/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
 
@@ -303,7 +310,7 @@ def main():
     # Get the orbital data and arrange the satellites in the orbits
     orbital_data = {}
     for itr, sh in enumerate(sat_config["shells"].keys()):  # Iterating over each shell
-        orb_data = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shells"][sh]["orbits"], itr, sat_config["shells"][sh]["inclination"], sat_config["shells"][sh]["altitude"])
+        orb_data = get_orbital_planes_classifications(path_of_recent_TLE, operator_name, sat_config["shells"][sh]["orbits"], itr, sat_config["shells"][sh]["pattern"], sat_config["shells"][sh]["inclination"], sat_config["shells"][sh]["altitude"])
         orbital_data.update(orb_data)
     arranged_sats = arrange_satellites(orbital_data, satellites_by_name, sat_config, main_config, operator_name, satellites_by_index, time_utc, tle_timestamp, sat_orbit_file_path) #Globally tracked
     satellites_by_index = arranged_sats["satellites by index"]
@@ -410,6 +417,7 @@ def main():
                                              [optimal_file_path]*len(time_hist),
                                              [optimal_weight_path]*len(time_hist),
                                              [topology_graph_path]*len(time_hist),
+                                             [coord_csv_path]*len(time_hist),
                                              [cpu_time_path]*len(time_hist)),
                                 total=len(time_hist), desc=r'.......... Computing network'))
     else:
@@ -417,7 +425,7 @@ def main():
         # Loop over the time history, update the topology and save it in a file
         for inc in tqdm(time_hist, total=len(time_hist), desc=r'.......... Computing network'):
             
-            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, topology_graph_path, cpu_time_path)
+            topology_generation(inc, sat_config, ts, epoch_start, num_of_satellites, num_of_ground_stations, ground_stations, optimal_path_nodes, operator_name, main_config, t2t_dict, connectivity_matrix_path, routing_file_path, optimal_file_path, optimal_weight_path, topology_graph_path, coord_csv_path, cpu_time_path)
             
     
     """Checking Link changes between each interval (10sec)"""
