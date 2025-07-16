@@ -33,13 +33,13 @@ plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existing in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -70  #-80    #-100   #5  #-35 
-lat0_3d                 = 40      #20   #30
-file_timestamp          = "2024_09_27_22_15_6"
-timestamp               = "2024_09_27_22_15_46"
-output_pathname         = "Acta/test"
+lon0_3d                 = -40  #-80    #-100   #5  #-35 
+lat0_3d                 = 50      #20   #30
+file_timestamp          = "2025_7_5_6_0_0"
+timestamp               = "2025_07_05_06_00_0"
+output_pathname         = "Acta/case2/congestion/test1"
 gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/terrestrial_info/terrestrial_'+file_timestamp+'.0.txt', 'r')
-tle_file                = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/starlink_tles/starlink_1727475306', 'r')
+tle_file                = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/starlink_tles/starlink_1751837425', 'r')
 optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
 conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/connectivity/starlink/topology_'+timestamp+'.0.txt'
 node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/node_indices/starlink/nodeindex_'+file_timestamp+'.0.txt'
@@ -49,9 +49,9 @@ gif_name                = 'congestion2'
 ################### Folder Paths ######################
 conn_folder             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/connectivity/starlink/'
 opt_route_folder        = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/optimal_routes/starlink/'
-gif_path                = '/home/spacenet/Desktop/GIFs/Acta/test/'
+gif_path                = '/home/spacenet/GIFS/Acta/case2/congestion/test1/'
 #######################################################
-number_of_orbits = 72+5 #$
+number_of_orbits = 72+6 #$
 # num_plotorbit = range(1)  #$ Number of orbits to plot
 # gs0 = (-74.003663, 40.717042) # NYC
 # gs1 = (103.850070, 1.289670) # Singapore
@@ -488,10 +488,10 @@ else:    ## (MAKING GIF)
     # conn_sorted_path.pop(-1)
     # conn_sorted_path.pop(-1)
 
-    conn_sorted_path.insert(0, conn_sorted_path[5])
-    conn_sorted_path.pop(6)
-    conn_sorted_path.insert(6, conn_sorted_path[-1])
-    conn_sorted_path.pop(-1)
+    # conn_sorted_path.insert(0, conn_sorted_path[5])
+    # conn_sorted_path.pop(6)
+    # conn_sorted_path.insert(6, conn_sorted_path[-1])
+    # conn_sorted_path.pop(-1)
 
     # conn_sorted_path.insert(6, conn_sorted_path[11])
     # conn_sorted_path.pop(12)
@@ -544,10 +544,10 @@ else:    ## (MAKING GIF)
     # optroute_sorted_path.pop(-1)
     # optroute_sorted_path.pop(-1)
     
-    optroute_sorted_path.insert(0, optroute_sorted_path[5])
-    optroute_sorted_path.pop(6)
-    optroute_sorted_path.insert(6, optroute_sorted_path[-1])
-    optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    # optroute_sorted_path.pop(6)
+    # optroute_sorted_path.insert(6, optroute_sorted_path[-1])
+    # optroute_sorted_path.pop(-1)
 
     # optroute_sorted_path.insert(6, optroute_sorted_path[11])
     # optroute_sorted_path.pop(12)
