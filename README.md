@@ -26,7 +26,7 @@ Important parameters that the users can toggle specific to their testbed experim
 | ConstellationName  | string value  | constel_config filename  |
 | Debug  | 0/1  | Verbose mode  |
 | SourceNode, DestNode  | string value  | ground station names in str  |
-| RouteWeight  | latency/distance/capacity/congesition  | Routing strategy  |
+| RouteWeight  | latency/distance/capacity/congestion  | Routing strategy  |
 | AssociationCritGSL  | BASED_ON_DISTANCE_ONLY_MININET  | Ground Station Link conneciton strategy  |
 | UseWeatherData  | 0/1  | Using weather information  |
 | TopoCrit  | 0,1 or 2  | Enabling/disabling ISTN  |
@@ -60,6 +60,20 @@ t2t_wonderproxy_endpoint_location_file: location of csv file that provides locat
 t2t_wonderproxy_endpoint_latency_file: location of csv file that provides latency data
 t2t_wonderproxy_dict_output_file: location to save the Endpoint dictionary after the data has been scraped and compiled
 
+## Ground device specifications 
+Multiple device type support with their respective wireless design values.
+
+|  | VSAT | Starlink | Handheld UEs | Gateways | IOT (class 1) | IOT (class 2) | IOT (class 3) |
+| ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- | ------------- |
+| Transmission power (dBm)  | 33 | 47  | 23  | 23  | 14  | 20  | 23  |
+| Antenna Type  | 60cm aperture dia  | phased array  | omnidirectional antenna  | omnidirectional antenna  | omnidirectional antenna  | omnidirectional antenna  | omnidirectional antenna  |
+| TX Gain (dBi)  | 43.2  | 33.5  | 0  | 0  | 0  | 0  | 0  |
+| RX Gain (dBi)  | 39.7  | 33.0  | 0  | 0  | 0  | 0  | 0  |
+| Noise figure | 1.2  | 2.5  | 9  | 9  | 9  | 9  | 9  |
+| RX Cable Loss  | 3  | 1.5  | 0  | 3  | 0  | 0  |0  |
+| Polarization  | 0  | 0  | 3  | 0  | 3  | 3  | 3  |
+
 ## Project status
 If your system runs out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
 
