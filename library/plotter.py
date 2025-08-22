@@ -1,6 +1,6 @@
 ''''
 
-SpaceNet: Generalized Plotting for Walker type constellation
+SpaceNet: Generalized Plotting for Walker type constellation (For Lunar ELFO cases, suggested to use csv_store to grab csvs and plot in MATLAB)
 
 AUTHOR:         Suryansh Aryan, 2025
                 Virginia Tech
@@ -46,14 +46,14 @@ show_optimal            = True   #If false it would not plot the optimal path (d
 plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
-make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
+make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = -40 #30  
-lat0_3d                 = 50 #-35      
+lat0_3d                 = 45 #-35      
 ll                      = [0.4, 0.4]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
 ur                      = [0.4, 0.4]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
-timestamp               = "2025_07_05_06_00_40"
+timestamp               = "2025_07_05_06_00_30"
 tle_unix_timestamp      = "1751837425"
-outputfolder_name       = "Acta/case2/congestion/test1/"
+outputfolder_name       = "poster/congestion"
 operator_name           = "starlink"
 gif_name                = 'gif_test'
 number_of_orbits        = 78
@@ -68,7 +68,7 @@ orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-gene
 ################### Folder Paths ######################
 conn_folder             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/connectivity/'+operator_name+'/'
 opt_route_folder        = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/optimal_routes/'+operator_name+'/'
-gif_path                = '/home/spacenet/GIFS/Acta/case2/congestion/test1/'
+gif_path                = '/home/spacenet/GIFS/poster/normal/'
 #######################################################
 Main_body = 'Moon'
 Third_body = 'Earth'

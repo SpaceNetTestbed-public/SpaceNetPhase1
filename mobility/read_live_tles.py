@@ -68,8 +68,9 @@ def get_orbital_planes_classifications(
     Lines = tle_file.readlines()
 
     # Defining thresholds
-    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(constellation, constellation_type, orbits_inclination, orbits_altitude)
+    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(tle_filename, constellation, constellation_type, orbits_inclination, orbits_altitude)
     
+    TLE_A = []
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
     for i in range(0, len(Lines), 3):
 
@@ -102,7 +103,9 @@ def get_orbital_planes_classifications(
             dump_orbital_data["aop"].append(tle_second_line[5])
             dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
             dump_orbital_data["Mean motion"].append(tle_second_line[7])
+            TLE_A.append(tle_a)
 
+    print(len(dump_orbital_data["RAAN"]))
     # Collect RAAN values in data dump
     list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
 
@@ -158,6 +161,13 @@ def get_orbital_planes_classifications(
                     
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
+
+    # inc_list = []
+    # for i in dump_orbital_data["Inclination"]:
+    #     inc_list.append(float(i))
+
+    # plt.hist(inc_list, bins=5, color='skyblue', edgecolor='black')
+    # plt.show()
 
     # Return the collected orbital information separated by orbit
     return data_orbits
@@ -223,7 +233,7 @@ def sort_satellites_in_orbit(
     return sorted_sats
 
 
-def real_tle_filter(operator_name, constellation_type, orbits_inclination, orbits_altitude):
+def real_tle_filter(tle_path, operator_name, constellation_type, orbits_inclination, orbits_altitude):
     """
     INPUT:  operator_name (str)        : Name of the constellation (SUPPORTS: starlink, lunar)
             orbits_inclination (float) : Mean inclination of the shell (in degrees)
@@ -237,40 +247,53 @@ def real_tle_filter(operator_name, constellation_type, orbits_inclination, orbit
 
     """
 
-    if operator_name=='starlink':
-        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+    tle_name = tle_path.split("/")[-1].split('_')[-1]
+    if tle_name.strip() == '1751837425':   #####This is only for Acta journal, remove after journal acceptance
+        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FC
             thresh1 = 0.1
-            thresh2 = -0.9
-            thresh3 = 7.1524
-            thresh4 = -9.0524
+            thresh2 = -0.1442
+            thresh3 = 7.3524
+            thresh4 = -19.0524
         elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
-            thresh1 = 0.1
+            thresh1 = 0.9
             thresh2 = -0.9
-            thresh3 = 3.0624
-            thresh4 = 2.0524
+            thresh3 = 13.0624
+            thresh4 = -13.0524
+    else:
+        if operator_name=='starlink':
+            if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+                thresh1 = 0.1
+                thresh2 = -0.9
+                thresh3 = 7.1524
+                thresh4 = -9.0524
+            elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
+                thresh1 = 0.1
+                thresh2 = -0.9
+                thresh3 = 3.0624
+                thresh4 = 2.0524
+            else:
+                thresh1 = 0.1
+                thresh2 = -0.1
+                thresh3 = 1
+                thresh4 = -1
+
+
+        elif operator_name=='lunar':
+            if constellation_type=='elfo':
+                thresh1 = 1
+                thresh2 = -1
+                thresh3 = 38*orbits_altitude    #Assuming maximum eccentricity that user would give is 0.95
+                thresh4 = -0.1*orbits_altitude
+            else:
+                thresh1 = 1
+                thresh2 = -1
+                thresh3 = 1
+                thresh4 = -1
+        
         else:
             thresh1 = 0.1
             thresh2 = -0.1
             thresh3 = 1
             thresh4 = -1
-
-
-    elif operator_name=='lunar':
-        if constellation_type=='elfo':
-            thresh1 = 1
-            thresh2 = -1
-            thresh3 = 38*orbits_altitude    #Assuming maximum eccentricity that user would give is 0.95
-            thresh4 = -0.1*orbits_altitude
-        else:
-            thresh1 = 1
-            thresh2 = -1
-            thresh3 = 1
-            thresh4 = -1
-    
-    else:
-        thresh1 = 0.1
-        thresh2 = -0.1
-        thresh3 = 1
-        thresh4 = -1
 
     return thresh1, thresh2, thresh3, thresh4

@@ -1054,7 +1054,11 @@ def calculate_link_characteristics_for_gsls_isls(
                 latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light  (Units in ms)
                 throughput_matrix[i][j]     = channel_bandwidth_downlink            #Mbps
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
-                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ### Temp for poster
+                throughput_matrix[i][j] = connectivity_matrix[i][j]**(-1)*throughput_matrix[i][j]
+                latency_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] >= 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):  # >=1 takes care of congestion and no congestion
@@ -1066,7 +1070,11 @@ def calculate_link_characteristics_for_gsls_isls(
                 channel_width               = channel_bandwidth_uplink
                 throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
-                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ### Temp for poster
+                throughput_matrix[i][j] = connectivity_matrix[i][j]**(-1)*throughput_matrix[i][j]
+                latency_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
 
                 # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
@@ -1086,7 +1094,11 @@ def calculate_link_characteristics_for_gsls_isls(
                 channel_width               = channel_bandwidth_downlink
                 throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
-                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ### Temp for poster
+                throughput_matrix[i][j] = connectivity_matrix[i][j]**(-1)*throughput_matrix[i][j]
+                latency_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
 
     # Return latency, throughput, distance and congestion matrices
     return {
@@ -1128,8 +1140,8 @@ def congestion_distribution(
         connectivity_matrix:                Updated Weights (values between 1-max, 1-->no congestion..... max-->highest congestion)
     """
 
-    congestion_spread = 3   ##This determines the spread of congestion distribution in links 
-    max = 5
+    congestion_spread = 5   ##This determines the spread of congestion distribution in links 
+    max = 2
 
     if congestion_flag:
 
@@ -1210,6 +1222,12 @@ def geographic_hotspots(gs_list, location):
     if location == "US+Canada":
         lat_lims = [25.0, 50.0]
         lon_lims = [-130.0, -68.0]
+    elif location == "Europe":
+        lat_lims = [25.0, 50.0]
+        lon_lims = [-130.0, -68.0]
+    elif location == "Japan":
+        lat_lims = [23.7048, 48.7048]
+        lon_lims = [107.2529, 169.2529]    
     else:
         lat_lims = [-180, 180]
         lon_lims = [-90, 90]

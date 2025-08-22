@@ -1,19 +1,19 @@
 # Main configuration script for Phase 1 (Simulation Phase) of the SpaceNet Testbed
-ConstellationName: starlink1584_10_12  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink2_0600  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local directory
-OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/Acta/test_2
+OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/poster/congestion
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
 
 # Source & Destination Nodes for Optimal Routing (For GSes: Total # of Sats + GS # in list; For Sats: idk lol)
-SourceNode: 25  #Union-WVa
-DestNode: 16    #Madrid
+SourceNode: 25  #McMurdo, Union WVa
+DestNode: 16    #Japan, Madrid
 
 # Routing Algorithm Options
-RouteWeight: latency  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
+RouteWeight: congestion # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
 
 # Ground Station Options
 GroundStationFile: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/gs_files/gs_default.txt
