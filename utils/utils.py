@@ -215,7 +215,7 @@ def save_topology(
         for j in range(len(connectivity_matrix[i])):
             if connectivity_matrix[i][j] >= 1:   # >= 1 would save all the links that has congestion values that are usually greater than 1
                 if i!=j and (i, j) not in existing_links:
-                   write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["congestion_latency_mix_matrix"][i][j],2))+"\n"
+                   write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],5))+","+str(round(links_charateristics["congestion_latency_mix_matrix"][i][j],2))+"\n"
                    #write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["distance_matrix"][i][j],2))+"\n"
                    f.write(write_this)
                    existing_links.append((i, j))

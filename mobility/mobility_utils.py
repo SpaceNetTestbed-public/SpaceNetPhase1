@@ -1069,6 +1069,8 @@ def calculate_link_characteristics_for_gsls_isls(
                 snr                         = 10**(snr_dB/10)
                 channel_width               = channel_bandwidth_uplink
                 throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                if i==1800 and j==71:
+                    print(snr, distance_meters)
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
                 # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
                 congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]

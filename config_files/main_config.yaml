@@ -3,7 +3,7 @@ ConstellationName: starlink2_0600  # Name must match constellation config file (
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local directory
-OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/poster/congestion
+OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/poster/normal
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
@@ -13,13 +13,13 @@ SourceNode: 25  #McMurdo, Union WVa
 DestNode: 16    #Japan, Madrid
 
 # Routing Algorithm Options
-RouteWeight: congestion # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
+RouteWeight: latency # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
 
 # Ground Station Options
 GroundStationFile: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/gs_files/gs_default.txt
 min_elevation_angle: 25 # minimum elevation angle between GS and Sat (default: 25 degrees)
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
-UseWeatherData: True # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
+UseWeatherData: False # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
 
 # Terrestrial Integration Configuration:
 TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
