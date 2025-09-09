@@ -89,11 +89,11 @@ ue_params = {
 
 gateway_params = {
     'terminal_type': 'GATEWAY',
-    'transmit_power': 0.2,  # 200 mW (23 dBm)
+    'transmit_power': 37,  # 5 W (37 dBm)
     'antenna_type': 'Omnidirectional antenna (linear polarisation)',
-    'tx_gain': 0,
-    'rx_gain': 0,
-    'noise_figure': 9,
+    'tx_gain': 34.6,
+    'rx_gain': 33.2,
+    'noise_figure': 2.5,
     'rx_cable_loss': 3,
     'polarisation': 0
 }
