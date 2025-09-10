@@ -4,6 +4,8 @@ AUTHOR:         Mohamed M. Kassem, Ph.D.
                 University of Surrey
 EDITOR:         Bruce Barbour
                 Virginia Tech
+                Rahul V. Chintalapati
+                Virginia Tech
 DESCRIPTION:    This Python script supplies the primary utility functions for computing link characteristics.
 CONTENTS:       LINK UTILITY FUNCTIONS
                     get_weather_info(lat, lon, init_timestamp)

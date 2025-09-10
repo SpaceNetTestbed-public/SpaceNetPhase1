@@ -70,7 +70,6 @@ def get_orbital_planes_classifications(
     # Defining thresholds
     thresh1, thresh2, thresh3, thresh4 = real_tle_filter(tle_filename, constellation, constellation_type, orbits_inclination, orbits_altitude)
     
-    TLE_A = []
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
     for i in range(0, len(Lines), 3):
 
@@ -103,9 +102,7 @@ def get_orbital_planes_classifications(
             dump_orbital_data["aop"].append(tle_second_line[5])
             dump_orbital_data["Mean anomaly"].append(tle_second_line[6])
             dump_orbital_data["Mean motion"].append(tle_second_line[7])
-            TLE_A.append(tle_a)
 
-    print(len(dump_orbital_data["RAAN"]))
     # Collect RAAN values in data dump
     list_of_values = [-1 for _ in range(len(dump_orbital_data["RAAN"]))]
 

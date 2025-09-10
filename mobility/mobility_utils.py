@@ -1056,9 +1056,6 @@ def calculate_link_characteristics_for_gsls_isls(
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
                 # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
                 congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
-                ### Temp for poster
-                throughput_matrix[i][j] = connectivity_matrix[i][j]**(-1)*throughput_matrix[i][j]
-                latency_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] >= 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):  # >=1 takes care of congestion and no congestion
@@ -1069,14 +1066,9 @@ def calculate_link_characteristics_for_gsls_isls(
                 snr                         = 10**(snr_dB/10)
                 channel_width               = channel_bandwidth_uplink
                 throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
-                if i==1800 and j==71:
-                    print(snr, distance_meters)
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
                 # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
                 congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
-                ### Temp for poster
-                throughput_matrix[i][j] = connectivity_matrix[i][j]**(-1)*throughput_matrix[i][j]
-                latency_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
 
                 # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
@@ -1098,9 +1090,6 @@ def calculate_link_characteristics_for_gsls_isls(
                 # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
                 # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
                 congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
-                ### Temp for poster
-                throughput_matrix[i][j] = connectivity_matrix[i][j]**(-1)*throughput_matrix[i][j]
-                latency_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
 
     # Return latency, throughput, distance and congestion matrices
     return {
