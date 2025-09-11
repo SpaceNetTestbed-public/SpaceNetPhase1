@@ -17,7 +17,7 @@ CONTENTS:       FILE SYSTEM/ (STARTS AT 80)
                     read_IProute_files_thread(routes, initial_routes)
                     save_topology(connectivity_matrix, links_charateristics, main_configurations, timestamp)
                     save_routes(routes, main_configurations, timestamp)
-                    save_optimal_path(optimal_path, main_configurations, timestap)
+                    save_optimal_path(optimal_path, main_configurations)
 
                 PARSING/ (STARTS AT 275)
                     parse_config_file_yml(filepath, filename)                     
@@ -368,7 +368,7 @@ def save_link_changes(
                         itr                     : int,
                         targetgs                : str,
                         operator_name           : str, 
-                        link_changes_path          : str
+                        link_changes_path       : str
                      ):
     
     # Generate a new file
@@ -440,7 +440,7 @@ def save_node_index_and_terrestrial_info(
                                             ground_stations         : list, 
                                             node_index_file_path    : str,
                                             terrestrial_file_path   : str,
-                                            timestamp               : int,
+                                            timestamp               : list,
                                             operator_name           : str,
                                             t2t_dict                : dict = None
                                         ):
@@ -464,20 +464,20 @@ def save_node_index_and_terrestrial_info(
     # Generate a new file for node indices
     file_path = node_index_file_path+operator_name+"/"
     check_create_path(file_path)
-    file_name = "nodeindex_"+timestamp+".txt"
+    file_name = "nodeindex_"+("_".join(timestamp))+".txt"
     nodeindex_log_write = open(file_path + file_name, "w") # Open file in write mode, overwriting any existing content
     nodeindex_log_write.close()
 
     # Generate a new file for terrestrial information
     file_path2 = terrestrial_file_path+"/"
     check_create_path(file_path2)
-    file_name2 = "terrestrial_"+timestamp+".txt"
+    file_name2 = "terrestrial_"+("_".join(timestamp))+".txt"
     terrestrial_log_write = open(file_path2 + file_name2, "w")
     terrestrial_log_write.close()
 
     # Append to files
-    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+timestamp+".txt", "a")
-    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+timestamp+".txt", "a")
+    nodeindex_log = open(node_index_file_path+operator_name+"/nodeindex_"+("_".join(timestamp))+".txt", "a")
+    terrestrial_log = open(terrestrial_file_path+"terrestrial_"+("_".join(timestamp))+".txt", "a")
 
     # Iterate over the satellites_by_index
     for sat_indx, sat_alias in satellites_by_index.items():
@@ -485,36 +485,6 @@ def save_node_index_and_terrestrial_info(
 
     # Iterate over ground station list
     for gs in ground_stations:
-        if gs['type'] == 9: # 9 indicates a gateway ground station
-            alias_prefix = "GW-"
-        else:
-            alias_prefix = "CT-"  # all else are designated as customer terminals (ct)
-        nodeindex_log.write(str(1+sat_indx+gs['gid'])+":"+alias_prefix+str(gs['gid'])+"\n")
-        terrestrial_log.write(
-                                str(1+sat_indx+gs['gid']) +
-                                ":"+alias_prefix+str(gs['gid']) +
-                                ":"+str(gs['name']) +
-                                ":"+str(gs['latitude_degrees_str']) +
-                                ":"+str(gs['longitude_degrees_str']) +
-                                "\n"
-                             )
-
-    # If t2t_dict is included, iterate over the dictionary and append endpoint aliases to the file
-    if t2t_dict is not None:
-        alias_prefix = "IE-" # IE indicates an internet endpoint
-        for id in t2t_dict.keys():
-            if 'type' in t2t_dict[id] and t2t_dict[id]['type'] == 'endpoint':
-                gs_coord = t2t_dict[id]['coordinates']
-                gs_name = str(t2t_dict[id]['friendly_name']) if 'friendly_name' in t2t_dict.keys() else str(t2t_dict[id]['name'])
-                nodeindex_log.write(str(1+sat_indx+t2t_dict[id]['gid'])+":"+alias_prefix+str(t2t_dict[id]['gid'])+"\n")
-                terrestrial_log.write(
-                                        str(1+sat_indx+t2t_dict[id]['gid']) +
-                                        ":"+alias_prefix+str(t2t_dict[id]['gid']) +
-                                        ":"+gs_name +
-                                        ":"+str(gs_coord[0]) +
-                                        ":"+str(gs_coord[1]) +
-                                        "\n"
-                                     )
         if gs['type'] == 9: # 9 indicates a gateway ground station
             alias_prefix = "GW-"
         else:
@@ -578,39 +548,6 @@ def save_cpu_time(
 
     # Close file to minimize memory leaks
     cpu_clock_log.close()
-
-
-def save_cpu_time(
-                    cpu_runtime     : float, 
-                    timestamp       : int,
-                    operator_name   : str, 
-                    cpu_time_path   : str,
-                    dt              : int
-                 ):
-    """
-    Saves the matching node indices and their corresponding aliases.
-
-    Args:
-        cpu_runtime (float):            CPU clock runtime, in seconds
-        timestamp (list):               Unix time as a list
-        operator_name (str):            Constellation/operator name
-        cpu_time_path (str):            Path to output CPU clock runtime file
-        dt (int):                       Topology granularity   
-
-    Returns:
-        Saves the CPU clock runtime as a .txt file.
-    """
-
-    # Generate a new file
-    cpu_clock_log = open(cpu_time_path+operator_name+"/cpu_clockruntime_"+("_".join(timestamp[:3]))+".txt", "a")
-    
-    # Iterate over the optimal path list
-    if cpu_runtime != None:
-        cpu_clock_log.write(str(cpu_runtime)+"\n")
-
-    # Close file to minimize memory leaks
-    cpu_clock_log.close()
-
 
 # =================================================================================== #
 # ------------------------------------ PARSING -------------------------------------- #
@@ -908,8 +845,9 @@ def arrange_satellites(
                         orbital_data            : dict, 
                         satellites_by_name      : dict, 
                         sat_config              : dict,
+                        main_config             : dict,
                         operator_name           : str,
-                        satellites_by_index     : {},
+                        satellites_by_index     : dict,
                         timestamp               : object,
                         tle_timestamp           : str,
                         sat_orbit_file_path     : str
@@ -918,9 +856,10 @@ def arrange_satellites(
     Arranges the satellites by index by transforming a TLE file into sorted orbits.
 
     Args:
-        orbital_data (dict):                Extracted orbital parameters for each satellite in TLE
+        orbital_data (dict):                Extracted orbital parameters for each satellite in TLE for all shells
         satellites_by_name (dict):          Satellite information arranged by name
         sat_config (dict):                  Constellation configuration file
+        main_config (dict):                 Main simulation configuration file
         operator_name (name):               Constellation/operator name
         satellites_by_index (empty dic):    Satellite information arranged by index, given as an empty dictionary
         timestamp (object):                 Skyfield object datetime
@@ -935,41 +874,45 @@ def arrange_satellites(
     file_path = sat_orbit_file_path+operator_name+"/"
     check_create_path(file_path)
     file_name = "sorted_satellites_within_orbit_"+tle_timestamp+".txt"
-    #f = open(sat_orbit_file_path+operator_name+"/sorted_satellites_within_orbit_"+tle_timestamp+".txt", "a")
-    f0 = open(file_path + file_name, "w")
-    f0.close()
     f = open(file_path + file_name, "a")
     
     # Debugging purposes
-    if sat_config["Debug"] == 1:
+    if main_config["Debug"] == 1:
         print("..... Phase-1: Constellation Orbits:")
 
     # Initialize satellite names according to constellation naming conversion
+    satellites_sorted_in_shells = []
     satellites_sorted_in_orbits = []
 
-    # Iterate over the number of orbits in first shell
-    for i in range(sat_config["shell1"]["orbits"]):
-        sorted = []
-        satellites_in_orbit = []
-        cn = 0
-        for data in orbital_data:
-            if i == int(orbital_data[str(data)][0]):
-                satellites_in_orbit.append(satellites_by_name[str(data.split(" ")[0])])
-                cn +=1
+    # Iterate over all the number of orbits in every shell    
+    for itr, shell_name in enumerate(sat_config["shells"].keys()):  #Iterate over shells
+        sat_sorted_in_orb_temp = []
+        for i in range(sat_config["shells"][shell_name]["orbits"]): #Iterate over orbits in current shell
+            sorted = []
+            satellites_in_orbit = []
+            cn = 0
+            for data in orbital_data:
+                if i == int(orbital_data[str(data)][0]) and itr == int(orbital_data[str(data)][-1])-1: #If sat exists in current shell and current orbit in the loops
+                    satellite_name = str(data.split(" ")[0])
+                    satellites_in_orbit.append(satellites_by_name[satellite_name])
+                    cn +=1
 
-        # Sort the satellites in orbit and append them to list
-        sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
-        satellites_sorted_in_orbits.append(sorted)
+            # Sort the satellites in orbit and append them to list
+            sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
+            satellites_sorted_in_orbits.append(sorted)
+            sat_sorted_in_orb_temp.append(sorted)
 
         # Debugging purposes
-        if sat_config["Debug"] == 1:
+        if main_config["Debug"] == 1:
             print(".......... Orbit no.    "+str(i)+"    ->  "+str(cn)+" satellites")
 
-        # Debugging purposes
-        if sat_config["Debug"] == 1:
-            for s in sorted:
-                write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
-                f.write(write_this)
+            # Debugging purposes
+            if main_config["Debug"] == 1:
+                for s in sorted:
+                    write_this = str(i)+" "+str(s.name)+" "+str(orbital_data[str(s.name)])+"\n"
+                    f.write(write_this)
+
+        satellites_sorted_in_shells.append(sat_sorted_in_orb_temp)
     
     # Close debugging file to minimize memory leak
     f.close()
@@ -979,7 +922,7 @@ def arrange_satellites(
     sat_index = -1
     orbit_id = 0
 
-    # Append new information to provided empty dictionary
+    # Append new information to provided empty dictionary (this is same as code before multi-shell)
     for orbit in satellites_sorted_in_orbits:
         orbit_id += 1
         for i in range(len(orbit)):
@@ -991,7 +934,7 @@ def arrange_satellites(
     file.close()
 
     # Return dictionary
-    return {"sorted satellite in orbits": satellites_sorted_in_orbits,
+    return {"sorted satellite in orbits": satellites_sorted_in_shells,
             "satellites by index": satellites_by_index
             }
 

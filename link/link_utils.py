@@ -36,8 +36,8 @@ api_key                                 = "cab2710f043a0aeedb61b28b3a316146" #Co
 channelFreq_isls                        = 37.0      # GHz
 channelFreq_sat_to_ground               = 12.7      # GHz
 channelFreq_ground_to_sat               = 14.5      # GH
-channnel_bandwidth_downlink             = 240       # MHz
-channnel_bandwidth_uplink               = 60        # MHz
+channnel_bandwidth_downlink             = 220       # MHz
+channnel_bandwidth_uplink               = 30        # MHz
 polarization_loss                       = 3         # dBi
 misalignment_attenuation_losses         = 0.5       # dB
 starlink_merit_figure                   = 9.2       # dB/K
@@ -144,6 +144,10 @@ def calc_gsl_snr(
 
     # Initialize variable
     gsl_distance = distance
+    if get_main_body_str(satellite) == "Earth":
+        curr_timestamp = t.tt       # Skyfield.Time
+    else:
+        curr_timestamp = t.value    # Astropy.Time
 
     # *Computes distance already in the mobility_utils
     # distance_between_ground_station_satellite(ground_station, satellite, t)
@@ -170,7 +174,7 @@ def calc_gsl_snr(
     if 'weather_data' in ground_station: # data already queried
         weather_data = ground_station['weather_data']
     else:
-        weather_data = get_weather_info(lat_gs, lon_gs)
+        weather_data = get_weather_info(lat_gs, lon_gs, curr_timestamp)
 
     # Check if weather data isn't empty
     if weather_data != "":
@@ -242,12 +246,12 @@ def calc_gsl_snr(
 
     # Calculate SNR for downlink (sat -> gs)
     if direction == "downlink":
-        snr_db = satellite_eirp_dbW - (10*(math.log(channnel_bandwidth_downlink*pow(10,6))/math.log(10))) - fspl - polarization_loss - misalignment_attenuation_losses - weather_attenuation_dl - 3 + starlink_merit_figure+228.6
-        snr = pow(10,(snr_db/10))
-        # rss_dBm = satellite_eirp - 2 + ground_station_receive_attenna_gain - fspl - polarization_loss - misalignment_attenuation_losses - weather_attenuation - 1.0;
-        # rss_watt = pow(10,((rss_dBm - 30)/10));
+        # snr_db = satellite_eirp_dbW - (10*(math.log(channnel_bandwidth_downlink*pow(10,6))/math.log(10))) - fspl - polarization_loss - misalignment_attenuation_losses - weather_attenuation_dl - 3 + starlink_merit_figure+228.6
+        # snr = pow(10,(snr_db/10))
+        rss_dBm = satellite_eirp - 2 + ground_station_receive_attenna_gain - fspl - polarization_loss - misalignment_attenuation_losses - weather_attenuation_dl - 1.0
+        rss_watt = pow(10,((rss_dBm - 30)/10))
         # print(fspl, snr_db, weather_attenuation)
-        return snr
+        # return snr
 
     # Calculate SNR for uplink (gs -> sat)
     if direction == "uplink":

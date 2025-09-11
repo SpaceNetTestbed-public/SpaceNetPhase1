@@ -11,7 +11,7 @@ def load_sim_and_constellation_config_file(sim_config_path, sim_config_file_name
     if constellation_config is None:
         print(f"Error: Unable to load constellation configuration file '{sim_config_path + constellation_config_subdir + constellationName + '.yaml'}'")
         return None, None
-    constellation_config["EpochStartDateTime"] = datetime.datetime(int(constellation_config["EpochStartYear"]), int(constellation_config["EpochStartMonth"]), int(constellation_config["EpochStartDay"]), int(constellation_config["EpochStartHour"]), int(constellation_config["EpochStartMinute"]), int(constellation_config["EpochStartSecond"]))
+    constellation_config["EpochStartDateTime"] = datetime.datetime(int(constellation_config["Sim_Date_Time"]["StartYear"]), int(constellation_config["Sim_Date_Time"]["StartMonth"]), int(constellation_config["Sim_Date_Time"]["StartDay"]), int(constellation_config["Sim_Date_Time"]["StartHour"]), int(constellation_config["Sim_Date_Time"]["StartMinute"]), int(constellation_config["Sim_Date_Time"]["StartSecond"]))
     return sim_config, constellation_config
 
 def read_config(file_path):
