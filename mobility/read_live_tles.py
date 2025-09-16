@@ -56,7 +56,7 @@ def get_orbital_planes_classifications(
         dict:                               Dictionary containing arranged orbital information
                                             Key: Satellite name, Value: Tuple (Orbital number, Epoch, Inclination, RAAN, Eccentricity, Argument of Perigee, Mean Anomaly, Mean Motion, Shell number)
     """
-    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727718467"
+    
     # Initialize dictionaries as empty
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
@@ -113,8 +113,7 @@ def get_orbital_planes_classifications(
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
     totalsatellites = 0
-    # if shell_num==1:
-    #     print(breaks)
+
     # Iterate over each determined natural break
     for b in range(1, len(breaks)):
         
@@ -128,7 +127,7 @@ def get_orbital_planes_classifications(
 
         # Iterate the satellite data and breaks in RAAN to arrange the satellites in their respective orbits
         for i, j in zip(list(range(len(dump_orbital_data["Satellites"]))), list(range(len(dump_orbital_data["RAAN"])))):
-            #print(dump_orbital_data["Inclination"][j])
+            
             # Only for the first break
             if b == 1:
 
@@ -140,8 +139,6 @@ def get_orbital_planes_classifications(
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
-
-                    # print(dump_orbital_data["Satellites"][i], dump_orbital_data["RAAN"][j])
 
             else:
 
@@ -158,13 +155,6 @@ def get_orbital_planes_classifications(
                     
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
-
-    # inc_list = []
-    # for i in dump_orbital_data["Inclination"]:
-    #     inc_list.append(float(i))
-
-    # plt.hist(inc_list, bins=5, color='skyblue', edgecolor='black')
-    # plt.show()
 
     # Return the collected orbital information separated by orbit
     return data_orbits
