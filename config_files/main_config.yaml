@@ -9,8 +9,8 @@ OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/u
 MonitorResource: False
 
 # Source & Destination Nodes for Optimal Routing (For GSes: Total # of Sats + GS # in list; For Sats: idk lol)
-SourceNode: 25  #Union-WVa
-DestNode: 16    #Madrid
+SourceNode: 25  #McMurdo, Union WVa
+DestNode: 16    #Japan, Madrid
 
 # Routing Algorithm Options
 RouteWeight: congestion  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 

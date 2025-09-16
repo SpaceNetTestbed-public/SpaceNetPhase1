@@ -58,7 +58,7 @@ def get_orbital_planes_classifications(
         dict:                               Dictionary containing arranged orbital information
                                             Key: Satellite name, Value: Tuple (Orbital number, Epoch, Inclination, RAAN, Eccentricity, Argument of Perigee, Mean Anomaly, Mean Motion, Shell number)
     """
-    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727718467"
+    
     # Initialize dictionaries as empty
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
@@ -70,7 +70,7 @@ def get_orbital_planes_classifications(
     Lines = tle_file.readlines()
 
     # Defining thresholds
-    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(constellation, constellation_type, orbits_inclination, orbits_altitude)
+    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(tle_filename, constellation, constellation_type, orbits_inclination, orbits_altitude)
     
     clustering_list = []
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
@@ -118,8 +118,7 @@ def get_orbital_planes_classifications(
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
     totalsatellites = 0
-    # if shell_num==1:
-    #     print(breaks)
+
     # Iterate over each determined natural break
     for b in range(1, len(breaks)):
         
@@ -133,7 +132,7 @@ def get_orbital_planes_classifications(
 
         # Iterate the satellite data and breaks in RAAN to arrange the satellites in their respective orbits
         for i, j in zip(list(range(len(dump_orbital_data["Satellites"]))), list(range(len(dump_orbital_data["RAAN"])))):
-            #print(dump_orbital_data["Inclination"][j])
+            
             # Only for the first break
             if b == 1:
 
@@ -145,8 +144,6 @@ def get_orbital_planes_classifications(
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
-
-                    # print(dump_orbital_data["Satellites"][i], dump_orbital_data["RAAN"][j])
 
             else:
 
@@ -235,7 +232,7 @@ def sort_satellites_in_orbit(
     return sorted_sats
 
 
-def real_tle_filter(operator_name, constellation_type, orbits_inclination, orbits_altitude):
+def real_tle_filter(tle_path, operator_name, constellation_type, orbits_inclination, orbits_altitude):
     """
     INPUT:  operator_name (str)        : Name of the constellation (SUPPORTS: starlink, lunar)
             orbits_inclination (float) : Mean inclination of the shell (in degrees)
@@ -267,41 +264,54 @@ def real_tle_filter(operator_name, constellation_type, orbits_inclination, orbit
     #         thresh4 = -13.0524
     #     return thresh1, thresh2, thresh3, thresh4
 
-    if operator_name=='starlink':
-        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+    tle_name = tle_path.split("/")[-1].split('_')[-1]
+    if tle_name.strip() == '1751837425':   #####This is only for Acta journal, remove after journal acceptance
+        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FC
             thresh1 = 0.1
-            thresh2 = -0.9
-            thresh3 = 7.1524
-            thresh4 = -9.0524
+            thresh2 = -0.1442
+            thresh3 = 7.3524
+            thresh4 = -19.0524
         elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
-            thresh1 = 0.1
+            thresh1 = 0.9
             thresh2 = -0.9
-            thresh3 = 3.0624
-            thresh4 = 2.0524
+            thresh3 = 13.0624
+            thresh4 = -13.0524
+    else:
+        if operator_name=='starlink':
+            if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+                thresh1 = 0.1
+                thresh2 = -0.9
+                thresh3 = 7.1524
+                thresh4 = -9.0524
+            elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
+                thresh1 = 0.1
+                thresh2 = -0.9
+                thresh3 = 3.0624
+                thresh4 = 2.0524
+            else:
+                thresh1 = 0.1
+                thresh2 = -0.1
+                thresh3 = 1
+                thresh4 = -1
+
+
+        elif operator_name=='lunar':
+            if constellation_type=='elfo':
+                thresh1 = 1
+                thresh2 = -1
+                thresh3 = 38*orbits_altitude    #Assuming maximum eccentricity that user would give is 0.95
+                thresh4 = -0.1*orbits_altitude
+            else:
+                thresh1 = 1
+                thresh2 = -1
+                thresh3 = 1
+                thresh4 = -1
+        
         else:
             thresh1 = 0.1
             thresh2 = -0.1
             thresh3 = 1
             thresh4 = -1
-
-
-    elif operator_name=='lunar':
-        if constellation_type=='elfo':
-            thresh1 = 1
-            thresh2 = -1
-            thresh3 = 38*orbits_altitude    #Assuming maximum eccentricity that user would give is 0.95
-            thresh4 = -0.1*orbits_altitude
-        else:
-            thresh1 = 1
-            thresh2 = -1
-            thresh3 = 1
-            thresh4 = -1
-    
-    else:
-        thresh1 = 0.1
-        thresh2 = -0.1
-        thresh3 = 1
-        thresh4 = -1
 
     return thresh1, thresh2, thresh3, thresh4
 

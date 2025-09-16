@@ -19,6 +19,8 @@ routing/__pycache__/*
 mobility/__pycache__/*
 library/__pycache__/*
 config_files/sat_config_files/starlink*
+config_files/sat_config_files/Scitech/*
+config_files/sat_config_files/Acta/*
 output/fake/*
 output/real/*
 utils/starlink_tles/*

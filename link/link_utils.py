@@ -4,6 +4,8 @@ AUTHOR:         Mohamed M. Kassem, Ph.D.
                 University of Surrey
 EDITOR:         Bruce Barbour
                 Virginia Tech
+                Rahul V. Chintalapati
+                Virginia Tech
 DESCRIPTION:    This Python script supplies the primary utility functions for computing link characteristics.
 CONTENTS:       LINK UTILITY FUNCTIONS
                     get_weather_info(lat, lon, init_timestamp)
@@ -43,8 +45,8 @@ api_key                                 = "cab2710f043a0aeedb61b28b3a316146" #Co
 channelFreq_isls                        = 37.0      # GHz
 channelFreq_sat_to_ground               = 12.7      # GHz
 channelFreq_ground_to_sat               = 14.5      # GHz
-channnel_bandwidth_downlink             = 220       # MHz
-channnel_bandwidth_uplink               = 30        # MHz
+channnel_bandwidth_downlink             = 240       # MHz
+channnel_bandwidth_uplink               = 60        # MHz
 polarization_loss                       = 3         # dBi
 misalignment_attenuation_losses         = 0.5       # dB
 starlink_merit_figure                   = 9.2       # dB/K
@@ -53,6 +55,117 @@ satellite_eirp_dbW                      = 50.9
 ground_station_tx_power                 = 36.08526  # dBm -- https://apps.fcc.gov/els/GetAtt.html?id=259301
 ground_station_receive_attenna_gain     = 33.2      # dBi -- https://apps.fcc.gov/els/GetAtt.html?id=259301
 ground_station_transmit_attenna_gain    = 34.6      # dBi -- https://apps.fcc.gov/els/GetAtt.html?id=259301
+
+vsat_params = {
+    'terminal_type': 'VSAT',
+    'transmit_power': 33,  # dBm
+    'antenna_type': '60 cm equivalent aperture diameter (circular polarisation)',
+    'tx_gain': 43.2,
+    'rx_gain': 39.7,
+    'noise_figure': 1.2,
+    'rx_cable_loss': 3,
+    'polarisation': 0
+}
+
+starlink_params = {
+    'terminal_type': 'LEO_SATELLITE',
+    'transmit_power': 47,  # dBm (approximately 50W for downlink)
+    'antenna_type': 'Phased array antenna (circular polarisation)',
+    'tx_gain': 33.5,  # dBi for Ku-band phased array
+    'rx_gain': 33.0,  # dBi for Ku-band phased array
+    'noise_figure': 2.5,  # dB (typical for modern satellite receivers)
+    'rx_cable_loss': 1.5,  # dB (lower due to modern waveguide technology)
+    'polarisation': 0  # Circular polarization like VSAT
+}
+
+ue_params = {
+    'terminal_type': 'HANDHELD',
+    'transmit_power': 23,  # dBm
+    'antenna_type': 'Omnidirectional antenna (linear polarisation)',
+    'tx_gain': 0,
+    'rx_gain': 0,
+    'noise_figure': 9,
+    'rx_cable_loss': 0,
+    'polarisation': 3
+}
+
+gateway_params = {
+    'terminal_type': 'GATEWAY',
+    'transmit_power': 37,  # 5 W (37 dBm)
+    'antenna_type': 'Omnidirectional antenna (linear polarisation)',
+    'tx_gain': 34.6,
+    'rx_gain': 33.2,
+    'noise_figure': 2.5,
+    'rx_cable_loss': 3,
+    'polarisation': 0
+}
+
+iot_class1_params = {
+    'terminal_type': 'IoT_C1',
+    'transmit_power': 14,
+    'antenna_type': 'Omnidirectional antenna (linear polarisation)',
+    'tx_gain': 0,
+    'rx_gain': 0,
+    'noise_figure': 9,
+    'rx_cable_loss': 0,
+    'polarisation': 3
+}
+
+iot_class2_params = {
+    'terminal_type': 'IoT_C2',
+    'transmit_power': 20,
+    'antenna_type': 'Omnidirectional antenna (linear polarisation)',
+    'tx_gain': 0,
+    'rx_gain': 0,
+    'noise_figure': 9,
+    'rx_cable_loss': 0,
+    'polarisation': 3
+}
+
+iot_class3_params = {
+    'terminal_type': 'IoT_C3',
+    'transmit_power': 23,
+    'antenna_type': 'Omnidirectional antenna (linear polarisation)',
+    'tx_gain': 0,
+    'rx_gain': 0,
+    'noise_figure': 9,
+    'rx_cable_loss': 0,
+    'polarisation': 3
+}
+
+
+# =================================================================================== #
+# ---------------------------- NEW DEVICE SELECTION FUNCTION ----------------------- #
+# =================================================================================== #
+
+def get_device_params(device_type: str) -> dict:
+    """
+    Get device parameters based on device type string
+
+    Args:
+        device_type (str): Type of device ('VSAT', 'STARLINK', 'UE', 'GATEWAY', 'IOT_C1', 'IOT_C2', 'IOT_C3')
+
+    Returns:
+        dict: Device parameters dictionary
+    """
+    device_map = {
+        'VSAT': vsat_params,
+        'STARLINK': starlink_params,
+        'UE': ue_params,
+        'HANDHELD': ue_params,  # Alias for UE
+        'GATEWAY': gateway_params,
+        'IOT_C1': iot_class1_params,
+        'IOT_C2': iot_class2_params,
+        'IOT_C3': iot_class3_params
+    }
+
+    device_type_upper = device_type.upper()
+    if device_type_upper not in device_map:
+        logger.warning(f"Unknown device type: {device_type}, defaulting to UE")
+        return ue_params
+
+    return device_map[device_type_upper]
+
 
 # =================================================================================== #
 # ---------------------------- MAPPING FUNCTIONS ------------------------------------ #
@@ -160,6 +273,7 @@ def map_link_direction(direction_str):
         logger.warning(f"Unknown link direction: {direction_str}, defaulting to DOWNLINK")
         return LinkDirection.DOWNLINK
 
+
 # =================================================================================== #
 # ---------------------------- LINK UTILITY FUNCTIONS ------------------------------- #
 # =================================================================================== #
@@ -264,6 +378,7 @@ def calc_gsl_snr(
         t (float):              Time of communication
         distance (float):       Distance between ground station and satellite in meters
         direction (str):        Communication direction, "downlink" or "uplink"
+        device_type (str):      Device type ("VSAT", "STARLINK", "UE", "GATEWAY", "IOT_C1", "IOT_C2", "IOT_C3")
         use_ntn_model (bool):   Whether to use the NTN Channel Model for calculation
         satellite_altitude (float): Altitude of the satellite in meters (only used with NTN model)
         frequency_ghz (float):   Carrier frequency in GHz (only used with NTN model)
@@ -283,6 +398,13 @@ def calc_gsl_snr(
         curr_timestamp = t.tt       # Skyfield.Time
     else:
         curr_timestamp = t.value    # Astropy.Time
+
+    ##### Current version only supports two types of gs == 0 and 9
+    if ground_station['type'] == 0:
+        device_type = 'VSAT'
+    elif ground_station['type'] == 9:
+        device_type = 'GATEWAY'
+    device_params = get_device_params(device_type)
 
     # Get ground station latitude and longitude
     lat_gs = float(ground_station["latitude_degrees_str"])
@@ -412,10 +534,10 @@ def calc_gsl_snr(
         # Create link budget calculator based on direction
         if direction.lower() == "downlink":
             # Downlink parameters (satellite to ground station)
-            tx_power_dbm = 43  # Satellite transmit power (20 Watts = 43 dBm)
-            tx_gain_dbi = 30  # Satellite antenna gain
-            rx_gain_dbi = ground_station_receive_attenna_gain  # Ground station receive antenna gain
-            noise_figure_db = 7  # Ground station noise figure
+            tx_power_dbm = device_params['transmit_power']  # Use device transmit power
+            tx_gain_dbi = device_params['tx_gain']  # Use device tx gain
+            rx_gain_dbi = device_params['rx_gain']  # Use device rx gain
+            noise_figure_db = device_params['noise_figure']  # Use device noise figure
 
             # Create link budget calculator for downlink
             link_budget = LinkBudget(
@@ -431,8 +553,8 @@ def calc_gsl_snr(
 
         else:  # uplink
             # Uplink parameters (ground station to satellite)
-            tx_power_dbm = ground_station_tx_power  # Ground station transmit power
-            tx_gain_dbi = ground_station_transmit_attenna_gain  # Ground station transmit antenna gain
+            tx_power_dbm = device_params['transmit_power']  # Use device transmit power
+            tx_gain_dbi = device_params['tx_gain']  # Use device tx gain
             rx_gain_dbi = 30  # Satellite receive antenna gain
             noise_figure_db = 2  # Satellite noise figure
 
@@ -500,10 +622,10 @@ def calc_gsl_snr(
         # Create link budget calculator based on direction
         if direction.lower() == "downlink":
             # Downlink parameters (satellite to UE)
-            tx_power_dbm = 43  # Satellite transmit power (20 Watts = 43 dBm)
-            tx_gain_dbi = 30  # Satellite antenna gain
-            rx_gain_dbi = ground_station_receive_attenna_gain  # Ground station antenna gain
-            noise_figure_db = 7  # Ground station noise figure
+            tx_power_dbm = device_params['transmit_power']  # Use device transmit power
+            tx_gain_dbi = device_params['tx_gain']  # Use device tx gain
+            rx_gain_dbi = device_params['rx_gain']  # Use device rx gain
+            noise_figure_db = device_params['noise_figure']  # Use device noise figure
 
             # Create link budget calculator
             link_budget = LinkBudget(
@@ -519,8 +641,8 @@ def calc_gsl_snr(
 
         elif direction.lower() == "uplink":
             # Uplink parameters (UE to satellite)
-            tx_power_dbm = ground_station_tx_power  # Ground station transmit power
-            tx_gain_dbi = ground_station_transmit_attenna_gain  # Ground station antenna gain
+            tx_power_dbm = device_params['transmit_power']  # Use device transmit power
+            tx_gain_dbi = device_params['tx_gain']  # Use device tx gaind station antenna gain
             rx_gain_dbi = 30  # Satellite antenna gain
             noise_figure_db = 2  # Satellite noise figure
 

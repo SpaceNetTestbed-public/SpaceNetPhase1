@@ -1,6 +1,6 @@
 ''''
 
-SpaceNet: Generalized Plotting for Walker type constellation
+SpaceNet: Generalized Plotting for Walker type constellation (For Lunar ELFO cases, suggested to use csv_store to grab csvs and plot in MATLAB)
 
 AUTHOR:         Suryansh Aryan, 2025
                 Virginia Tech
@@ -48,7 +48,7 @@ plot_debug              = False   #Plots linked sats to the given sat index and 
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = -40 #30  
-lat0_3d                 = 50 #-35      
+lat0_3d                 = 45 #-35      
 ll                      = [0.4, 0.4]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
 ur                      = [0.4, 0.4]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
 timestamp               = "2024_09_27_22_15_6"
