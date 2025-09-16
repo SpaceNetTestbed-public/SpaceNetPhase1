@@ -28,7 +28,7 @@ import atexit
 # =================================================================================== #
 
 find_optimal_routes         = True
-use_multiprocessing         = True
+use_multiprocessing         = False
 global_arranged_sats        = None
 global_satellites_by_name   = None
 plot_ground_stations        = False
@@ -93,7 +93,7 @@ def topology_generation(inc, sat_config,
             connectivity_matrix, links_characteristics, t2t_dict = add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characteristics, satellites_by_index, ground_stations, t2t_dict)
 
         # Spreads congestion over NTN topology (Updates connectivity matrix values)
-        connectivity_matrix = congestion_distribution(num_of_satellites, connectivity_matrix, ground_stations, congestion_flag)
+        connectivity_matrix, links_characteristics, usage_matrix = congestion_distribution(time_utc_inc, num_of_satellites, connectivity_matrix, links_characteristics, ground_stations, congestion_flag, map_type='rush_hr', spread_map='pseudo_load_balanced')
 
         # Calculate the link characteristics for GSLs and ISLs
         links_characteristics = calculate_link_characteristics_for_gsls_isls(connectivity_matrix, links_characteristics, satellites_by_index, satellites_by_name, ground_stations, time_utc_inc)
@@ -119,7 +119,8 @@ def topology_generation(inc, sat_config,
             elif metric_type == "distance":
                 metrics = links_characteristics["distance_matrix"]
             elif metric_type == "congestion":
-                metrics = links_characteristics["congestion_latency_mix_matrix"]
+                # metrics = links_characteristics["congestion_latency_mix_matrix"]
+                metrics = links_characteristics["latency_matrix"]
             elif metric_type == "hops":
                 metrics = None
 

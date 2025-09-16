@@ -1,9 +1,9 @@
 # Main configuration script for Phase 1 (Simulation Phase) of the SpaceNet Testbed
-ConstellationName: starlink1584_10_12  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink1584_test  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local directory
-OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/Acta/test_2
+OutputFilePath: /home/suryaryan/t2t-plotting/dynamic-topology-generator/output/userspawn_test
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
@@ -13,27 +13,27 @@ SourceNode: 25  #Union-WVa
 DestNode: 16    #Madrid
 
 # Routing Algorithm Options
-RouteWeight: latency  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
+RouteWeight: congestion  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
 
 # Ground Station Options
-GroundStationFile: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/gs_files/gs_default.txt
+GroundStationFile: /home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/gs_files/gs_default.txt
 min_elevation_angle: 25 # minimum elevation angle between GS and Sat (default: 25 degrees)
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
-UseWeatherData: True # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
+UseWeatherData: False # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
 
 # Terrestrial Integration Configuration:
 TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
 Gateways:
     t2t_gateway_kmz_type: local # Options- local, link
-    t2t_gateway_kmz_path: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
-    t2t_dict_output_file: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json
+    t2t_gateway_kmz_path: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz
+    t2t_dict_output_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/gateway_files/t2t_dict.json
 Azure: # Configuration for using Azure data center locations for t2t link endpoints
     t2t_use_azure: True
-    t2t_azure_endpoint_location_file: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/azure/AzureDataCenterLocations.csv
+    t2t_azure_endpoint_location_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/azure/AzureDataCenterLocations.csv
     t2t_azure_endpoint_latency_url: https://learn.microsoft.com/en-us/azure/networking/azure-network-latency
-    t2t_azure_dict_output_file: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/azure/t2t_azure_dict.json
+    t2t_azure_dict_output_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/azure/t2t_azure_dict.json
 WonderProxy: # Configuration for using WonderProxy server locations for t2t link endpoints
     t2t_use_wonderproxy: True
-    t2t_wonderproxy_endpoint_location_file: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/wonderproxy/wonderproxy_servers-2020-07-19.csv
-    t2t_wonderproxy_endpoint_latency_file: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/wonderproxy/wonderproxy_pings-2020-07-19-2020-07-20.csv
-    t2t_wonderproxy_dict_output_file: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/wonderproxy/t2t_wonderproxy_dict.json
+    t2t_wonderproxy_endpoint_location_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/wonderproxy/wonderproxy_servers-2020-07-19.csv
+    t2t_wonderproxy_endpoint_latency_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/wonderproxy/wonderproxy_pings-2020-07-19-2020-07-20.csv
+    t2t_wonderproxy_dict_output_file: /home/suryaryan/t2t-plotting/dynamic-topology-generator/t2t/wonderproxy/t2t_wonderproxy_dict.json
