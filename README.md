@@ -63,9 +63,9 @@ If your system runs out of energy or time for your project, put a note at the to
 ## Tracking Branches
 | Branches  | Maintainers | Description |
 | ------------- | ------------- | ------------- |
-| main  | Everyone  | main branch of Phase1, this is used to mirror over SpaceNet's public repository |
-| dev-aryan  | suryaryan  | Xploror main dev branch (most updated) $$\color{gray}(not\ synced\ -\ ecd30492)$$  |
-| dev-aryan-beta  | suryaryan  | Xploror experimental dev branch $$\color{gray}(not\ synced\ -\ fbf9483f)$$ |
+| main  | Everyone  | main branch of Phase1, this is used to mirror over SpaceNet's public repository $$\color{gray}(current\ -\ ecd30492)$$ |
+| dev-aryan  | suryaryan  | Xploror main dev branch (most updated) $$\color{gray}(not\ synced\ (15 commits ahead)\ -\ c95a7d25)$$  |
+| dev-aryan-beta  | suryaryan  | Xploror experimental dev branch $$\color{gray}(not\ synced\ (2 commits ahead)\ -\ fbf9483f)$$ |
 | bbarbour_jp  | Bruce Barbour  | Bruce journal development branch  |
 | IEEE_Access_2024  | Bruce Barbour  | Stable version for IEEE Access 2024 results  |
 | t2t_links  | Bruce Barbour, Alexander Lee Kedrowitsch  | Depriciated (inactive 10 months+)  |
