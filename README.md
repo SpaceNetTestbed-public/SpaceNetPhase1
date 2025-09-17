@@ -4,93 +4,42 @@
 
 ## Getting started
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+To run a basic experiment on the default constellation (Starlink) follow these steps:
+- [Make sure your files exists](#checking-your-files)
+- [Tune the parameters for your experiment](#table-of-parameters)
+- Run main.py file 
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+To design your own custom experiment on an arbitrary starlink TLE:
+- Run `sh get_tles.sh` to extract an actual TLE or generate a custom TLE by [setting up the TLE generator](#tle-generator). Store this TLE file at your desired location or the default location (utils/starlink_tles/) 
+- [Make sure your files exists](#checking-your-files)
+- [Tune the parameters for your experiment](#table-of-parameters)
+- Run main.py file
 
-## Add your files
+## Table of parameters
+Important parameters that the users can toggle specific to their testbed experiments:
 
-- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+| Parameters  | Options | Definition |
+| ------------- | ------------- | ------------- |
+| ConstellationName  | string value  | constel_config filename  |
+| Debug  | 0/1  | Verbose mode  |
+| SourceNode, DestNode  | string value  | ground station names in str  |
+| RouteWeight  | latency/distance/capacity/congesition  | Routing strategy  |
+| AssociationCritGSL  | BASED_ON_DISTANCE_ONLY_MININET  | Ground Station Link conneciton strategy  |
+| UseWeatherData  | 0/1  | Using weather information  |
+| TopoCrit  | 0,1 or 2  | Enabling/disabling ISTN  |
+| generate_TLE  | true/false  | generates custom TLE  |
 
-```
-cd existing_repo
-git remote add origin https://code.vt.edu/netsat/dynamic-topology-generator.git
-git branch -M main
-git push -uf origin main
-```
+## Checking your files
+A successful experiment runs when all the supporting files are located correctly. Look for the following files:
+- Your constellation configuration file (constel_config) at `config_files/sat_config_files/`
+- Your constel_config mentioned in the main_config.yaml at `config_files/`
+- Your TLE file with correct filename (unix timestamp) corresponding to your experiment's datetime at `utils/starlink_tles/` or TLE location at your constel_config. If it doesn't exist then you can also [generate TLEs](#tle-generator) from scratch.
+- Mention the location of your ground station file in the main_config.yaml or keep it unchanged to the default location.
 
-## Integrate with your tools
+## TLE generator
+The testbed can generate custom constellation and can even emulate network topology over it. To make your own built, its as simple 
+as defining your shell specs in your constel_config file and enable `generate_TLE = true`. You can also add multiple shells in your custom constellation.
 
-- [ ] [Set up project integrations](https://code.vt.edu/netsat/dynamic-topology-generator/-/settings/integrations)
-
-## Collaborate with your team
-
-- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-- [ ] [Set auto-merge](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
-
-## Test and Deploy
-
-Use the built-in continuous integration in GitLab.
-
-- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
-- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
-
-***
-
-# Editing this README
-
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
-
-## Suggestions for a good README
-
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
-
-## Name
-Choose a self-explaining name for your project.
-
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
-
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
-
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
-
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
-
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
-
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
-
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
-
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
-
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
-
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
-
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
-
-## License
-For open source projects, say how it is licensed.
-
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
 ## T2T Links
 For t2t links to work, you need to have the following configurations in the main_mn_config.yaml file:
 Use_t2t: set to 'True'
@@ -107,3 +56,18 @@ t2t_use_wonderproxy: set to 'True' to use WonderProxy server data for Endpoints
 t2t_wonderproxy_endpoint_location_file: location of csv file that provides location data for WonderProxy servers
 t2t_wonderproxy_endpoint_latency_file: location of csv file that provides latency data
 t2t_wonderproxy_dict_output_file: location to save the Endpoint dictionary after the data has been scraped and compiled
+
+## Project status
+If your system runs out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+
+## Tracking Branches
+| Branches  | Maintainers | Description |
+| ------------- | ------------- | ------------- |
+| main  | Everyone  | main branch of Phase1, this is used to mirror over SpaceNet's public repository $$\color{gray}(current\ -\ ecd30492)$$ |
+| dev-aryan  | suryaryan  | Xploror main dev branch (most updated) $$\color{gray}(not\ synced\ (15 commits ahead)\ -\ c95a7d25)$$  |
+| dev-aryan-beta  | suryaryan  | Xploror experimental dev branch $$\color{gray}(not\ synced\ (2 commits ahead)\ -\ fbf9483f)$$ |
+| bbarbour_jp  | Bruce Barbour  | Bruce journal development branch  |
+| IEEE_Access_2024  | Bruce Barbour  | Stable version for IEEE Access 2024 results  |
+| t2t_links  | Bruce Barbour, Alexander Lee Kedrowitsch  | Depriciated (inactive 10 months+)  |
+| dev-alex-interface-orientation  | Alexander Lee Kedrowitsch  | Depriciated (inactive 10 months+)  |
+
