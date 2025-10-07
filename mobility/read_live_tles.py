@@ -114,7 +114,7 @@ def get_orbital_planes_classifications(
     # Extract RAAN values for classification
     for i in range(0, len(dump_orbital_data["RAAN"])):
         list_of_values[i] = float(dump_orbital_data["RAAN"][i])
-    
+
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
     totalsatellites = 0
@@ -163,7 +163,7 @@ def get_orbital_planes_classifications(
 
     #######################  DEBUGGING ZONE ---> FILTERING TECHNIQUES USING CLUSTERING ($)
     
-    # debug_TLE_histogram(dump_orbital_data, "altitude", GM, radius, number_of_orbits, shell_num, orbits_inclination, orbits_altitude)
+    # debug_TLE_histogram(dump_orbital_data, "RAAN", GM, radius, number_of_orbits, shell_num, orbits_inclination, orbits_altitude)
     # debug_KMeans_clustering(clustering_list, 16)
     
     ##################################################################################
@@ -265,8 +265,8 @@ def real_tle_filter(tle_path, operator_name, constellation_type, orbits_inclinat
     #     return thresh1, thresh2, thresh3, thresh4
 
     tle_name = tle_path.split("/")[-1].split('_')[-1]
-    if tle_name.strip() == '1751837425':   #####This is only for Acta journal, remove after journal acceptance
-        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FC
+    if tle_name.strip() == '1751837425':   #####This is only for Acta journal, remove after journal acceptance (6th July)
+        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
             thresh1 = 0.1
             thresh2 = -0.1442
             thresh3 = 7.3524
@@ -276,6 +276,17 @@ def real_tle_filter(tle_path, operator_name, constellation_type, orbits_inclinat
             thresh2 = -0.9
             thresh3 = 13.0624
             thresh4 = -13.0524
+    elif tle_name.strip() == '1758315600':   #####This is only for Acta journal, remove after journal acceptance (19th Sept)
+        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+            thresh1 = 0.1
+            thresh2 = -0.144801
+            thresh3 = 7.2904
+            thresh4 = -1.0524
+        elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
+            thresh1 = 0.3
+            thresh2 = -0.3
+            thresh3 = 23.0624
+            thresh4 = -8.0524
     else:
         if operator_name=='starlink':
             if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
@@ -339,10 +350,10 @@ def debug_TLE_histogram(dump_orbital_data, plot_value, GM, radius, number_of_orb
         col = 'orange'
     count, bins, _ = plt.hist(val_list, bins=number_of_orbits, color=col, edgecolor='black')
     try: 
-        count = [ele for ele in count if ele!=0]
+        count_nonzero = [ele for ele in count if ele!=0]
     except:
         pass
-    avg_num_sats = sum(count)/len(count)
+    avg_num_sats = sum(count_nonzero)/len(count_nonzero)
     print(count, bins, avg_num_sats)
     plt.axhline(avg_num_sats, 0, 360, color='r')
     plt.grid(True, color='k', linestyle='--')

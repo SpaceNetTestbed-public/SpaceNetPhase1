@@ -47,28 +47,28 @@ plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -40 #30  
-lat0_3d                 = 45 #-35      
-ll                      = [0.4, 0.4]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
-ur                      = [0.4, 0.4]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
-timestamp               = "2024_09_27_22_15_6"
-tle_unix_timestamp      = "1727475306"  #"1751837425"
-outputfolder_name       = "userspawn_test"
+lon0_3d                 = 170 #30  
+lat0_3d                 = -25 #-35      
+ll                      = [0.6, 0.6]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
+ur                      = [0.6, 0.6]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
+timestamp               = "2025_09_21_01_00_0"
+tle_unix_timestamp      = "1758315600"  #"1751837425"
+outputfolder_name       = "Acta/case4/9pmEST"
 operator_name           = "starlink"
-gif_name                = 'gif_traffic'
-number_of_orbits        = 77
-_timespan               = 120  #1800 #Important to change if doesnt match Phase1 settings
-gs_filepath             = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/terrestrial_info/terrestrial_'+tle_unix_timestamp+'.txt', 'r')
-tle_file                = open('/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+tle_unix_timestamp, 'r')
-optimal_route_filepath  = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/optimal_routes/'+operator_name+'/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/connectivity/'+operator_name+'/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/node_indices/'+operator_name+'/nodeindex_'+tle_unix_timestamp+'.txt'
-topo_graph_filepath     = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/topology_graph/'+operator_name+'/topology_graph_'+timestamp+'.0.txt'
-orb_sat_txt             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/satellites_orbits/orbits_satellites.txt'
+gif_name                = 'gif_c4_9pm'
+number_of_orbits        = 78
+_timespan               = 300  #1800 #Important to change if doesnt match Phase1 settings
+gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/terrestrial_info/terrestrial_'+tle_unix_timestamp+'.txt', 'r')
+tle_file                = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+tle_unix_timestamp, 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/optimal_routes/'+operator_name+'/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/connectivity/'+operator_name+'/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/node_indices/'+operator_name+'/nodeindex_'+tle_unix_timestamp+'.txt'
+topo_graph_filepath     = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/topology_graph/'+operator_name+'/topology_graph_'+timestamp+'.0.txt'
+orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/satellites_orbits/orbits_satellites.txt'
 ################### Folder Paths ######################
-conn_folder             = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/connectivity/'+operator_name+'/'
-opt_route_folder        = '/home/suryaryan/t2t-plotting/dynamic-topology-generator/output/'+outputfolder_name+'/optimal_routes/'+operator_name+'/'
-gif_path                = '/home/suryaryan/GIFS/traffic_model/'
+conn_folder             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/connectivity/'+operator_name+'/'
+opt_route_folder        = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/optimal_routes/'+operator_name+'/'
+gif_path                = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/GIFs/'
 #######################################################
 Main_body = 'Earth'
 Third_body = 'Moon'
@@ -227,6 +227,10 @@ def debugging_section(sat_orbit_index, sat_index_orbit):
         num_links.append(len(js))
         if len(js)>4:
             count += 1
+    # for i in range(1800):
+    #     if i not in [int(ele) for ele in conn_mat.keys()]:
+    #         print(i)
+    # print(len(conn_mat.keys()), len(num_links))
 
     # ================================================================================================
     # FILE PARSING - OPTIMAL PATH ASSIGNMENT

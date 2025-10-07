@@ -111,7 +111,7 @@ def get_recent_TLEs_using_timestamp(
         f = os.path.join(directory, filename)
         if os.path.isfile(f):
             file_timestamp = int(filename.split("_")[1])
-            if abs(int(timestamp-file_timestamp)) < timestamp_diff and int(timestamp-file_timestamp) <= 86400:
+            if abs(int(timestamp-file_timestamp)) < timestamp_diff and int(timestamp-file_timestamp) <= 3*86400:
                 timestamp_diff = abs(int(timestamp-file_timestamp))
                 recent_file = f
 
@@ -1221,7 +1221,7 @@ def convert_time_utc_to_unix(
     datetime.now().isoformat()
     datetime.utcnow().isoformat()
     time.altzone
-    time_timestamp = time_timestamp - time.altzone
+    # time_timestamp = time_timestamp + time.altzone
 
     # Return conversion to unix time
     return time_timestamp

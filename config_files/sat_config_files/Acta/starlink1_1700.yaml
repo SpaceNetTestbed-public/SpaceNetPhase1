@@ -3,9 +3,9 @@ Sim_Length:
     TimeStepCount: 30
 Sim_Date_Time:
     StartYear: 2025
-    StartMonth: 07
-    StartDay: 05
-    StartHour: 07
+    StartMonth: 09
+    StartDay: 19
+    StartHour: 21 #UTC
     StartMinute: 00
     StartSecond: 00
 

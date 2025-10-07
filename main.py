@@ -41,7 +41,7 @@ link_changes_save           = True
 
 config_file_path            = "config_files/"
 config_file_name            = "main_config.yaml"
-sat_config_sub_path         = "sat_config_files/"
+sat_config_sub_path         = "sat_config_files/Acta/"
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
@@ -78,7 +78,11 @@ def topology_generation(inc, sat_config,
 
         # Update the size of the connectivity matrix
         conn_mat_size = num_of_satellites + num_of_ground_stations
-
+        
+        if os.path.exists(connectivity_matrix_path+operator_name+"/topology_"+str(y)+"_"+str(mon)+"_"+str(d)+"_"+str(h)+"_"+str(min)+"_"+str(float(s))+".txt"):
+            print('Skipping ' + str(inc))
+            return
+        
         # Initialize the connectivity matrix
         connectivity_matrix, links_characteristics = initializer(conn_mat_size)
         
