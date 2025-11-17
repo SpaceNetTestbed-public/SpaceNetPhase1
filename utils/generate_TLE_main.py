@@ -112,7 +112,7 @@ def basic_generate_fake_TLE(
     for indx, oe_line in enumerate(oe_sweep):
 
         # Generate fake TLE
-        TLE_output[indx] = gft.generate_virtual_TLE(epoch=epoch, oe=oe_line, iter_num=indx)
+        TLE_output[indx] = gft.generate_virtual_TLE(op_name="starlink", main_body='Earth', epoch=epoch, oe=oe_line, iter_num=indx)
 
     
     return TLE_output
@@ -130,13 +130,13 @@ def generate_TLE_main (
 
 
     # Settings
-    altitude            = sat_config["shell1"]["altitude"]
-    inclination         = sat_config["shell1"]["inclination"]
-    num_orbits          = sat_config["shell1"]["orbits"]
-    num_sat_per_orbit   = sat_config["shell1"]["sat_per_orbit"]
+    altitude            = sat_config["shells"]["shell1"]["altitude"]
+    inclination         = sat_config["shells"]["shell1"]["inclination"]
+    num_orbits          = sat_config["shells"]["shell1"]["orbits"]
+    num_sat_per_orbit   = sat_config["shells"]["shell1"]["sat_per_orbit"]
     tot_num_sats        = int(num_orbits*num_sat_per_orbit)
-    ipp_increment       = sat_config["shell1"]["ipp_increment"] # set to zero for no IPP Angle, otherwise set to a positive integer
-    pattern             = sat_config["shell1"]["pattern"]
+    ipp_increment       = sat_config["shells"]["shell1"]["ipp_increment"] # set to zero for no IPP Angle, otherwise set to a positive integer
+    pattern             = sat_config["shells"]["shell1"]["pattern"]
 
     # Date/Time input
     datetime    = (sat_config["Sim_Date_Time"]["StartYear"],
