@@ -46,13 +46,13 @@ continent_gscount_dict = {}
 
 total_users = 50000  #total existing users in the simulated world
 SPREAD_TYPE = 'gaussian'
-avg_packet_size = 8000  #bits (a random guess as of now! [1000 bytes]) (As per internet, 40-1500 bytes is average traffic size for internet)
+avg_packet_size = 7200  #bits (a random guess as of now! [c3: 1500 bytes | c4: 900 bytes]) (As per internet, 40-1500 bytes is average traffic size for internet)
 data_count = 1000  #Data counts for stochastic process
 
 #### Default Service Chart (FORMAT: [poisson mean, log-normal mean, log-normal std-dev])
 service_chart = {
-                    'gateway' : [0,np.log(5.7e-5),1e-1],  # 57 microsecs
-                    'satellite' : [0,np.log(7.7e-5),1e-1],  # 77 microsecs
+                    'gateway' : [0,np.log(1.7e-4),1e-1],  # 170 microsecs
+                    'satellite' : [0,np.log(3.7e-4),1e-1],  # 370 microsecs
                     'customer_terminal' : [0,0,0]
                 }
 
@@ -1083,20 +1083,53 @@ def calculate_link_characteristics_for_gsls_isls(
     number_of_users_per_cell = 5.0
     density = 1.0/float(number_of_users_per_cell)
 
+    # RF ISL parameters
+    channelFreq_isls                      = 37.0      # GHz
+    eirp_rf_isl                           = 60        # dBm
+    receiver_gain_RF_ISL                  = 50        # dB
+    polarization_loss_RF_ISL              = 1         # dB
+    alignment_loss_rf_isl                 = 1         # dB
+    system_losses_rf_isl                  = 2         # dB
+    noise_temp_rf_isl                     = 290       # Kelvin
+    isl_bandwidth_MHz                     = 250       #MHz
+    isl_bandwidth_Hz                      = isl_bandwidth_MHz*1e6
+
     # Loop through every satellite and CT to calculate latency and throughput
     for i in range(matrix_size):
         for j in range(matrix_size):
             # ISL between two satellites
             if connectivity_matrix[i][j] >= 1 and i < len(satellites_by_index) and j < len(satellites_by_index):  # >=1 takes care of congestion and no congestion
+                
+                ###### RF LINK modeling ######
                 distance_meters             = _distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
-                latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3                                         #speed of light  (Units in ms)
+                # distance_matrix[i][j]       = int(distance_meters)
+                distance_km = distance_meters/1000
+                fspl_db = 20 * math.log10(distance_km) + 20 * math.log10(channelFreq_isls) + 92.45  # FSPL in dB 
+                RSS_dbm = eirp_rf_isl - fspl_db + receiver_gain_RF_ISL - system_losses_rf_isl - alignment_loss_rf_isl-polarization_loss_RF_ISL
+                k = 1.38e-23  # Boltzmann constant in J/K
+                noise_W = k*noise_temp_rf_isl*isl_bandwidth_Hz
+                noise_dbm = 10 * math.log10(noise_W) + 30  # Convert noise power to dBm\
+                snr_dB = RSS_dbm - noise_dbm
+                snr_isl = 10**(snr_dB/10)
+                latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3
+                channel_width               = isl_bandwidth_Hz
                 if throughput_matrix[i][j] != 0.0:
-                    throughput_matrix[i][j]     = min(channel_bandwidth_downlink, float(throughput_matrix[i][j]))  #Mbps
+                    throughput_matrix[i][j]     = min((density*channel_width*(math.log2(1+snr_isl)))/1e6, float(throughput_matrix[i][j]))  ## pulled from GSL section below
                 else:
-                    throughput_matrix[i][j]     = channel_bandwidth_downlink
-                # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
-                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                    throughput_matrix[i][j]     = (density*channel_width*(math.log2(1+snr_isl)))/1e6  ## pulled from GSL section below
                 congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ##############################
+                ###### OLDER MODEL ######
+                # distance_meters             = _distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
+                # latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3                                         #speed of light  (Units in ms)
+                # if throughput_matrix[i][j] != 0.0:
+                #     throughput_matrix[i][j]     = min(channel_bandwidth_downlink, float(throughput_matrix[i][j]))  #Mbps
+                # else:
+                #     throughput_matrix[i][j]     = channel_bandwidth_downlink
+                # # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
+                # # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ##############################
 
             # GSL between ground station and satellite
             if connectivity_matrix[i][j] >= 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):  # >=1 takes care of congestion and no congestion
@@ -1226,7 +1259,8 @@ def congestion_distribution(
                     connection_matrix[s_id][sat_num+GIDs[i]] = max_v
                 elif map_type == 'rush_hr':  # Changes values in link characteristic matrix using connectivity matrix
                     ############ Run rush hour mapping and user stochastic process for GSLs
-                    usage_val = rush_map(lon_localtime(time_utc, float(lon), 'secs'))/len(satIDs[GIDs[i]]) #Gives mean value for user traffic stochastic process (even distribution of traffic to all sats connected)
+                    usage_val = rush_map(lon_localtime(time_utc, float(lon)*np.pi/180, 'secs'))/len(satIDs[GIDs[i]]) #Gives mean value for user traffic stochastic process (even distribution of traffic to all sats connected)
+                    # print('GS: ' + str(hotspots[GIDs[i]]['name']) + ' | lon: ' + str(lon) + ' | usage_val: ' + str(usage_val))
                     usage_matrix[sat_num+GIDs[i]][s_id] = usage_val
         
         ##### Remove duplicate sats
@@ -1334,11 +1368,13 @@ def compute_incoming_traffic(sat, usage_matrix, sat_num):
 
     num_gs = len(usage_matrix) - sat_num
     GS_traffics = []
+    num_gs = 0
     for i in range(num_gs):
         if usage_matrix[sat_num+i][sat]:
             GS_traffics.append(usage_matrix[sat_num+i][sat])
+            num_gs += 1
     
-    return sum(GS_traffics)
+    return sum(GS_traffics)/num_gs if num_gs else sum(GS_traffics)
 
 
 ############ STOCHASTIC TRAFFIC FLOW MODELING METHODS ###########
@@ -1397,6 +1433,7 @@ def log_normal_distbn(mean, std_dev, est_traffic_count, service_specs):
     else:
         throughput = avg_service_rate*avg_packet_size*10**(-6)  # Limiting by service rate since package arrival are choking
     
+    # print(latency, throughput)
     return latency, throughput
 #################################################################
 
@@ -1448,7 +1485,7 @@ def lon_localtime(t, lon, format):
         '''
         y, mon, d, h, min, s = convert_time_utc_to_ymdhms(t)
         tot_sec = float(h)*3600 + float(min)*60 + float(s)
-        local_t = 3600*(np.floor((15*np.pi/180)**(-1)*(lon-(7.5*np.pi/180))) + 1) + tot_sec
+        local_t = 3600*(np.floor((30*np.pi/180)**(-1)*(lon-(15*np.pi/180))) + 1) + tot_sec
         if local_t > 86400:
             local_t = np.remainder(local_t, 86400)
         elif local_t < 0:
@@ -1523,10 +1560,10 @@ def stochastic_traffic_generation(value, device_type='satellite', distbn_type="p
     
     ###### Mean ranges from [0.28720972199681555, 0.36716733649294675] approx same for each timestep
     if device_type=='satellite':
-        mean = np.log((9 - 0.75*(-1 + 2*value/700))*10**(-5))   # ranges from (8e-5 - 10e-5) linearly with value=(0, 700)  (mean for underlying normal distribution when using log-normal)
+        mean = np.log((6 - 0.75*(-1 + 2*value/700))*10**(-4))   # ranges from (5e-4 - 7e-4) linearly with value=(0, 700)  (mean for underlying normal distribution when using log-normal)
         std_dev = 1e-1
     elif device_type=='gateway':
-        mean = np.log((7 - 0.3*(-1 + 2*value/700))*10**(-5))   # ranges from (6e-5 - 8e-5) linearly with value=(0, 700)  (mean for underlying normal distribution when using log-normal)
+        mean = np.log((4 - 0.3*(-1 + 2*value/700))*10**(-4))   # ranges from (3e-4 - 5e-4) linearly with value=(0, 700)  (mean for underlying normal distribution when using log-normal)
         std_dev = 1e-1
     ####
 
@@ -1607,7 +1644,7 @@ def distance_threshold(flag):
     global threshold
 
     if flag=="Earth":
-        threshold = 5016000  #m
+        threshold = 6016000  #m
     elif flag=="Lunar":
         threshold = 716000  #m
 

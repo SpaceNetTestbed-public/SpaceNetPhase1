@@ -4,8 +4,8 @@ Sim_Length:
 Sim_Date_Time:
     StartYear: 2025
     StartMonth: 09
-    StartDay: 19
-    StartHour: 21 #UTC
+    StartDay: 29
+    StartHour: 11 #UTC (5pm, 11pm, 7am  EST) (9pm, 3am(next day), 11am(next day) UTC)
     StartMinute: 00
     StartSecond: 00
 
@@ -23,8 +23,8 @@ shells:
         body: Earth
     shell2:               
         name: shell2
-        orbits: 6
-        sat_per_orbit: 36
+        orbits: 5
+        sat_per_orbit: 42
         altitude: 560
         inclination: 97.6
         pattern: walker_delta

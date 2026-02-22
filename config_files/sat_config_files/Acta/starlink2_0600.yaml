@@ -23,8 +23,8 @@ shells:
         body: Earth
     shell2:               
         name: shell2
-        orbits: 6
-        sat_per_orbit: 36
+        orbits: 5
+        sat_per_orbit: 42
         altitude: 560
         inclination: 97.6
         pattern: walker_delta

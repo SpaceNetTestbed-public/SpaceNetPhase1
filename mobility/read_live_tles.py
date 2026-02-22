@@ -285,8 +285,8 @@ def real_tle_filter(tle_path, operator_name, constellation_type, orbits_inclinat
         elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
             thresh1 = 0.3
             thresh2 = -0.3
-            thresh3 = 23.0624
-            thresh4 = -8.0524
+            thresh3 = 6.0624
+            thresh4 = -5.0524
     else:
         if operator_name=='starlink':
             if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC

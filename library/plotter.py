@@ -12,6 +12,7 @@ Note: It can plot only one type at a time (If the simulation contains both Earth
 '''
 
 import os
+import sys
 import matplotlib
 import gif_utils
 import matplotlib.pyplot as plt
@@ -23,7 +24,14 @@ from poliastro.twobody import Orbit
 import poliastro.bodies as pbodies
 from poliastro.util import Time
 
-import sys
+try:
+    from utils.utils import *
+except: #This means this file is called from library directory
+    pwd = os.getcwd()
+    sys.path.append("../")
+    from utils.utils import *
+    os.chdir(pwd)
+
 pwd = os.getcwd()
 sys.path.append("../")
 from mobility.lunar_dyn_utils import *
@@ -35,7 +43,7 @@ from datetime import datetime, timezone
 from mpl_toolkits.basemap import Basemap
 
 
-
+##### ACTA: McMurdo-Tokyo ->[170,-25, 0.6] | Union-Seattle ->[-100, 35, 0.22] | Union-Madrid->[] | McMurdo-Canada->[]
 # ================================================================================================
 # >>> SCRIPT CONTROL - EDIT HERE <<<
 # ================================================================================================
@@ -46,17 +54,17 @@ show_optimal            = True   #If false it would not plot the optimal path (d
 plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
-make_gif                = False   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = 170 #30  
-lat0_3d                 = -25 #-35      
-ll                      = [0.6, 0.6]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
-ur                      = [0.6, 0.6]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
-timestamp               = "2025_09_21_01_00_0"
+make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
+lon0_3d                 = -100 #30  c3 -100 | c4 -100
+lat0_3d                 = 40 #-35  c3 -25 | c4 40
+ll                      = [0.27, 0.27]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7] | US-scaled [0.27, 0.27] | case3 [0.5, 0.5]
+ur                      = [0.27, 0.27]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7] | US-scaled [0.27, 0.27] | case3 [0.5, 0.5]
+timestamp               = "2025_09_20_11_00_0"
 tle_unix_timestamp      = "1758315600"  #"1751837425"
-outputfolder_name       = "Acta/case4/9pmEST"
+outputfolder_name       = "Acta/case4/7amEST"
 operator_name           = "starlink"
-gif_name                = 'gif_c4_9pm'
-number_of_orbits        = 78
+gif_name                = 'gif_c4_7am'
+number_of_orbits        = 77
 _timespan               = 300  #1800 #Important to change if doesnt match Phase1 settings
 gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+outputfolder_name+'/terrestrial_info/terrestrial_'+tle_unix_timestamp+'.txt', 'r')
 tle_file                = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+tle_unix_timestamp, 'r')
@@ -72,7 +80,7 @@ gif_path                = '/home/spacenet/simulator/gitlab/dynamic-topology-gene
 #######################################################
 Main_body = 'Earth'
 Third_body = 'Moon'
-ref = 1 #1263  # index of satellite to be debugged for ISLs (Only use with plot_debug=True)
+ref = 1668 #1263  # index of satellite to be debugged for ISLs (Only use with plot_debug=True)
 shell_color = {1584:"orange",1814:"green"}
 #shell_color = {440:"orange"}
 default_projection_for_moon = "ortho"
@@ -92,7 +100,7 @@ plotted_sat_index                   = {}
 conn_mat                            = {}
 optimal_routes                      = []
 optimal_orbits                      = []
-num_links                           = []
+num_links                           = {}
 dt_hist                             = []
 epoch_hist                          = []
 lats                                = []
@@ -223,10 +231,13 @@ def debugging_section(sat_orbit_index, sat_index_orbit):
                     conn_mat[line[0]].append(int(line[1])) # Actually a nested list
 
     count = 0
-    for i, js in conn_mat.items():
-        num_links.append(len(js))
-        if len(js)>4:
-            count += 1
+    for i in range(len(sat_index_orbit)):
+        try:
+            num_links[i] = (len(conn_mat[str(i)]))
+            if len(conn_mat[str(i)])>4:
+                count += 1
+        except:
+            num_links[i] = 0
     # for i in range(1800):
     #     if i not in [int(ele) for ele in conn_mat.keys()]:
     #         print(i)
@@ -422,6 +433,25 @@ def sat_color_scheme(shell_color, topo_graph_path, total_sats):
         return sat_color_map
 
 
+def plot_all_ISLs(m, conn_mat):
+   
+    for sat in conn_mat.keys():
+        curr_info = node_info_topology_at_t[node_index_to_alias_topology_dict[int(sat)]]
+        curr_lon, curr_lat = curr_info[1:]
+        x_curr, y_curr = m(curr_lon, curr_lat)
+        X = [x_curr]
+        Y = [y_curr]
+        for neighbours in conn_mat[sat]:
+            info = node_info_topology_at_t[node_index_to_alias_topology_dict[neighbours]]
+            neighbour_lon, neighbour_lat = info[1:]
+            x, y = m(neighbour_lon, neighbour_lat)
+            X.append(x)
+            Y.append(y)
+            plt.plot(X, Y, color='red', marker=',', linewidth=0.5)   ##### Plots current orbit
+            X = [x_curr]
+            Y = [y_curr]
+
+
 def final_plotting(optimal_route_at_epoch, count):
 
     global lats, lons
@@ -597,6 +627,8 @@ def gif_creator():
 
     global node_info_topology_at_t
 
+    check_create_path(gif_path)
+
     conn_mat_global = {}   # Only exists if make_gif exists
     COUNT_global = []      # Only exists if make_gif exists
     num_links_global = {}  # Only exists if make_gif exists
@@ -635,12 +667,15 @@ def gif_creator():
                         conn_mat[line[0]] = [int(line[1])]
                     else:
                         conn_mat[line[0]].append(int(line[1])) # Actually a nested list
-        num_links = []
+        num_links = {}
         count = 0
-        for i, js in conn_mat.items():
-            num_links.append(len(js))
-            if len(js)>4:
-                count += 1
+        for i in range(len(sat_index_orbit)):
+            try:
+                num_links[i] = (len(conn_mat[str(i)]))
+                if len(conn_mat[str(i)])>4:
+                    count += 1
+            except:
+                num_links[i] = 0
         conn_mat_global[itr] = conn_mat
         COUNT_global.append(count)
         num_links_global[itr] = num_links
@@ -774,6 +809,8 @@ def gif_creator():
                         #plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:
                         plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats[node_idx], edgecolors=coloring_shell_sats[node_idx], zorder=20)
+
+        # plot_all_ISLs(m, conn_mat)
 
         ####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
         if plot_debug:

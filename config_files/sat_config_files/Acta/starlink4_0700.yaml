@@ -1,11 +1,11 @@
 Sim_Length:
-    TimeStepDuration: 15
-    TimeStepCount: 20
+    TimeStepDuration: 10
+    TimeStepCount: 30
 Sim_Date_Time:
     StartYear: 2025
     StartMonth: 09
-    StartDay: 21
-    StartHour: 01 #UTC  next-up
+    StartDay: 20
+    StartHour: 11 #UTC
     StartMinute: 00
     StartSecond: 00
 
