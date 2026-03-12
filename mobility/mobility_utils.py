@@ -46,7 +46,7 @@ continent_gscount_dict = {}
 
 total_users = 50000  #total existing users in the simulated world
 SPREAD_TYPE = 'gaussian'
-avg_packet_size = 7200  #bits (a random guess as of now! [c3: 1500 bytes | c4: 900 bytes]) (As per internet, 40-1500 bytes is average traffic size for internet)
+avg_packet_size = 12000  #bits (a random guess as of now! [c1/c3: 1500 bytes | c4: 700 bytes]) (As per internet, 40-1500 bytes is average traffic size for internet)
 data_count = 1000  #Data counts for stochastic process
 
 #### Default Service Chart (FORMAT: [poisson mean, log-normal mean, log-normal std-dev])
@@ -1368,13 +1368,13 @@ def compute_incoming_traffic(sat, usage_matrix, sat_num):
 
     num_gs = len(usage_matrix) - sat_num
     GS_traffics = []
-    num_gs = 0
+    gs_cnt = 0
     for i in range(num_gs):
         if usage_matrix[sat_num+i][sat]:
             GS_traffics.append(usage_matrix[sat_num+i][sat])
-            num_gs += 1
+            gs_cnt += 1
     
-    return sum(GS_traffics)/num_gs if num_gs else sum(GS_traffics)
+    return sum(GS_traffics)/gs_cnt if gs_cnt else sum(GS_traffics)
 
 
 ############ STOCHASTIC TRAFFIC FLOW MODELING METHODS ###########
