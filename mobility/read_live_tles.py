@@ -29,6 +29,8 @@ import mobility.lunar_dyn_utils as lunar_dyn
 from .mobility_utils import *
 import mobility.mobility_utils as mobil_utl
 
+from sklearn.cluster import SpectralClustering, KMeans
+
 # =================================================================================== #
 # -------------------------- TLE CONSTELLATION FUNCTIONS ---------------------------- #
 # =================================================================================== #
@@ -36,7 +38,8 @@ def get_orbital_planes_classifications(
                                         tle_filename                : str, 
                                         constellation               : str, 
                                         number_of_orbits            : int, 
-                                        shell_num                   : int, 
+                                        shell_num                   : int,
+                                        constellation_type          : str, 
                                         orbits_inclination          : float,
                                         orbits_altitude             : float
                                       ) -> dict:
@@ -55,7 +58,7 @@ def get_orbital_planes_classifications(
         dict:                               Dictionary containing arranged orbital information
                                             Key: Satellite name, Value: Tuple (Orbital number, Epoch, Inclination, RAAN, Eccentricity, Argument of Perigee, Mean Anomaly, Mean Motion, Shell number)
     """
-    # tle_filename = "/home/suryaryan/t2t-plotting/dynamic-topology-generator/utils/starlink_tles/starlink_1727718467"
+    
     # Initialize dictionaries as empty
     data_orbits                 = {}
     dump_orbital_data           = {"Epoch": [], "Satellites": [], "Inclination": [], "RAAN": [], "Mean anomaly": [], "ecc": [], "aop": [], "Mean motion": []}
@@ -67,8 +70,9 @@ def get_orbital_planes_classifications(
     Lines = tle_file.readlines()
 
     # Defining thresholds
-    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(constellation, orbits_inclination, orbits_altitude)
+    thresh1, thresh2, thresh3, thresh4 = real_tle_filter(tle_filename, constellation, constellation_type, orbits_inclination, orbits_altitude)
     
+    clustering_list = []
     # First, we dump the TLE files into the dump_orbital_data variable; we read the three lines by three lines, and save satellite names, inclination and RAAN
     for i in range(0, len(Lines), 3):
 
@@ -87,6 +91,8 @@ def get_orbital_planes_classifications(
             GM = get_value("GM")
             radius = get_value("radius")
         tle_a           = (GM / (tle_n ** 2)) ** (1. / 3.) - radius     # (altitude in km)
+
+        clustering_list.append([tle_a, float(tle_second_line[2])])  #($)
 
         # Inclination of constellation shell
         if  float(tle_second_line[2]) < (orbits_inclination + thresh1) and float(tle_second_line[2]) >= (orbits_inclination + thresh2) \
@@ -108,12 +114,11 @@ def get_orbital_planes_classifications(
     # Extract RAAN values for classification
     for i in range(0, len(dump_orbital_data["RAAN"])):
         list_of_values[i] = float(dump_orbital_data["RAAN"][i])
-    
+
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
     totalsatellites = 0
-    # if shell_num==1:
-    #     print(breaks)
+
     # Iterate over each determined natural break
     for b in range(1, len(breaks)):
         
@@ -127,7 +132,7 @@ def get_orbital_planes_classifications(
 
         # Iterate the satellite data and breaks in RAAN to arrange the satellites in their respective orbits
         for i, j in zip(list(range(len(dump_orbital_data["Satellites"]))), list(range(len(dump_orbital_data["RAAN"])))):
-            #print(dump_orbital_data["Inclination"][j])
+            
             # Only for the first break
             if b == 1:
 
@@ -139,8 +144,6 @@ def get_orbital_planes_classifications(
                     
                     # Count satellites in orbit
                     count_sats_per_orbit += 1
-
-                    # print(dump_orbital_data["Satellites"][i], dump_orbital_data["RAAN"][j])
 
             else:
 
@@ -157,6 +160,13 @@ def get_orbital_planes_classifications(
                     
         # Count the total number of satellites
         totalsatellites += count_sats_per_orbit
+
+    #######################  DEBUGGING ZONE ---> FILTERING TECHNIQUES USING CLUSTERING ($)
+    
+    # debug_TLE_histogram(dump_orbital_data, "RAAN", GM, radius, number_of_orbits, shell_num, orbits_inclination, orbits_altitude)
+    # debug_KMeans_clustering(clustering_list, 16)
+    
+    ##################################################################################
 
     # Return the collected orbital information separated by orbit
     return data_orbits
@@ -222,7 +232,7 @@ def sort_satellites_in_orbit(
     return sorted_sats
 
 
-def real_tle_filter(operator_name, orbits_inclination, orbits_altitude):
+def real_tle_filter(tle_path, operator_name, constellation_type, orbits_inclination, orbits_altitude):
     """
     INPUT:  operator_name (str)        : Name of the constellation (SUPPORTS: starlink, lunar)
             orbits_inclination (float) : Mean inclination of the shell (in degrees)
@@ -235,35 +245,138 @@ def real_tle_filter(operator_name, orbits_inclination, orbits_altitude):
              thresh4 : Altitude upper bound
 
     """
+    # #### Added for 6th July TLE analysis for Acta (remove before committing) ($)
+    # if operator_name=='starlink':
+    #     if orbits_inclination == 53.2 and orbits_altitude == 540:  #Shell2
+    #         thresh1 = 0.1
+    #         thresh2 = -0.1442
+    #         thresh3 = 7.3524
+    #         thresh4 = -19.0524
+    #     elif orbits_inclination == 53 and orbits_altitude == 550:  #Shell1 
+    #         thresh1 = 0.1
+    #         thresh2 = -0.1442
+    #         thresh3 = 7.3524
+    #         thresh4 = -29.0524
+    #     elif orbits_inclination == 97.6 and orbits_altitude == 560:  #Shell4
+    #         thresh1 = 0.9
+    #         thresh2 = -0.9
+    #         thresh3 = 13.0624
+    #         thresh4 = -13.0524
+    #     return thresh1, thresh2, thresh3, thresh4
 
-    if operator_name=='starlink':
+    tle_name = tle_path.split("/")[-1].split('_')[-1]
+    if tle_name.strip() == '1751837425':   #####This is only for Acta journal, remove after journal acceptance (6th July)
         if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
             thresh1 = 0.1
-            thresh2 = -0.9
-            thresh3 = 7.1524
-            thresh4 = -9.0524
+            thresh2 = -0.1442
+            thresh3 = 7.3524
+            thresh4 = -19.0524
         elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
-            thresh1 = 0.1
+            thresh1 = 0.9
             thresh2 = -0.9
-            thresh3 = 3.0624
-            thresh4 = 2.0524
+            thresh3 = 13.0624
+            thresh4 = -13.0524
+    elif tle_name.strip() == '1758315600':   #####This is only for Acta journal, remove after journal acceptance (19th Sept)
+        if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+            thresh1 = 0.1
+            thresh2 = -0.144801
+            thresh3 = 7.2904
+            thresh4 = -1.0524
+        elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
+            thresh1 = 0.3
+            thresh2 = -0.3
+            thresh3 = 6.0624
+            thresh4 = -5.0524
+    else:
+        if operator_name=='starlink':
+            if orbits_inclination == 53.2 and orbits_altitude == 540:   # ref Starlink FCC
+                thresh1 = 0.1
+                thresh2 = -0.9
+                thresh3 = 7.1524
+                thresh4 = -9.0524
+            elif orbits_inclination == 97.6 and orbits_altitude == 560:   # ref Starlink FCC
+                thresh1 = 0.1
+                thresh2 = -0.9
+                thresh3 = 3.0624
+                thresh4 = 2.0524
+            else:
+                thresh1 = 0.1
+                thresh2 = -0.1
+                thresh3 = 1
+                thresh4 = -1
+
+
+        elif operator_name=='lunar':
+            if constellation_type=='elfo':
+                thresh1 = 1
+                thresh2 = -1
+                thresh3 = 38*orbits_altitude    #Assuming maximum eccentricity that user would give is 0.95
+                thresh4 = -0.1*orbits_altitude
+            else:
+                thresh1 = 1
+                thresh2 = -1
+                thresh3 = 1
+                thresh4 = -1
+        
         else:
             thresh1 = 0.1
             thresh2 = -0.1
             thresh3 = 1
             thresh4 = -1
 
-
-    elif operator_name=='lunar':
-        thresh1 = 1
-        thresh2 = -1
-        thresh3 = 1
-        thresh4 = -1
-    
-    else:
-        thresh1 = 0.1
-        thresh2 = -0.1
-        thresh3 = 1
-        thresh4 = -1
-
     return thresh1, thresh2, thresh3, thresh4
+
+
+def debug_TLE_histogram(dump_orbital_data, plot_value, GM, radius, number_of_orbits, shell_num, orbits_inclination, orbits_altitude):
+
+    val_list = []
+    a_list = []
+    if plot_value=='altitude':
+        val = "Mean motion"
+    else:
+        val = plot_value
+    
+    for i in dump_orbital_data[val]:
+        a = (GM / ((float(i)* 2 * np.pi / 86400) ** 2)) ** (1. / 3.) - radius
+        val_list.append(float(i))
+        a_list.append(float(a))
+    if plot_value=='altitude':
+        val_list = a_list
+    
+    print(len(val_list))
+    if shell_num==0:
+        col = 'skyblue'
+    else:
+        col = 'orange'
+    count, bins, _ = plt.hist(val_list, bins=number_of_orbits, color=col, edgecolor='black')
+    try: 
+        count_nonzero = [ele for ele in count if ele!=0]
+    except:
+        pass
+    avg_num_sats = sum(count_nonzero)/len(count_nonzero)
+    print(count, bins, avg_num_sats)
+    plt.axhline(avg_num_sats, 0, 360, color='r')
+    plt.grid(True, color='k', linestyle='--')
+    plt.xlabel("RAAN values (in degrees)", fontsize=15)
+    plt.ylabel("Number of satellites", fontsize=15)
+    plt.title("Shell "+str(2*shell_num+2)+": incl- "+str(orbits_inclination)+ ", alt- "+str(orbits_altitude)+" km", fontsize=15)
+    plt.show()
+
+
+def debug_KMeans_clustering(clustering_list, n_clust):
+    '''
+    Inputs --> clustering_list.append([tle_a, float(tle_second_line[2])]) FORMAT
+    '''
+
+    clustering_list = np.array(clustering_list)
+    clustering = KMeans(n_clusters=n_clust, random_state=0, n_init=10).fit(clustering_list)
+    label = clustering.labels_
+    unique_label = np.unique(label)
+    plt.scatter(clustering.cluster_centers_[:,0], clustering.cluster_centers_[:,1], s=100)
+    plt.grid(True, linestyle='--', color='k')
+    for num, l in enumerate(unique_label):
+        val = clustering_list[label==l]
+        plt.scatter(val[:,0], val[:,1], label=l)
+        print(clustering.cluster_centers_[num], len(val))
+
+    plt.show()

@@ -33,28 +33,29 @@ plot_in_3D              = True
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
 plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existing in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
-lon0_3d                 = -140  #-80    #-100   #5  #-35 
-lat0_3d                 = 5      #20   #30
-timestamp               = "2025_3_17_12_24_14"
-timestamp_nopadding     = no_zeropadding(timestamp)
-output_pathname         = "aiaa_journal/hi_late/sydney"
-gs_filepath             = open('/home/spacenet/Desktop/jack_results/'+output_pathname+'/terrestrial_info/terrestrial_'+timestamp_nopadding+'.0.txt', 'r')
-tle_file                = open('/home/spacenet/Desktop/jacktles/alt500km/inc75/starlink_tles/starlink_1742212800', 'r')
-optimal_route_filepath  = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
-conn_filepath           = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/connectivity/starlink/topology_'+timestamp+'.0.txt'
-node_indices_filepath   = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/node_indices/starlink/nodeindex_'+timestamp_nopadding+'.0.txt'
-orb_sat_txt             = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
-gif_name                = 'gif_hi_late_sydney'
+lon0_3d                 = -40  #-80    #-100   #5  #-35 
+lat0_3d                 = 50      #20   #30
+file_timestamp          = "2025_7_5_6_0_0"
+timestamp               = "2025_07_05_06_00_0"
+output_pathname         = "Acta/case2/congestion/test1"
+gs_filepath             = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/terrestrial_info/terrestrial_'+file_timestamp+'.0.txt', 'r')
+tle_file                = open('/home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/starlink_tles/starlink_1751837425', 'r')
+optimal_route_filepath  = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/optimal_routes/starlink/best_path_'+timestamp+'.0.txt'
+conn_filepath           = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/connectivity/starlink/topology_'+timestamp+'.0.txt'
+node_indices_filepath   = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/node_indices/starlink/nodeindex_'+file_timestamp+'.0.txt'
+topo_graph_filepath     = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/topology_graph/starlink/topology_graph_'+timestamp+'.0.txt'
+orb_sat_txt             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/satellites_orbits/orbits_satellites.txt'
+gif_name                = 'congestion2'
 ################### Folder Paths ######################
-conn_folder             = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/connectivity/starlink/'
-opt_route_folder        = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/optimal_routes/starlink/'
-gif_path                = '/home/spacenet/Desktop/jack_results/'+output_pathname+'/gifs/'
+conn_folder             = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/connectivity/starlink/'
+opt_route_folder        = '/home/spacenet/simulator/gitlab/dynamic-topology-generator/output/'+output_pathname+'/optimal_routes/starlink/'
+gif_path                = '/home/spacenet/GIFS/Acta/case2/congestion/test1/'
 #######################################################
-number_of_orbits = 36 #$
+number_of_orbits = 72+6 #$
 # num_plotorbit = range(1)  #$ Number of orbits to plot
 # gs0 = (-74.003663, 40.717042) # NYC
 # gs1 = (103.850070, 1.289670) # Singapore
-ref = 1056 #1263  # index of satellite to be debugged for ISLs 
+ref = 1037 #1263  # index of satellite to be debugged for ISLs 
 shell_color = {1584:"orange",1814:"green"}
 
 # ||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
@@ -79,6 +80,51 @@ dt_hist                             = []
 gs_alias_list                       = ["CT", "GS", "GW", "IE"]
 total_num_sat                       = 0
 total_num_gs                        = 0
+
+def sat_color_scheme(shell_color, topo_graph_path, total_sats):
+    ###### Coloring scheme only for satellites
+
+    sat_color_map = [0 for i in range(total_sats)]
+
+    level_vals = []
+    shell_span = 0
+    shell_list = list(shell_color.keys())
+
+    with open(topo_graph_path, 'r') as topology_graph:
+        for i, graph_links in enumerate(topology_graph):
+            line = graph_links.split("\t\t\t\t\t\t")
+            indices = line[0].split(",")
+            if int(indices[0]) >= total_sats:
+                break
+            if float(line[-1]) not in level_vals:
+                level_vals.append(float(line[-1]))
+            
+            #### defaulting normal color scheme for different shells
+            while int(indices[0])>shell_list[shell_span]:
+                shell_span += 1 
+            sat_color_map[int(indices[0])] = shell_color[shell_list[shell_span]]
+    
+    ### Removing no congestion links
+    level_vals.remove(float(1))
+
+    if not level_vals:  #No congestion in the entire topology
+        return sat_color_map
+    else:
+        #### Color coding
+        color_gradient = [(0.5+0.5*i/len(level_vals),0,0) for i in range(len(level_vals))]
+        layer_tracker = [0 for i in range(total_sats)]
+        with open(topo_graph_path, 'r') as topology_graph:
+            for i, graph_links in enumerate(topology_graph):
+                line = graph_links.split("\t\t\t\t\t\t")
+                indices = line[0].split(",")
+                if int(indices[0]) >= total_sats:
+                    break
+                if float(line[-1]) != float(1): #Only congestion relevant sats
+                    if  level_vals.index(float(line[-1])) > layer_tracker[int(indices[0])]: #Origin sat (coloring based on the link with highest congestion)
+                        idx = level_vals.index(float(line[-1]))
+                        layer_tracker[int(indices[0])] = idx
+                        sat_color_map[int(indices[0])] = color_gradient[idx]
+        return sat_color_map
 
 # ================================================================================================
 # FILE PARSING - TLE DICT
@@ -250,12 +296,14 @@ if not make_gif:
         #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
     else:
         m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c')   #US zoomed
-        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
+        #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c')   #US zoomed
+        m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
     m.drawcoastlines()
     m.drawcountries()
     m.fillcontinents(color='lightgray', lake_color='white')
     m.drawmapboundary(fill_color='white')
+
+    coloring_shell_sats = sat_color_scheme(shell_color, topo_graph_filepath, total_num_sat)
 
     # PLOT ALL SATELLITE NODES IN TOPOLOGY (IF not make_gif then just plot OTHERWISE make the GIF OFC!)
     if not plot_only_optimal:
@@ -286,11 +334,6 @@ if not make_gif:
             if not any(gs_type in node_alias for gs_type in gs_alias_list):
 
                 node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
-                shell_span = 0
-                shell_list = list(shell_color.keys())
-                while node_idx>shell_list[shell_span]:
-                    shell_span += 1
-                coloring_shell_sats = shell_color[shell_list[shell_span]]
 
                 x, y = m(node_lon, node_lat)
                 if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
@@ -300,7 +343,7 @@ if not make_gif:
                     # plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                     # plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                 else:
-                    plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats, edgecolors=coloring_shell_sats, zorder=20)
+                    plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats[node_idx], edgecolors=coloring_shell_sats[node_idx], zorder=20)
                     plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     #plt.text(x, y-0.5, node_assigned_alias, fontsize=7, zorder=100)
 
@@ -445,10 +488,10 @@ else:    ## (MAKING GIF)
     # conn_sorted_path.pop(-1)
     # conn_sorted_path.pop(-1)
 
-    conn_sorted_path.insert(0, conn_sorted_path[5])
-    conn_sorted_path.pop(6)
-    conn_sorted_path.insert(6, conn_sorted_path[9])
-    conn_sorted_path.pop(-1)
+    # conn_sorted_path.insert(0, conn_sorted_path[5])
+    # conn_sorted_path.pop(6)
+    # conn_sorted_path.insert(6, conn_sorted_path[-1])
+    # conn_sorted_path.pop(-1)
 
     # conn_sorted_path.insert(6, conn_sorted_path[11])
     # conn_sorted_path.pop(12)
@@ -501,10 +544,10 @@ else:    ## (MAKING GIF)
     # optroute_sorted_path.pop(-1)
     # optroute_sorted_path.pop(-1)
     
-    optroute_sorted_path.insert(0, optroute_sorted_path[5])
-    optroute_sorted_path.pop(6)
-    optroute_sorted_path.insert(6, optroute_sorted_path[9])
-    optroute_sorted_path.pop(-1)
+    # optroute_sorted_path.insert(0, optroute_sorted_path[5])
+    # optroute_sorted_path.pop(6)
+    # optroute_sorted_path.insert(6, optroute_sorted_path[-1])
+    # optroute_sorted_path.pop(-1)
 
     # optroute_sorted_path.insert(6, optroute_sorted_path[11])
     # optroute_sorted_path.pop(12)
@@ -612,12 +655,14 @@ else:    ## (MAKING GIF)
             #m = Basemap(projection='cyl', llcrnrlat=0, urcrnrlat=80, llcrnrlon=-140, urcrnrlon=-40, resolution='c')
         else:
             m0 = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, resolution=None)
-            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c') #US zoomed
-            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
+            #m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/10.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/2.75, resolution='c') #US zoomed
+            m = Basemap(projection='ortho', lat_0=lat0_3d, lon_0=lon0_3d, llcrnrx=-m0.urcrnrx/1.75, llcrnry=-m0.urcrnry/1.75, urcrnrx=m0.urcrnrx/1.75, urcrnry=m0.urcrnry/1.75, resolution='c') #llcrnry=-m0.urcrnry/10.75  #Whole Globe
         m.drawcoastlines()
         m.drawcountries()
         m.fillcontinents(color='lightgray', lake_color='white')
         m.drawmapboundary(fill_color='white')
+
+        coloring_shell_sats = sat_color_scheme(shell_color, topo_graph_filepath, total_num_sat)
 
         # PLOT ALL SATELLITE NODES IN TOPOLOGY (IF not make_gif then just plot OTHERWISE make the GIF OFC!)
         if not plot_only_optimal:
@@ -632,11 +677,6 @@ else:    ## (MAKING GIF)
                 if not any(gs_type in node_alias for gs_type in gs_alias_list):
 
                     node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
-                    shell_span = 0
-                    shell_list = list(shell_color.keys())
-                    while node_idx>shell_list[shell_span]:
-                        shell_span += 1
-                    coloring_shell_sats = shell_color[shell_list[shell_span]]
 
                     x, y = m(node_lon, node_lat)
                     if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
@@ -646,7 +686,7 @@ else:    ## (MAKING GIF)
                         plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                         plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:
-                        plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats, edgecolors=coloring_shell_sats, zorder=20)
+                        plt.scatter(x, y, s=20, marker="o", facecolors=coloring_shell_sats[node_idx], edgecolors=coloring_shell_sats[node_idx], zorder=20)
 
         ####################  #$ PLOT SATS AND ITS LINKS WITH HIGHLIGHTED ORBITS (DEBUGGING ZONE STARTS) ###########################
         if plot_debug:

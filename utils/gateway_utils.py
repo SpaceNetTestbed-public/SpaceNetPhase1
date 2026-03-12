@@ -659,18 +659,22 @@ def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characterist
 
     latency_matrix = links_characteristics['latency_matrix']
     throughput_matrix = links_characteristics['throughput_matrix']
-    # Expand the existing rows of the matracies, initializing the new rows with 0s (or 0.0)
+    congestion_matrix = links_characteristics['congestion_latency_mix_matrix']  #Made compatible with t2t however congestion values not values for any GW or IE
+    # Expand the existing rows of the matrices, initializing the new rows with 0s (or 0.0)
     for row in connectivity_matrix:
         row.extend([0] * num_endpoints)
     for row in latency_matrix:
         row.extend([0.0] * num_endpoints)
     for row in throughput_matrix:
         row.extend([0.0] * num_endpoints)
+    for row in congestion_matrix:
+        row.extend([0.0] * num_endpoints)
     # Add new rows to the matrices, initializing them with 0s (or 0.0)
     for _ in range(num_endpoints):
         connectivity_matrix.append([0] * new_conn_mat_size)
         latency_matrix.append([0.0] * new_conn_mat_size)
         throughput_matrix.append([0.0] * new_conn_mat_size)
+        congestion_matrix.append([0.0] * new_conn_mat_size)
 
     if 't2t_gw_to_ep_link_list' in t2t_dict: # Values already calculated, so just reference and update matrices
         for tuple in t2t_dict['t2t_gw_to_ep_link_list']:
@@ -683,6 +687,8 @@ def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characterist
             latency_matrix[y][x] = t2t_dict[source_id][dest_id]
             throughput_matrix[x][y] = terrestrial_link_bandwidth # Add throughput value to throughput matrix
             throughput_matrix[y][x] = terrestrial_link_bandwidth
+            congestion_matrix[x][y] = connectivity_matrix[x][y]*latency_matrix[x][y]
+            congestion_matrix[y][x] = connectivity_matrix[y][x]*latency_matrix[y][x]
     else: # Calculate values and update matrices
         t2t_dict['t2t_gw_to_ep_link_list'] = []
         t2t_dict['conn_mat_index_to_t2t_index'] = {}
@@ -741,6 +747,8 @@ def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characterist
                         latency_matrix[y][x] = t2t_dict[source_id][dest_id]
                         throughput_matrix[x][y] = terrestrial_link_bandwidth # Add throughput value to throughput matrix (currently a fixed value)
                         throughput_matrix[y][x] = terrestrial_link_bandwidth
+                        congestion_matrix[x][y] = connectivity_matrix[x][y]*latency_matrix[x][y]
+                        congestion_matrix[y][x] = connectivity_matrix[y][x]*latency_matrix[y][x]
 
                         # Record link in t2t_dict for reference in future time increments
                         t2t_dict['t2t_gw_to_ep_link_list'].append((x, y))
@@ -749,7 +757,7 @@ def add_t2t_links_to_connectivity_matrix(connectivity_matrix, links_characterist
                             t2t_dict['conn_mat_index_to_t2t_index'][x] = source_id
                         if y not in t2t_dict['conn_mat_index_to_t2t_index']:
                             t2t_dict['conn_mat_index_to_t2t_index'][y] = dest_id
-    links_characteristics = {'latency_matrix': latency_matrix, 'throughput_matrix': throughput_matrix, 'distance_matrix': links_characteristics['throughput_matrix']}
+    links_characteristics = {'latency_matrix': latency_matrix, 'throughput_matrix': throughput_matrix, 'distance_matrix': links_characteristics['throughput_matrix'], 'congestion_latency_mix_matrix': congestion_matrix}
     return connectivity_matrix, links_characteristics, t2t_dict
     
 def plot_nodes_links_ground_stations(satellites_by_index, ground_stations, connectivity_matrix, operator_name, time_stamp, topology = None, routes = None, t2t_dict = None):

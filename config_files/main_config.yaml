@@ -1,28 +1,28 @@
 # Main configuration script for Phase 1 (Simulation Phase) of the SpaceNet Testbed
-ConstellationName: starlink1584_10_12  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
+ConstellationName: starlink1_1700  # Name must match constellation config file (fakelink6_10_2, onefib66_30_18, starlink72_1_10, starlink72_30_29)
 Debug: 0
 # Output directory for phase 1 outputs (connectivity matrices, routing tables, etc.)
 # Recommended to store outputs in a local directory
-OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/output_new/
+OutputFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/output/Acta/case1/7amEST/
 
 # Resource monitoring options (if True: CPU, RAM, etc. data will be collected)
 MonitorResource: False
 
 # Source & Destination Nodes for Optimal Routing (For GSes: Total # of Sats + GS # in list; For Sats: idk lol)
-SourceNode: 1814
-DestNode: 1815
+SourceNode: 26  #McMurdo (26), Union WVa (25)
+DestNode: 0    #Japan (0), Madrid (16), Seattle (28), Beauharnois (29)
 
 # Routing Algorithm Options
-RouteWeight: latency  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity' 
+RouteWeight: congestion  # Floyd-Warshall Algorithm Weight; Options: 'hops' (default), 'latency', 'distance', 'capacity', 'congestion' 
 
 # Ground Station Options
 GroundStationFile: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/gs_files/gs_default.txt
 min_elevation_angle: 25 # minimum elevation angle between GS and Sat (default: 25 degrees)
 AssociationCritGSL: BASED_ON_DISTANCE_ONLY_MININET
-UseWeatherData: False # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
+UseWeatherData: True # if True, GSLs will consider weather attenuation effects (weather data provided by OpenWeatherAPI)
 
 # Terrestrial Integration Configuration:
-TopoCrit: 0           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
+TopoCrit: 2           # (0) ISL; (1) Terrestrial; (2) Both (default=2)
 Gateways:
     t2t_gateway_kmz_type: local # Options- local, link
     t2t_gateway_kmz_path: /home/spacenet/simulator/gitlab/dynamic-topology-generator/t2t/gateway_files/UnofficialStarlinkGlobalGatewaysNPoPs_noLinks.kmz

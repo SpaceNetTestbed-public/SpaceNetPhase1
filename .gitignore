@@ -2,9 +2,11 @@
 output/*
 output/connectivity_matrix/starlink/*
 output/Figures/*
+output/resource/*
 output/node_indices/starlink/*
 output/optimal_routes/starlink/*
 output/routing/starlink/*
+output/satellites_orbits/*
 output/satellites_orbits/orbits_satellites.txt
 output/satellites_orbits/starlink/*
 output/terrestrial_info/*
@@ -17,10 +19,10 @@ routing/__pycache__/*
 mobility/__pycache__/*
 library/__pycache__/*
 config_files/sat_config_files/starlink*
+config_files/sat_config_files/Scitech/*
+config_files/sat_config_files/Acta/*
 output/fake/*
 output/real/*
 utils/starlink_tles/*
 utils/analysis/*
 .vscode/
-
-output/satellites_orbits/orbits_satellites.txt

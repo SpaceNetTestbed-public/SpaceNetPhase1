@@ -1,0 +1,35 @@
+Sim_Length:
+    TimeStepDuration: 10
+    TimeStepCount: 30
+Sim_Date_Time:
+    StartYear: 2025
+    StartMonth: 09
+    StartDay: 29
+    StartHour: 11 #UTC (5pm, 11pm, 7am  EST) (9pm, 3am(next day), 11am(next day) UTC)
+    StartMinute: 00
+    StartSecond: 00
+
+generate_TLE: false # true/false (if true, will generate TLEs based on following parameters; use false if providing pre-generated TLEs)
+
+shells:
+    shell1:
+        name: shell1
+        orbits: 72
+        sat_per_orbit: 22
+        altitude: 540
+        inclination: 53.2
+        pattern: walker_delta
+        ipp_increment: 1
+        body: Earth
+    shell2:               
+        name: shell2
+        orbits: 5
+        sat_per_orbit: 42
+        altitude: 560
+        inclination: 97.6
+        pattern: walker_delta
+        ipp_increment: 1
+        body: Earth
+
+# TLE file directory (if generating TLEs, TLE file will save to this directory; if providing TLE, match TLEFilePath to TLE location directory)
+TLEFilePath: /home/spacenet/simulator/gitlab/dynamic-topology-generator/utils/

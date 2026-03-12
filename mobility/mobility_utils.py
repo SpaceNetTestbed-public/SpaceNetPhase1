@@ -1,17 +1,64 @@
+'''
+EDITED BY:      S Aryan, 2025
+                Virginia Tech
+
+DESCRIPTION:    The main script responsible for teh constellation mobility, grid scheme and link characterization
+'''
+
 from skyfield.api import wgs84, load, EarthSatellite
 import math
 import threading
 
 import sys
 sys.path.append("../")
+import numpy as np
 from link.link_utils import *
+from utils.utils import *
 import mobility.lunar_dyn_utils as lunar_dyn
 import link.link_utils as link
 
+#### Percentage of total internet users globally continent-wise 
+continental_user_spread = {
+                            'Asia': 53.44,
+                            'Africa' : 11.49,
+                            'Europe' : 14.26,
+                            'NA' : 6.73,
+                            'SA' : 9.64,
+                            'Oceania' : 0.59,
+                            'Middle_East' : 3.85,
+                            'Antarctica' : 0.001
+                            }
+
+#### Continent lat-lon approximation (South, North, West, East)
+continent_boundary_map = {
+                            'Asia': [0, 90, 60, 180],
+                            'Africa' : [-35, 35, -17, 50],
+                            'Europe' : [35, 90, -25, 60],
+                            'NA' : [12.5, 85, -180, -50],
+                            'SA' : [-60, 12.5, -80, -25],
+                            'Oceania' : [-60, 0, 95, 180],
+                            'Middle_East' : [14, 35, 35, 60],
+                            'Antarctica' : [-90, -60, -180, 180]
+                            }
+
+#### Continent GS counts
+continent_gscount_dict = {}
+
+total_users = 50000  #total existing users in the simulated world
+SPREAD_TYPE = 'gaussian'
+avg_packet_size = 12000  #bits (a random guess as of now! [c1/c3: 1500 bytes | c4: 700 bytes]) (As per internet, 40-1500 bytes is average traffic size for internet)
+data_count = 1000  #Data counts for stochastic process
+
+#### Default Service Chart (FORMAT: [poisson mean, log-normal mean, log-normal std-dev])
+service_chart = {
+                    'gateway' : [0,np.log(1.7e-4),1e-1],  # 170 microsecs
+                    'satellite' : [0,np.log(3.7e-4),1e-1],  # 370 microsecs
+                    'customer_terminal' : [0,0,0]
+                }
+
 def calc_max_gsl_length(
                         main_config,
-                        sat_config,
-                        operator_name
+                        sat_config
                         ):
     """
     Calculates the maximum Ground Station-to-Satellite Link (GSL) length
@@ -59,7 +106,8 @@ def calc_distance_gs_sat_thread(
                                 satellites_by_name, 
                                 satellites_by_index, 
                                 time_t, 
-                                max_gsl_length_m, 
+                                main_config, 
+                                sat_config, 
                                 ground_station_satellites_in_range
                                 ):
     """
@@ -84,10 +132,22 @@ def calc_distance_gs_sat_thread(
     elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
         _distance_between_ground_station_satellite = distance_between_ground_station_satellite
 
+    sat_idx_list = total_sat_shell_listing(sat_config)
+
     # Iterate over each ground station
     for gs in ground_stations:
+        shell = 0
         # Iterate over the range of satellite indices
         for sid in range(len(satellites_by_index)):
+            while sid>sat_idx_list[shell]:
+                shell = shell + 1
+            max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][list(sat_config["shells"].keys())[shell]])
+            # Check if max GSL length is valid
+            if max_gsl_length_m == -1:
+                if main_config["Debug"] == 1:
+                    print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
+                    return
+
             # Calculate the distance between the current ground station and satellite
             distance_m = _distance_between_ground_station_satellite(gs, satellites_by_name[str(satellites_by_index[sid])], time_t)
             
@@ -258,6 +318,60 @@ def find_adjacent_orbit_sat(
     return nearest_sat_in_adj_plane.name.split(" ")[0] if nearest_sat_in_adj_plane != -1 else None
 
 
+def find_adjacent_orbit_sat_interface( 
+                            origin_sat, 
+                            adj_plane, 
+                            satellites_sorted_in_orbits,
+                            sats_by_index,
+                            sats_by_name,
+                            conn_mat,
+                            direction,  
+                            t
+                            ):
+    global threshold
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(origin_sat)==lunar_dyn.CustomSatellites:
+        _distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
+        _get_current_states = lunar_dyn.get_current_states
+    elif type(origin_sat)==EarthSatellite:
+        _distance_between_two_satellites = distance_between_two_satellites
+        _get_current_states = get_current_states
+    
+    import numpy as np
+    interface_FOV =110*np.pi/180  #Interface half-angle (hyperparam)
+    geo_origin_radial, geo_origin_heading = _get_current_states(origin_sat, t)
+    origin_radial = geo_origin_radial/np.linalg.norm(geo_origin_radial)
+    origin_heading = geo_origin_heading/np.linalg.norm(geo_origin_heading)
+    interface_direction = direction*np.cross(origin_heading, origin_radial)/np.linalg.norm(np.cross(origin_heading, origin_radial))
+
+    adj_plane_sats = satellites_sorted_in_orbits[adj_plane]
+
+    potential_sat_list = {}
+    distance_list = []
+    for i in range(len(adj_plane_sats)):
+        #satpos_vector = adj_plane_sats[i].at(t)
+        satpos_vector, satvel_vector = _get_current_states(adj_plane_sats[i], t)
+        sat2sat_vector = satpos_vector - geo_origin_radial
+        sat_sat_vector = sat2sat_vector/np.linalg.norm(sat2sat_vector)
+        angle = np.arccos(np.dot(sat_sat_vector, interface_direction))
+        if angle<=interface_FOV:
+            distance = _distance_between_two_satellites(origin_sat, adj_plane_sats[i], t) #in meters
+            if distance<threshold:
+                potential_sat_list[distance] = adj_plane_sats[i]
+                distance_list.append(distance) 
+    
+    distance_list = sorted(distance_list)
+
+    visible_sat_list = []
+    for i in range(len(distance_list)):
+        visible_sat = potential_sat_list[distance_list[i]]
+        name = visible_sat.name.split(" ")[0]
+        index = list(sats_by_index.keys())[list(sats_by_index.values()).index(name)]
+        visible_sat_list.append(index)
+
+    return visible_sat_list
+
+
 def get_current_isl_to_sats(
                             connectivity_matrix_row
                             ):
@@ -267,6 +381,22 @@ def get_current_isl_to_sats(
         if link==1:
             satidx_list.append(idx) 
     return satidx_list
+
+
+def compute_store_xyz( 
+                        satellites_by_name, 
+                        satellites_by_index,
+                        coord_csv_path,
+                        operator_name,
+                        t, 
+                        timestamp
+                    ):
+
+    # Storing satellite coordinates for current epoch only for Lunar case
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites:
+        sat_coords = lunar_dyn.store_sat_xyzcoords(satellites_by_name, satellites_by_index, t)
+        save_xyz_2_csv(sat_coords, timestamp, operator_name, coord_csv_path)
+
 
 
 def mininet_add_ISLs(
@@ -302,6 +432,7 @@ def mininet_add_ISLs(
 
     # Initialize the total number of satellites
     total_sat_now = 0
+    interface_tracking = [ [ 0 for i in range(2) ] for j in range(len(connectivity_matrix[1])) ]
 
     for sat_orb_data in satellites_sorted_in_orbits:  #Multi-shell addition
         # Get the number of orbits
@@ -474,6 +605,66 @@ def mininet_add_ISLs(
             """
             print("ISLs added to connectivity matrix")
 
+        # Plus grid with modified interface based connections (Works only with EarthSatellite type satellites [FIX IT!])
+        elif isl_config == "MODIFIED_PLUS_GRID":
+
+            # Iterate through each orbit
+            for i in range(n_orbits):
+            
+                # Get the number of satellites in the current orbit
+                n_sats_per_orbit = len(sat_orb_data[i])
+                
+                # Iterate through each satellite in the current orbit
+                for j in range(n_sats_per_orbit):
+                    
+                    # Determine the index of the current satellite
+                    sat = total_sat_now + j
+                    current_sat_name = satellites_by_index[sat]
+                    current_sat = satellites_by_name[current_sat_name]
+
+                    # Determine the index of next satellite in same orbit
+                    sat_same_orbit = total_sat_now + ((j + 1) % n_sats_per_orbit)
+                    current_sat_same_orbit_name = satellites_by_index[sat_same_orbit]
+                    current_sat_same_orbit = satellites_by_name[current_sat_same_orbit_name]
+
+                    # Intra-orbit connection (Connection to all same orbit sats within threshold)
+                    if _distance_between_two_satellites(current_sat, current_sat_same_orbit, t) < threshold:
+                        connectivity_matrix[sat][sat_same_orbit] = 1
+                        connectivity_matrix[sat_same_orbit][sat] = 1
+                    
+                    # Inter-orbit connections
+                    # For the satellite in the next orbit
+                    sats_adjacent_orbit_1 = find_adjacent_orbit_sat_interface(current_sat, (i + 1)%n_orbits, sat_orb_data, satellites_by_index, satellites_by_name, connectivity_matrix, 1, t)
+                    # if sats_adjacent_orbit_1:
+                    #     print(sat, sats_adjacent_orbit_1)
+                    if sats_adjacent_orbit_1:
+                        for k in range(len(sats_adjacent_orbit_1)):
+                            curr_id = sats_adjacent_orbit_1[k]
+                            if interface_tracking[curr_id][0]==0 and interface_tracking[sat][1]==0:  # Right interface of sat and left interface of curr_id
+                                connectivity_matrix[sat][curr_id] = 1
+                                connectivity_matrix[curr_id][sat] = 1
+                                interface_tracking[curr_id][0] = 1
+                                interface_tracking[sat][1] = 1
+                                break
+
+                    # For the satellite in the previous orbit
+                    sats_adjacent_orbit_2 = find_adjacent_orbit_sat_interface(current_sat, (i - 1)%n_orbits, sat_orb_data, satellites_by_index, satellites_by_name, connectivity_matrix, -1, t)
+                    # if sats_adjacent_orbit_2:
+                    #     print(sat, sats_adjacent_orbit_2)
+                    if sats_adjacent_orbit_2:
+                        for k in range(len(sats_adjacent_orbit_2)):
+                            curr_id = sats_adjacent_orbit_2[k]
+                            if interface_tracking[curr_id][1]==0 and interface_tracking[sat][0]==0:  # Left interface of sat and right interface of curr_id
+                                connectivity_matrix[sat][curr_id] = 1
+                                connectivity_matrix[curr_id][sat] = 1
+                                interface_tracking[curr_id][1] = 1
+                                interface_tracking[sat][0] = 1
+                                break
+
+                # Update the current total number of satellites
+                total_sat_now += n_sats_per_orbit
+                # print("Orbit " + str(i) + " Done")
+
     # Return the updated connectivity matrix
     return connectivity_matrix
 
@@ -535,59 +726,57 @@ def mininet_add_GSLs_parallel(
         connectivity_matrix (list): updated connectivity matrix, now including GSLs
 
     """
-    
-    for shells in sat_config["shells"].keys():
-        # Retrieve maximum GSL length from config
-        max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][shells], operator_name)
 
-        # Check if max GSL length is valid
-        if max_gsl_length_m == -1:
-            if main_config["Debug"] == 1:
-                print ("[Mininet_add_GSLs] --- check the max GSL length variable ")
-                return
+    ##### Changing methods based on satellite object type (FIX THIS [have a better solution to this (Maybe Global???)])
+    if type(satellites_by_name[satellites_by_index[0]])==lunar_dyn.CustomSatellites and sat_config["shells"]["shell1"]["pattern"]=='elfo':
+        _calc_gs_sat_thread = lunar_dyn.calc_elfo_gs_sat_thread
+    elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
+        _calc_gs_sat_thread = calc_distance_gs_sat_thread
+    else:
+        _calc_gs_sat_thread = calc_distance_gs_sat_thread
             
-        # Calculate number of pools and ground stations per thread pool (for parallel execution)
-        number_of_pools = len(ground_stations)/number_of_threads
-        num_of_gs_per_pool = len(ground_stations)/number_of_pools
+    # Calculate number of pools and ground stations per thread pool (for parallel execution)
+    number_of_pools = len(ground_stations)/number_of_threads
+    num_of_gs_per_pool = len(ground_stations)/number_of_pools
 
-        # Initialize list to store results for each pool
-        ground_station_satellites_in_range = [[] for _ in range(int(number_of_pools+1))]
+    # Initialize list to store results for each pool
+    ground_station_satellites_in_range = [[] for _ in range(int(number_of_pools+1))]
 
-        # Create thread list
-        thread_list = []
-        count = 0
+    # Create thread list
+    thread_list = []
+    count = 0
 
-        # Divide ground stations into pools and create threads
-        for i in range(0, len(ground_stations), int(num_of_gs_per_pool)):
-            subgs_list = ground_stations[i:i+int(num_of_gs_per_pool)]
-            thread = threading.Thread(target=calc_distance_gs_sat_thread, args=(subgs_list, satellites_by_name, satellites_by_index, t, max_gsl_length_m, ground_station_satellites_in_range[count]))
-            thread_list.append(thread)
-            count += 1
+    # Divide ground stations into pools and create threads
+    for i in range(0, len(ground_stations), int(num_of_gs_per_pool)):
+        subgs_list = ground_stations[i:i+int(num_of_gs_per_pool)]
+        thread = threading.Thread(target=_calc_gs_sat_thread, args=(subgs_list, satellites_by_name, satellites_by_index, t, main_config, sat_config, ground_station_satellites_in_range[count]))
+        thread_list.append(thread)
+        count += 1
 
-        # Start and join threads for parallel execution
-        for thread in thread_list:
-            thread.start()
-        for thread in thread_list:
-            thread.join()
+    # Start and join threads for parallel execution
+    for thread in thread_list:
+        thread.start()
+    for thread in thread_list:
+        thread.join()
 
-        # Prepare temporary list for association criteria processing
-        ground_station_satellites_in_range_temporary = []
-        for list in ground_station_satellites_in_range:
-            for ls in list:
-                ground_station_satellites_in_range_temporary.append([[ls]])
-        
-        # Chooses a function to reconfigure the connectivity matrix to match the requested association criteria
-        if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET":
-            connectivity_matrix = M_gs_sat_association_criteria_BasedOnDistance(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index))
-            return connectivity_matrix
+    # Prepare temporary list for association criteria processing
+    ground_station_satellites_in_range_temporary = []
+    for list in ground_station_satellites_in_range:
+        for ls in list:
+            ground_station_satellites_in_range_temporary.append([[ls]])
+    
+    # Chooses a function to reconfigure the connectivity matrix to match the requested association criteria
+    if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET":
+        connectivity_matrix = M_gs_sat_association_criteria_BasedOnDistance(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index))
+        return connectivity_matrix
 
-        if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET_ALAN":
-            connectivity_matrix = M_gs_sat_no_association_criteria(connectivity_matrix, ground_station_satellites_in_range_temporary, len(satellites_by_index), satellites_by_index)
-            return connectivity_matrix
+    if association_criteria == "BASED_ON_DISTANCE_ONLY_MININET_ALAN":
+        connectivity_matrix = M_gs_sat_no_association_criteria(connectivity_matrix, ground_station_satellites_in_range_temporary, len(satellites_by_index), satellites_by_index)
+        return connectivity_matrix
 
-        if association_criteria == "BASED_ON_LONGEST_ASSOCIATION_TIME":
-            connectivity_matrix = M_gs_sat_association_criteria_MaxAssociationTime(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index), satellites_by_index, satellites_by_name, max_gsl_length_m, t)
-            return connectivity_matrix
+    if association_criteria == "BASED_ON_LONGEST_ASSOCIATION_TIME": ###### Multi-shell would fail for this criteria [FIX: Incorporate calc_max_gsl_length in the function call below]
+        connectivity_matrix = M_gs_sat_association_criteria_MaxAssociationTime(connectivity_matrix, ground_station_satellites_in_range_temporary, ground_stations, len(satellites_by_index), satellites_by_index, satellites_by_name, data, t)
+        return connectivity_matrix
     
     return -1
 
@@ -846,7 +1035,8 @@ def M_gs_sat_association_criteria_BasedOnDistance(
 # removed M_gs_sat_association_criteria_BasedOnDistance_alan, as it was not being used in any file or function
 
 def calculate_link_characteristics_for_gsls_isls(
-                                                connectivity_matrix, 
+                                                connectivity_matrix,
+                                                links_characteristics, 
                                                 satellites_by_index, 
                                                 satellites_by_name, 
                                                 ground_stations, 
@@ -857,6 +1047,7 @@ def calculate_link_characteristics_for_gsls_isls(
 
     Args:
         connectivity_matrix (list): 2D matrix representing the network connectivity between satellites, as well as ground stations
+        links_characteristics (dict): Dictionary of 2D matrices of routing metrics between satellites, as well as ground stations (If congestion true, then it contains wait & service time latency and throughput additions)
         satellites_by_index (dict): satellites sorted by index
         satellites_by_name (dict): satellites sorted by name
         ground_stations (dict): list of ground stations
@@ -873,68 +1064,570 @@ def calculate_link_characteristics_for_gsls_isls(
         _distance_between_two_satellites = lunar_dyn.distance_between_two_satellites
         _distance_between_ground_station_satellite = lunar_dyn.distance_between_ground_station_satellite
     elif type(satellites_by_name[satellites_by_index[0]])==EarthSatellite:
-        pass
         _distance_between_two_satellites = distance_between_two_satellites
         _distance_between_ground_station_satellite = distance_between_ground_station_satellite
     
     # Initialize matrices for latency and throughput
-    matrix_size = len(satellites_by_index)+len(ground_stations)
-    latency_matrix = [[0.0 for _ in range(matrix_size)] for _ in range(matrix_size)]
-    throughput_matrix = [[0.0 for _ in range(matrix_size)] for _ in range(matrix_size)]
-    distance_matrix = [[0 for _ in range(matrix_size)] for _ in range(matrix_size)]
+    matrix_size = len(satellites_by_index)+len(ground_stations)  #Iterating over this value would only take sats and CTs excluding GW and IE if t2t exists
+    latency_matrix = links_characteristics['latency_matrix']
+    throughput_matrix = links_characteristics['throughput_matrix']
+    distance_matrix = links_characteristics['distance_matrix']
+    congestion_latency_mix_matrix = links_characteristics['congestion_latency_mix_matrix']
     
     # Define constants
+    congestion_weight = 0.65
+    latency_weight = 1 - congestion_weight
+
     channel_bandwidth_downlink = 220 # check spacex/starlink max upload/download speeds
     channel_bandwidth_uplink = 30
     number_of_users_per_cell = 5.0
     density = 1.0/float(number_of_users_per_cell)
 
-    # Loop through the connectivity matrix to calculate latency and throughput
-    for i in range(len(connectivity_matrix)):
-        for j in range(len(connectivity_matrix[i])):
+    # RF ISL parameters
+    channelFreq_isls                      = 37.0      # GHz
+    eirp_rf_isl                           = 60        # dBm
+    receiver_gain_RF_ISL                  = 50        # dB
+    polarization_loss_RF_ISL              = 1         # dB
+    alignment_loss_rf_isl                 = 1         # dB
+    system_losses_rf_isl                  = 2         # dB
+    noise_temp_rf_isl                     = 290       # Kelvin
+    isl_bandwidth_MHz                     = 250       #MHz
+    isl_bandwidth_Hz                      = isl_bandwidth_MHz*1e6
+
+    # Loop through every satellite and CT to calculate latency and throughput
+    for i in range(matrix_size):
+        for j in range(matrix_size):
             # ISL between two satellites
-            if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j < len(satellites_by_index):
+            if connectivity_matrix[i][j] >= 1 and i < len(satellites_by_index) and j < len(satellites_by_index):  # >=1 takes care of congestion and no congestion
+                
+                ###### RF LINK modeling ######
                 distance_meters             = _distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
-                distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3                                          #speed of light  (Units in ms)
-                throughput_matrix[i][j]     = channel_bandwidth_downlink            #Mbps
+                # distance_matrix[i][j]       = int(distance_meters)
+                distance_km = distance_meters/1000
+                fspl_db = 20 * math.log10(distance_km) + 20 * math.log10(channelFreq_isls) + 92.45  # FSPL in dB 
+                RSS_dbm = eirp_rf_isl - fspl_db + receiver_gain_RF_ISL - system_losses_rf_isl - alignment_loss_rf_isl-polarization_loss_RF_ISL
+                k = 1.38e-23  # Boltzmann constant in J/K
+                noise_W = k*noise_temp_rf_isl*isl_bandwidth_Hz
+                noise_dbm = 10 * math.log10(noise_W) + 30  # Convert noise power to dBm\
+                snr_dB = RSS_dbm - noise_dbm
+                snr_isl = 10**(snr_dB/10)
+                latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3
+                channel_width               = isl_bandwidth_Hz
+                if throughput_matrix[i][j] != 0.0:
+                    throughput_matrix[i][j]     = min((density*channel_width*(math.log2(1+snr_isl)))/1e6, float(throughput_matrix[i][j]))  ## pulled from GSL section below
+                else:
+                    throughput_matrix[i][j]     = (density*channel_width*(math.log2(1+snr_isl)))/1e6  ## pulled from GSL section below
+                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ##############################
+                ###### OLDER MODEL ######
+                # distance_meters             = _distance_between_two_satellites(satellites_by_name[str(satellites_by_index[i])], satellites_by_name[str(satellites_by_index[j])], t)
+                # latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3                                         #speed of light  (Units in ms)
+                # if throughput_matrix[i][j] != 0.0:
+                #     throughput_matrix[i][j]     = min(channel_bandwidth_downlink, float(throughput_matrix[i][j]))  #Mbps
+                # else:
+                #     throughput_matrix[i][j]     = channel_bandwidth_downlink
+                # # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
+                # # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
+                ##############################
 
             # GSL between ground station and satellite
-            if connectivity_matrix[i][j] == 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):
+            if connectivity_matrix[i][j] >= 1 and i >= len(satellites_by_index) and j < len(satellites_by_index):  # >=1 takes care of congestion and no congestion
                 distance_meters             = _distance_between_ground_station_satellite(ground_stations[i-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[j])], t)
-                distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
+                latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3            #speed of light   (Units in ms)
                 snr_dB                      = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "uplink")
                 snr                         = 10**(snr_dB/10)
                 channel_width               = channel_bandwidth_uplink
-                throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
-                # throughput_matrix[i][j]     = channel_width*(math.log(1+snr)/math.log(2))
+                if throughput_matrix[i][j] != 0.0:
+                    throughput_matrix[i][j]     = min(density*channel_width*(math.log2(1+snr)), throughput_matrix[i][j])
+                else:
+                    throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
 
                 # Additional check for specific conditions (further clarification?) [!!! As of now this part doesnt have significant effect !!!]
                 if i-len(satellites_by_index) == 1:
                     snr_dB                      = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[j])], ground_stations[i-len(satellites_by_index)], t, distance_meters, "uplink")
                     snr                         = 10**(snr_dB/10)
                     channel_width               = channel_bandwidth_uplink
-                    throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                    if throughput_matrix[i][j] != 0.0:
+                        throughput_matrix[i][j]     = min(density*channel_width*(math.log2(1+snr)), throughput_matrix[i][j])
+                    else:
+                        throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
                     # throughput_matrix[i][j]     = channel_width*(math.log(1+snr)/math.log(2))
             
             # GSL between satellite and ground station
-            if connectivity_matrix[i][j] == 1 and i < len(satellites_by_index) and j >= len(satellites_by_index):
+            if connectivity_matrix[i][j] >= 1 and i < len(satellites_by_index) and j >= len(satellites_by_index):  # >=1 takes care of congestion and no congestion
                 distance_meters             = _distance_between_ground_station_satellite(ground_stations[j-len(satellites_by_index)], satellites_by_name[str(satellites_by_index[i])], t)
-                distance_matrix[i][j]       = int(distance_meters)
-                latency_matrix[i][j]        = ((distance_meters)/299792458.0)*1e3           #speed of light
+                latency_matrix[i][j]        = latency_matrix[i][j] + ((distance_meters)/299792458.0)*1e3           #speed of light
                 snr_dB                      = link.calc_gsl_snr(satellites_by_name[str(satellites_by_index[i])], ground_stations[j-len(satellites_by_index)], t, distance_meters, "downlink")
                 snr                         = 10**(snr_dB/10)
                 channel_width               = channel_bandwidth_downlink
-                throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
-                # throughput_matrix[i][j]     = channel_width*(math.log(1+snr)/math.log(2))
+                if throughput_matrix[i][j] != 0.0:
+                    throughput_matrix[i][j]     = min(density*channel_width*(math.log2(1+snr)), throughput_matrix[i][j])
+                else:
+                    throughput_matrix[i][j]     = density*channel_width*(math.log2(1+snr))
+                # congestion_latency_mix_matrix[i][j] = congestion_weight*connectivity_matrix[i][j] + latency_weight*latency_matrix[i][j]  #Complementary like-filter
+                # congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]*latency_matrix[i][j]
+                congestion_latency_mix_matrix[i][j] = connectivity_matrix[i][j]**(-1)*latency_matrix[i][j]
 
-    # Return latency and throughput matrices
+    # Return latency, throughput, distance and congestion matrices
     return {
                 "latency_matrix": latency_matrix,
                 "throughput_matrix": throughput_matrix,
-                "distance_matrix": distance_matrix
+                "distance_matrix": distance_matrix,
+                "congestion_latency_mix_matrix": congestion_latency_mix_matrix
             }
+
+
+def initializer(mat_size):
+
+    connectivity_matrix = [[0 for _ in range(mat_size)] for r in range(mat_size)]
+    link_characteristics = {}
+    link_characteristics['latency_matrix'] = [[0.0 for _ in range(mat_size)] for _ in range(mat_size)]
+    link_characteristics['throughput_matrix'] = [[0.0 for _ in range(mat_size)] for _ in range(mat_size)]
+    link_characteristics['distance_matrix'] = [[0.0 for _ in range(mat_size)] for _ in range(mat_size)]
+    link_characteristics['congestion_latency_mix_matrix'] = [[0.0 for _ in range(mat_size)] for _ in range(mat_size)]
+
+    return connectivity_matrix, link_characteristics
+
+
+def congestion_distribution(
+                            time_utc             : time,
+                            sat_num              : int,
+                            connection_matrix    : np.ndarray,
+                            link_char_dict       : dict, 
+                            ground_stations      : list, 
+                            congestion_flag      : int = 0,
+                            map_type             : str = 'simple',
+                            spread_map           : str = 'gaussian'
+                            )-> {np.ndarray, dict}:
+    """
+    Updates the connection matrix based on levels of congestion.
+
+    Args:
+        sat_num (int):                      Number of satellites in the connectivity matrix
+        connectivity_matrix (np.ndarray):   Matrix representing the connectivity between nodes
+        link_char_dict (dict):              Updates latency and throughput for the topology with users waiting and service time effects
+        ground_stations (list):             List of ground stations
+        congestion_flag (int):              Flag to turn on/off congestion over a topology
+    
+    Returns:
+        connectivity_matrix:                Updated Weights (values between 1-max, 1-->no congestion..... max-->highest congestion)
+    """
+
+    global SPREAD_TYPE
+    SPREAD_TYPE = spread_map
+    if map_type == 'rush_hr':
+        usage_matrix = [[0 for _ in range(len(connection_matrix))] for _ in range(len(connection_matrix))] #Helps in tracking approx user counts received by every nodes
+    elif map_type == 'simple':
+        usage_matrix = connection_matrix  #Usage is simply reflected in the connectivity matrix
+
+    congestion_spread = 3   ##This determines the spread of traffic distribution in links 
+    max_v = 5
+    continent_gscount_global(ground_stations) #Fill the dictionary for gscounts continentwise globally
+
+    ##########
+    lat_mat = link_char_dict['latency_matrix']
+    throughput_mat = link_char_dict['throughput_matrix']
+    ##########
+
+    if congestion_flag:
+        
+        GIDs = []
+        if map_type=='rush_hr':
+            hotspots = ground_stations  #Get GID for every GS since now every GS is affected by the rush hour trend
+        elif map_type=='simple':
+            hotspots = calc_hotspots(ground_stations, "geographic")
+
+        ### Get the ground station indices
+        for gs in hotspots:
+            GIDs.append(gs['gid'])
+        ### Get all the GSLs (satellite IDs) associated to these hotspots and spread congestion to the topology
+        satIDs = {}
+        SATS = []
+        for i in range(len(GIDs)):
+            lon = hotspots[GIDs[i]]['longitude_degrees_str']
+            rush_map = rush_hour_mapping(hotspots[GIDs[i]])
+            satIDs[GIDs[i]] = [j for j, val in enumerate(connection_matrix[sat_num+GIDs[i]]) if val == 1 and j<sat_num]  ##Take only GSL relevant satID and not t2t
+            SATS.extend(satIDs[GIDs[i]])
+            ### Congesting GSLs (layer 0)
+            for s_id in satIDs[GIDs[i]]:
+                if map_type == 'simple':  # Changes values in connectivity matrix
+                    connection_matrix[sat_num+GIDs[i]][s_id] = max_v
+                    connection_matrix[s_id][sat_num+GIDs[i]] = max_v
+                elif map_type == 'rush_hr':  # Changes values in link characteristic matrix using connectivity matrix
+                    ############ Run rush hour mapping and user stochastic process for GSLs
+                    usage_val = rush_map(lon_localtime(time_utc, float(lon)*np.pi/180, 'secs'))/len(satIDs[GIDs[i]]) #Gives mean value for user traffic stochastic process (even distribution of traffic to all sats connected)
+                    # print('GS: ' + str(hotspots[GIDs[i]]['name']) + ' | lon: ' + str(lon) + ' | usage_val: ' + str(usage_val))
+                    usage_matrix[sat_num+GIDs[i]][s_id] = usage_val
+        
+        ##### Remove duplicate sats
+        SATS_arr = np.array(SATS)
+        SATS_arr = np.unique(SATS_arr)
+        SATS = list(SATS_arr)
+
+        ##### Update traffic spread in ISLs
+        global primary_sat  #Globally tracks origin sat to mitigate looping of traffic while spreading in traffic_mapping()
+        layer = 1
+        for sat in SATS:
+            max_v = compute_incoming_traffic(sat, usage_matrix, sat_num)
+            primary_sat = sat
+            usage_matrix = traffic_mapping(usage_matrix, connection_matrix, sat, max_v, congestion_spread, sat_num, layer)
+
+        ##### Compute final processing latency and throughput values for every node after usage_matrix is completely updated with traffic spread
+        flat_usage = [item for i, row in enumerate(usage_matrix) for item in row if i<sat_num]
+        flat_usage = np.unique(flat_usage)
+        idx = np.where(flat_usage==0)
+        flat_usage = np.delete(flat_usage, idx)
+
+        lat_mat, throughput_mat = Queue_computations(usage_matrix, lat_mat, throughput_mat, sat_num, 'log-normal')
+        link_char_dict['latency_matrix'] = lat_mat
+        link_char_dict['throughput_matrix'] = throughput_mat
+        
+        return connection_matrix, link_char_dict, usage_matrix
+
+    else:
+        return connection_matrix, link_char_dict, usage_matrix
+
+
+def traffic_mapping(mat, conn_mat, curr_node, max_val, spread, sat_num, layer):
+    '''
+    This is a recursive function that assigns congestion values recursively to any neighbouring link in Gaussian spread --> outputs updated connectivity matrix
+    LOGIC: First fill the usage_matrix for the entire topology (ISLs + GSLs) with recursion and then compute latency and throughput values for relevant ISLs + GSLs
+    '''
+
+    gs_neighbours, sat_neighbours = get_neighbour_sats(curr_node, conn_mat, sat_num, 1)
+    if primary_sat in sat_neighbours: sat_neighbours.remove(primary_sat)    #### Handles looping problem
+    num_gs_found = len(gs_neighbours)
+    num_sat_neighbour = len(sat_neighbours)
+    
+    for sat in sat_neighbours:  #Iterate over ISLs and GSLs
+        
+        if layer <= spread:  #(congesting only those recursive sats under 0=<layer<spread)
+            if SPREAD_TYPE == 'pseudo_load_balanced':
+                if layer==1:  #### Don't want the same traffic spreading back to it's source ground station if existing! (well if layer==0 -- basically spread everywhere!)
+                    mat[curr_node][sat] = mat[curr_node][sat] + max_val/(num_sat_neighbour) # If some recurser already updated it (i.e another source of incoming cummulative user traffic), then add the current val and recompute the latency and throughput
+                else:  #### can spread from higher layer onwards to other ground stations
+                    mat[curr_node][sat] = np.add(mat[curr_node][sat], max_val/(num_sat_neighbour + num_gs_found), dtype=object)
+                    if num_gs_found:
+                        for gs in gs_neighbours:
+                            mat[curr_node][gs] = mat[curr_node][gs] + max_val/(num_sat_neighbour + num_gs_found)
+                val = mat[curr_node][sat]  # (float type) Recursively transfers delegated user traffic
+            elif SPREAD_TYPE == 'gaussian':
+                mat[curr_node][sat] = mat[curr_node][sat] + gaussian_distbn(max_val, layer, spread)
+                val = max_val   # Recursively transfers max_val
+            
+            mat = traffic_mapping(mat, conn_mat, sat, val, spread, sat_num, layer+1)
+
+            #### Below part of code is only achievable once recursive method reaches layer>spread or finished with neighbours loop for its child recursion
+            # val1, val2 = stochastic_traffic_generation(val, layer, spread, 'satellite', 'log-normal')  #Traffic spread for next layer at current node that was reached via current layer
+            # if SPREAD_TYPE == 'gaussian':
+            #     level_val = val1
+            #     if mat[curr_node][sat] < level_val and mat[sat][curr_node] < level_val:  #Only change values if its not changed by any other recurser
+            #         mat[curr_node][sat] =  level_val
+            #         mat[sat][curr_node] =  level_val
+            # elif SPREAD_TYPE == 'pseudo_load_balanced':
+            #     lat_m[curr_node][sat] = val1
+            #     thro_m[curr_node][sat] = val2
+
+        else:  #When layer>spread (don't want to congest)
+            pass
+
+    return mat
+
+
+def Queue_computations(usage_mat, lat_mat, thro_mat, sat_num, distb_type):
+    '''
+    Decides which distribution to implement based on the completed usage matrix and computes processing latency and throughput values for every ISL and GSL in the network topology 
+    '''
+    for i in range(len(usage_mat)):
+        for j in range(len(usage_mat)):
+            if i<sat_num:
+                dev_type = 'satellite'
+            else:
+                dev_type = 'gateway'
+            
+            if usage_mat[i][j] == 0.0:
+                continue
+
+            val1, val2 = stochastic_traffic_generation(usage_mat[i][j], dev_type, distb_type)
+            lat_mat[i][j] = lat_mat[i][j] + val1  #Add on top of latency from existing sources
+            if thro_mat[i][j]:
+                thro_mat[i][j] = min(thro_mat[i][j], val2)
+            else:
+                thro_mat[i][j] = val2
+
+
+    
+    return lat_mat, thro_mat
+
+
+def compute_incoming_traffic(sat, usage_matrix, sat_num):
+
+    num_gs = len(usage_matrix) - sat_num
+    GS_traffics = []
+    gs_cnt = 0
+    for i in range(num_gs):
+        if usage_matrix[sat_num+i][sat]:
+            GS_traffics.append(usage_matrix[sat_num+i][sat])
+            gs_cnt += 1
+    
+    return sum(GS_traffics)/gs_cnt if gs_cnt else sum(GS_traffics)
+
+
+############ STOCHASTIC TRAFFIC FLOW MODELING METHODS ###########
+def gaussian_distbn(max_val, layer, spread):
+    return max_val*np.exp(-(layer)**2 / (spread**2))
+
+
+def poisson_distbn(mean, est_traffic_count, service_specs):
+    '''
+    Implements Poisson stochastic process for user traffic spawning and implementing G/G/1 Queuing
+    model to compute latency and bandwidth due to waiting and service time on the source device
+    '''
+    interarrival_T = np.random.poisson(mean, est_traffic_count)
+    service_T = np.random.lognormal(service_specs[0], est_traffic_count)
+
+    arr_rate = np.reciprocal(interarrival_T.astype(float))
+    service_rate = np.reciprocal(service_T.astype(float))
+    avg_arr_rate = sum(arr_rate)/len(arr_rate)  # This or reciprocal of mean interarrival
+    avg_service_rate = sum(service_rate)/len(service_rate)  # This or reciprocal of mean service time
+
+    rho = avg_arr_rate/avg_service_rate  #Service Utilization
+
+    wait_time = rho/(avg_service_rate*(1-rho))
+    serv_time = 1/(avg_service_rate*(1-rho))
+    latency = wait_time + serv_time
+    if rho<1:
+        throughput = avg_arr_rate  # Considering varibale mean is in units secs/bit
+    
+    return latency, throughput
+
+
+def log_normal_distbn(mean, std_dev, est_traffic_count, service_specs):
+    '''
+    Implements log-normal stochastic process for user traffic spawning and implementing G/G/1 Queuing
+    model to compute latency and bandwidth due to waiting and service time on the source device
+    '''
+    interarrival_T = np.random.lognormal(mean, std_dev, est_traffic_count)
+    service_T = np.random.lognormal(service_specs[1], service_specs[2], est_traffic_count)
+
+    arr_rate = np.reciprocal(interarrival_T.astype(float))
+    service_rate = np.reciprocal(service_T.astype(float))
+    avg_arr_rate = sum(arr_rate)/len(arr_rate)  # This or reciprocal of mean interarrival time
+    avg_service_rate = sum(service_rate)/len(service_rate)  # This or reciprocal of mean service time
+
+    rho = avg_arr_rate/avg_service_rate  #Service Utilization
+
+    std_dev_Ta = np.sqrt(np.exp(2*mean + std_dev**2)*(np.exp(std_dev**2 - 1)))
+    std_dev_Ts = np.sqrt(np.exp(2*service_specs[1] + service_specs[2]**2)*(np.exp(service_specs[2]**2 - 1)))
+    c_a = std_dev_Ta/(1/avg_arr_rate)
+    c_s = std_dev_Ts/(1/avg_service_rate)
+
+    W_avg = (rho/(1-rho))*0.5*(c_a**2 + c_s**2)*avg_service_rate**(-1)
+    latency = (W_avg + avg_service_rate**(-1))*1e3
+    if rho<=1:
+        throughput = avg_arr_rate*avg_packet_size*10**(-6)  # Units: Mbps (this is the traffic throughput)
+    else:
+        throughput = avg_service_rate*avg_packet_size*10**(-6)  # Limiting by service rate since package arrival are choking
+    
+    # print(latency, throughput)
+    return latency, throughput
+#################################################################
+
+################# HOTSPOT SPECIFIC METHODS ######################
+def calc_hotspots(ground_stations, type):
+
+    if type == "user_defined" or type == 1:
+        req_gs = [ground_stations[82], ground_stations[59], ground_stations[63]]
+    elif type == "daytime" or type == 2:
+        req_gs = ground_stations
+    elif type == "geographic" or type == 3:
+        req_gs = geographic_hotspots(ground_stations, "US+Canada")
+
+    return req_gs
+
+
+def geographic_hotspots(gs_list, location):
+
+    if location == "US+Canada":
+        lat_lims = [25.0, 50.0]
+        lon_lims = [-130.0, -68.0]
+    elif location == "Europe":
+        lat_lims = [25.0, 50.0]
+        lon_lims = [-130.0, -68.0]
+    elif location == "Japan":
+        lat_lims = [23.7048, 48.7048]
+        lon_lims = [107.2529, 169.2529]    
+    else:
+        lat_lims = [-180, 180]
+        lon_lims = [-90, 90]
+    
+    hotspots = []
+    for gs in gs_list:
+        coords = [float(gs['latitude_degrees_str']), float(gs['longitude_degrees_str'])]
+        if coords[0]>=lat_lims[0] and coords[0]<=lat_lims[1] and coords[1]>=lon_lims[0] and coords[1]<=lon_lims[1]:
+            hotspots.append(gs)
+    
+    return hotspots
+##############################################################
+
+def lon_localtime(t, lon, format):
+    '''
+    Converts a location's longitude data to the local time in required format using current UTC time
+    '''
+
+    if format=='secs':
+        '''
+        Returns time spend in seconds after midnight in local time
+        '''
+        y, mon, d, h, min, s = convert_time_utc_to_ymdhms(t)
+        tot_sec = float(h)*3600 + float(min)*60 + float(s)
+        local_t = 3600*(np.floor((30*np.pi/180)**(-1)*(lon-(15*np.pi/180))) + 1) + tot_sec
+        if local_t > 86400:
+            local_t = np.remainder(local_t, 86400)
+        elif local_t < 0:
+            local_t = 86400 + local_t
+        
+        return local_t
+    
+    elif format=='hms':
+        '''
+        Returns time spend in seconds after midnight in local time
+        '''
+        y, mon, d, h, min, s = convert_time_utc_to_ymdhms(t)
+        tot_sec = float(h)*3600 + float(min)*60 + float(s)
+        local_t = 3600*(np.floor((15*np.pi/180)**(-1)*(lon-(7.5*np.pi/180))) + 1) + tot_sec
+        if local_t > 86400:
+            local_t = np.remainder(local_t, 86400)
+        elif local_t < 0:
+            local_t = 86400 + local_t
+        h = int(local_t/3600)
+        m = int((local_t-(3600*h))/60)
+        s = local_t - (3600*h + 60*m)
+        return [h, m, s]
+
+
+def rush_hour_mapping(ground_station, calm_t=13, flag=None): ### Only relevant to ground stations (hotspots)
+    '''
+    Tracks the internet rush hour based on the epoch time and maps the usage number to all lat-lon values
+    curr_t (Skyfield.Time/Astropy.Time) -- Current time (TDB jd) 
+
+    RETURNS -- lambda function of lat-lon coordinates in radians to compute number of user activity
+    '''
+
+    continent = continent_gscount_global([ground_station])
+    if continent:
+        user_share = continental_user_spread[continent]/continent_gscount_dict[continent]
+    else:
+        user_share = 1   #dont change the usage value if dont know the user share of the region
+
+    ##### Can gaussian pick the number of users value (given this mean and some s.d) since its also a stochastic process to replicate real-life
+    ##############################################################################################
+    
+    ##############################################
+
+    min_usage = 0.1 ### expected minimum share of active users
+    max_usage = 1 ### expected maximum share of active users
+    amp = (max_usage - min_usage)/2  
+    normal_amp_pos = (max_usage + min_usage)/2  #Nominal number of users
+
+    if flag==None:
+        '''
+        default mapping (Assumption: Rush hour is symmetric for every weekday and weekend irrespective of holidays or events, uniformly distributed users) [Sinusoid => 6am - least, 8pm - peak]
+        '''
+        w = 2*np.pi/(28*3600)  # Taking 6am (low) and 8pm (peak) sinusoid with 28hrs cycle (1pm - calm state)
+
+        mean = lambda t: (normal_amp_pos + amp*np.sin(w*(t-(calm_t*3600))))*0.01*user_share*total_users
+        usage = lambda t: np.random.normal(loc=mean(t), scale=0.08*mean(t))  # zero at UTC zone!
+
+    return usage
+
+
+def stochastic_traffic_generation(value, device_type='satellite', distbn_type="poisson"):  ###Gives latency thorughput vals for a link with waiting and service time modelling (GSLs and ISLs)
+    '''
+    value --> Mean number of users for poisson or log-normal setting, otherwise level values for simple gaussian spread
+    '''
+
+    if device_type=='gateway':
+        service_specs = service_chart['gateway']
+    elif device_type=='satellite':
+        service_specs = service_chart['satellite']
+    
+    #### Inter-arrival mean computation (function with input as user traffic and output means for interarrival time)
+    
+    ###### Mean ranges from [0.28720972199681555, 0.36716733649294675] approx same for each timestep
+    if device_type=='satellite':
+        mean = np.log((6 - 0.75*(-1 + 2*value/700))*10**(-4))   # ranges from (5e-4 - 7e-4) linearly with value=(0, 700)  (mean for underlying normal distribution when using log-normal)
+        std_dev = 1e-1
+    elif device_type=='gateway':
+        mean = np.log((4 - 0.3*(-1 + 2*value/700))*10**(-4))   # ranges from (3e-4 - 5e-4) linearly with value=(0, 700)  (mean for underlying normal distribution when using log-normal)
+        std_dev = 1e-1
+    ####
+
+    if distbn_type == 'gaussian':  #Return scale so that later this scaling just scales the latency and throughput
+        # scale = gaussian_distbn(value, layer, spread)
+        # return scale, None
+        return None, None
+    elif distbn_type == 'poisson':
+        latency, throughput = poisson_distbn(mean, data_count, service_specs)
+    elif distbn_type == 'log-normal':
+        latency, throughput = log_normal_distbn(mean, std_dev, data_count, service_specs)
+    
+    return latency, throughput
+    
+
+def continent_gscount_global(ground_stations):
+    '''
+    This function specifically inputs list of ground stations or just a single ground station! If list of 
+    ground stations are the input, then the gscount_dict is supposed to be updated otherwise if a single 
+    ground station is input then its corresponding continent string is returned (Use this method carefully!) 
+    '''
+
+    count = [0 for _ in range(len(continent_boundary_map.keys()))]
+    for gs in ground_stations:
+        lat = float(gs['latitude_degrees_str'])
+        lon = float(gs['longitude_degrees_str'])
+        for idx, conti in enumerate(continent_boundary_map.keys()):
+            [lat_min, lat_max, lon_min, lon_max] = continent_boundary_map[conti]
+            if continent_gscount_dict or len(ground_stations)==1:
+                if lat>=lat_min and lat<=lat_max and lon>=lon_min and lon<=lon_max:
+                    return conti
+            else:
+                if lat>=lat_min and lat<=lat_max and lon>=lon_min and lon<=lon_max:
+                    count[idx] = count[idx] + 1
+                    break
+    
+    continent_gscount_dict['Asia'] = count[0]
+    continent_gscount_dict['Africa'] = count[1]
+    continent_gscount_dict['Europe'] = count[2]
+    continent_gscount_dict['NA'] = count[3]
+    continent_gscount_dict['SA'] = count[4]
+    continent_gscount_dict['Oceania'] = count[5]
+    continent_gscount_dict['Middle_East'] = count[6]
+    continent_gscount_dict['Antarctica'] = count[7]
+
+
+def get_neighbour_sats(sat_id, connection_matrix, sat_num, get_gs=0):
+
+    neighbours = [j for j, val in enumerate(connection_matrix[sat_id]) if val != 0 and j<sat_num]
+    if get_gs==1:
+        gs_neighbour = [j for j, val in enumerate(connection_matrix[sat_id]) if val != 0 and j>=sat_num]
+        return gs_neighbour, neighbours
+    else:
+        return neighbours
+
+
+def get_current_states(sat, time):
+    ### Gives position and velocity w.r.t Skyfield frame at timstamp 'time'
+
+    node = sat.at(time)
+    pos = node.position.km
+    vel = node.velocity.km_per_s
+
+    return pos, vel
 
 
 def get_main_body_str(sat):
@@ -951,7 +1644,7 @@ def distance_threshold(flag):
     global threshold
 
     if flag=="Earth":
-        threshold = 5016000  #m
+        threshold = 6016000  #m
     elif flag=="Lunar":
         threshold = 716000  #m
 

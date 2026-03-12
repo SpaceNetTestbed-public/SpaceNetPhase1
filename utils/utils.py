@@ -5,7 +5,9 @@ SpaceNet Utils/
 AUTHOR:         Mohamed M. Kassem, Ph.D.
                 University of Surrey
 
-EDITOR:         Bruce Barbour
+EDITORS:        Bruce Barbour
+                Virginia Tech
+                S Aryan
                 Virginia Tech
 
 DESCRIPTION:    This Python script supplies the primary utility functions for the SpaceNet simulator.
@@ -77,6 +79,7 @@ import sys
 sys.path.append("../")
 from mobility.read_live_tles import *
 from utils.file_utils import *
+import mobility.read_live_tles as rlt
 
 # =================================================================================== #
 # ---------------------------------- FILE SYSTEM ------------------------------------ #
@@ -108,7 +111,7 @@ def get_recent_TLEs_using_timestamp(
         f = os.path.join(directory, filename)
         if os.path.isfile(f):
             file_timestamp = int(filename.split("_")[1])
-            if abs(int(timestamp-file_timestamp)) < timestamp_diff and int(timestamp-file_timestamp) <= 86400:
+            if abs(int(timestamp-file_timestamp)) < timestamp_diff and int(timestamp-file_timestamp) <= 10*86400:
                 timestamp_diff = abs(int(timestamp-file_timestamp))
                 recent_file = f
 
@@ -210,9 +213,9 @@ def save_topology(
     # Iterate over the connectivity matrix list
     for i in range(len(connectivity_matrix)):
         for j in range(len(connectivity_matrix[i])):
-            if connectivity_matrix[i][j] == 1:
+            if connectivity_matrix[i][j] >= 1:   # >= 1 would save all the links that has congestion values that are usually greater than 1
                 if i!=j and (i, j) not in existing_links:
-                   write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+"\n"
+                   write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],6))+"\n"
                    #write_this = str(i)+","+str(j)+","+str(round(links_charateristics["latency_matrix"][i][j],2))+","+str(round(links_charateristics["throughput_matrix"][i][j],2))+","+str(round(links_charateristics["distance_matrix"][i][j],2))+"\n"
                    f.write(write_this)
                    existing_links.append((i, j))
@@ -248,6 +251,49 @@ def extract_connectivity(
 
     return connectivity_matrix, link_characteristics
             
+
+def save_topology_graph(
+                    connectivity_matrix         : list,
+                    operator_name               : str, 
+                    timestamp                   : int,
+                    topology_graph_path         : str
+                 ):
+    """
+    Saves the topology graph metrics used for routing (Values in the connectivity matrix) for each link in the topology. (Very useful if simulating congestion model)
+
+    Args:
+        connectivity_matrix (list):     Two-dimensional matrix list of sat/gs connections, where each row index (i) corresponds 
+                                        a single sat/gs in the sorted list and each column index (j) are each of the sat/gs in the sorted list. 
+                                        Any elements of the indexpair (i, j) that are 1 is a connected pair. Discludes loopback.
+        operator_name (str):            Constellation/operator name
+        timestamp (int):                Unix time
+        connectivity_matrix_path (str): Path to output the connectivity matrix files                    
+
+    Returns:
+        Saves the topology as a .txt file.
+    """
+
+    # Initialize list
+    existing_links = []
+
+    # Generate a new file
+    file_path = topology_graph_path+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "topology_graph_"+timestamp+".txt"
+    f = open(file_path + file_name, "a")
+
+    # Iterate over the connectivity matrix list
+    for i in range(len(connectivity_matrix)):
+        for j in range(len(connectivity_matrix[i])):
+            if connectivity_matrix[i][j] >= 1:   # >= 1 would save all the links that has congestion values that are usually greater than 1
+                if i!=j and (i, j) not in existing_links:
+                   write_this = str(i)+","+str(j)+"\t\t\t\t\t\t"+str(connectivity_matrix[i][j])+"\n"
+                   f.write(write_this)
+                   existing_links.append((i, j))
+    
+    # Close file to minimize memory leaks
+    f.close()
+
 
 
 def save_routes(
@@ -518,6 +564,24 @@ def save_node_index_and_terrestrial_info(
     # Close file to minimize memory leaks
     nodeindex_log.close()
     terrestrial_log.close()
+
+def save_xyz_2_csv(
+                        coordinate_list         : list, 
+                        timestamp               : int,
+                        operator_name           : str, 
+                        csv_filepath            : str
+                     ):
+    
+    import pandas as pd
+
+    # Generate a new file
+    file_path = csv_filepath+operator_name+"/"
+    check_create_path(file_path)
+    file_name = "xyzcoords_"+("_".join(timestamp))+".csv"
+    xyz_dict = {'X': coordinate_list[0], 'Y': coordinate_list[1], 'Z': coordinate_list[2]}
+    df = pd.DataFrame(xyz_dict)
+    df.to_csv(file_path+file_name)
+
 
 def save_cpu_time(
                     cpu_runtime     : float, 
@@ -898,7 +962,7 @@ def arrange_satellites(
                     cn +=1
 
             # Sort the satellites in orbit and append them to list
-            sorted = sort_satellites_in_orbit(satellites_in_orbit, timestamp)
+            sorted = rlt.sort_satellites_in_orbit(satellites_in_orbit, timestamp)
             satellites_sorted_in_orbits.append(sorted)
             sat_sorted_in_orb_temp.append(sorted)
 
@@ -937,6 +1001,16 @@ def arrange_satellites(
     return {"sorted satellite in orbits": satellites_sorted_in_shells,
             "satellites by index": satellites_by_index
             }
+
+
+def total_sat_shell_listing(sat_config):
+
+    sat_index_per_shell = [0]
+    for shell_idx, shell_name in enumerate(sat_config["shells"].keys()):
+        sat_index_per_shell.append(sat_index_per_shell[-1] + sat_config["shells"][shell_name]["orbits"]*sat_config["shells"][shell_name]["sat_per_orbit"])
+    sat_index_per_shell.pop(0)
+    
+    return sat_index_per_shell
 
 
 def reload_tles(
@@ -1147,7 +1221,7 @@ def convert_time_utc_to_unix(
     datetime.now().isoformat()
     datetime.utcnow().isoformat()
     time.altzone
-    time_timestamp = time_timestamp - time.altzone
+    # time_timestamp = time_timestamp + time.altzone
 
     # Return conversion to unix time
     return time_timestamp
