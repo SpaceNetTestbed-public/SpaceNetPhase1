@@ -41,7 +41,7 @@ link_changes_save           = True
 
 config_file_path            = "config_files/"
 config_file_name            = "main_config.yaml"
-sat_config_sub_path         = "sat_config_files/Acta/"
+sat_config_sub_path         = "sat_config_files/"
 
 def topology_generation(inc, sat_config, 
                         ts, epoch_start, 
