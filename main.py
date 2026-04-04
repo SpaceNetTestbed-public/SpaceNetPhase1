@@ -182,7 +182,7 @@ def main():
 
     # Parse the main configurations from the YAML file
     main_config, sat_config = spacenet_yaml_config.load_sim_and_constellation_config_file(config_file_path, config_file_name, sat_config_sub_path)
-    operator_name = re.match(r'[a-zA-Z]+', main_config["ConstellationName"]).group(0)
+    operator_name = re.match(r'[a-zA-Z]+', sat_config["operator_name"]).group(0)
 
     # Path configuration
     output_filepath             = main_config["OutputFilePath"]
@@ -468,4 +468,6 @@ def main():
 
 
 if __name__ == '__main__':
+    if (len(sys.argv) == 4):
+        config_file_path, config_file_name, sat_config_sub_path = sys.argv[1], sys.argv[2], sys.argv[3]
     main()
