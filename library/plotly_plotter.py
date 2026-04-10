@@ -812,6 +812,24 @@ def file_to_unix(filename: str) -> int:
     dt = datetime(year, month, day, hour, minute, second, tzinfo=timezone.utc)
     return str(int(dt.timestamp()))
 
+def midpoint(lat1, lon1, lat2, lon2):
+    # convert to radians
+    lat1, lon1 = math.radians(lat1), math.radians(lon1)
+    lat2, lon2 = math.radians(lat2), math.radians(lon2)
+
+    dlon = lon2 - lon1
+
+    bx = math.cos(lat2) * math.cos(dlon)
+    by = math.cos(lat2) * math.sin(dlon)
+
+    lat3 = math.atan2(
+        math.sin(lat1) + math.sin(lat2),
+        math.sqrt((math.cos(lat1) + bx)**2 + by**2)
+    )
+    lon3 = lon1 + math.atan2(by, math.cos(lat1) + bx)
+
+    return math.degrees(lat3), (math.degrees(lon3) + 540) % 360 - 180
+
 def setConfigurations():
     if (len(sys.argv) == 2):
         gif_config_path = sys.argv[1]
@@ -854,8 +872,8 @@ def setConfigurations():
         total_orbits += orbit_total
         total_sats += shell["sat_per_orbit"] * shell["orbits"]
     number_of_orbits        = total_orbits
-    groundStation1 = main_config['SourceNode'] - total_sats
-    groundStation2 = main_config['DestNode'] - total_sats
+    groundStation1 = main_config['SourceNode']
+    groundStation2 = main_config['DestNode']
 
     sx, sy = 0, 0
     dx, dy = 0, 0
@@ -872,19 +890,15 @@ def setConfigurations():
                 dx = float(parts[3])
     # center gif between the ground stations
     if (config['center_gif']):
-        lon0_3d                 = (sx + dx) / 2
-        lat0_3d                 = (sy + dy) / 2  
+        lat0_3d, lon0_3d = midpoint(sy, sx, dy, dx)
     else: 
         lon0_3d                 = config['long'] #30  
         lat0_3d                 = config['lat'] #-35   
 
     _timespan               = sat_config['Sim_Length']['TimeStepDuration'] * sat_config['Sim_Length']['TimeStepCount']  #Important to change if doesnt match Phase1 settings
     time_step_count         = 0
-    print(time_step)
     if (time_step != 0 and _timespan % sat_config['Sim_Length']['TimeStepDuration'] == 0):
         time_step_count = time_step // sat_config['Sim_Length']['TimeStepDuration']
-        print(time_step_count)
-    print(time_step_count)
     optimal_route_filepath  = matchFilePath(outputfolder_path + 'output/optimal_routes/'+operator_name, r'^best_path.*.0.txt$')
     gs_filepath             = open(matchFilePath(outputfolder_path + 'output/terrestrial_info/', r'^terrestrial_.*.0.txt$'), 'r')
     node_indices_filepath   = matchFilePath(outputfolder_path + 'output/node_indices/'+operator_name, r'^nodeindex.*.0.txt')
