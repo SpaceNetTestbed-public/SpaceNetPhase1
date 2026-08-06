@@ -150,6 +150,19 @@ def initial_routing_fw(satellites, connectivity_matrix, metric, source_dest_node
                 static_routes[(i, j)] = nx.reconstruct_path(i, j, pred)
 
     if source_dest_nodes:
+        # reconstruct_path above leaves optimal_output as None when the graph has
+        # no src->dest path. Without this guard the len() below raises a bare
+        # "object of type 'NoneType' has no len()" TypeError that says nothing
+        # about the actual problem: the topology is not routable for this pair.
+        if optimal_output is None:
+            src, dest = source_dest_nodes
+            raise ValueError(
+                f"No route exists between nodes {src} and {dest} in the current topology. "
+                "Sparse constellations often cannot reach distant ground-station pairs - "
+                "24 satellites (4 orbits x 6) fragment the ISL graph and cannot span, say, "
+                "Tokyo to Sao Paulo. Pick a closer SourceNode/DestNode pair, use a larger "
+                "shell, or lower min_elevation_angle so more GSLs qualify."
+            )
         weight_list= []
         for i in range(len(optimal_output)-1):
             weight_list.append(mega_constellation_graph[optimal_output[i]][optimal_output[i+1]]['weight'])
