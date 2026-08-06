@@ -151,8 +151,50 @@ def get_recent_TLEs_using_datetime(
     return get_recent_TLEs_using_timestamp(path, time_timestamp, constellation)
 
 
+class ExceptionPropagatingThread(threading.Thread):
+    """
+    threading.Thread that records any exception raised by its target.
+
+    A plain threading.Thread swallows it: the thread dies, join() returns
+    normally, and the caller silently continues with partial results. Phase 1
+    used to spin forever that way when a GSL worker hit an IndexError.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.exc = None
+
+    def run(self):
+        try:
+            super().run()
+        except BaseException as exc:
+            self.exc = exc  # re-raised by join_threads() on the parent thread
+
+
+def join_threads(
+                    thread_list         : list,
+                    context             : str
+                ) -> None:
+    """
+    Joins every thread and re-raises the first exception any of them hit.
+
+    Args:
+        thread_list (list): started ExceptionPropagatingThread objects
+        context (str):      short description of the work, used in the error message
+    """
+    for thread in thread_list:
+        thread.join()
+
+    failed = [t for t in thread_list if getattr(t, "exc", None) is not None]
+    if failed:
+        raise RuntimeError(
+            f"{len(failed)} of {len(thread_list)} {context} worker thread(s) failed; "
+            f"first error: {type(failed[0].exc).__name__}: {failed[0].exc}"
+        ) from failed[0].exc
+
+
 def read_IProute_files_thread(
-                                routes              : list, 
+                                routes              : list,
                                 initial_routes      : list
                              ) -> list:
     """
@@ -846,14 +888,13 @@ def parse_topology_routes(
                 # Divide the routes into sublists for parallel processing
                 for i in range(0, len(routes), sublist_len):
                     subroutes = routes[i:i+sublist_len]
-                    thread = threading.Thread(target=read_IProute_files_thread, args=(subroutes, initial_routes))
+                    thread = ExceptionPropagatingThread(target=read_IProute_files_thread, args=(subroutes, initial_routes))
                     thread_list.append(thread)
 
                 # Start and join threads for parallel route parsing
                 for thread in thread_list:
                     thread.start()
-                for thread in thread_list:
-                    thread.join()
+                join_threads(thread_list, "route file parsing")
 
                 # Copy and organize the initial routes into the constellation_routes dictionary
                 copy_initial_routes     = initial_routes[:]

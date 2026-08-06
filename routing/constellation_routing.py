@@ -11,6 +11,7 @@ import sys
 sys.path.append("./")
 from routing.routing_utils import *
 from routing.G_weight_fun import *
+from utils.utils import ExceptionPropagatingThread, join_threads
 
 
 
@@ -641,13 +642,12 @@ def gs_routing_parallel(data_path, gs_statellite_pair, links_updated, num_of_sat
     num_thread = num_of_threads#; # Set the number of threads to the number of threads to use for parallel execution
 
     for gs_sat in gs_statellite_pair: # For each ground station-satellite pair
-        thread = threading.Thread(target=gs_routing_worker, args=(data_path, gs_sat, links_updated, num_of_satellites, satellites_by_index, list_of_Intf_IPs, constellation_routes)) # Create a new thread for the ground station routing worker
+        thread = ExceptionPropagatingThread(target=gs_routing_worker, args=(data_path, gs_sat, links_updated, num_of_satellites, satellites_by_index, list_of_Intf_IPs, constellation_routes)) # Create a new thread for the ground station routing worker
         thread_list.append(thread) # Append the thread to the thread list
 
     for thread in thread_list: # For each thread in the thread list
         thread.start() # Start the thread
-    for thread in thread_list: # For each thread in the thread list
-        thread.join() # Join the thread
+    join_threads(thread_list, "ground-station routing")
 
 
 

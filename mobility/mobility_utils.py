@@ -133,15 +133,38 @@ def calc_distance_gs_sat_thread(
         _distance_between_ground_station_satellite = distance_between_ground_station_satellite
 
     sat_idx_list = total_sat_shell_listing(sat_config)
+    shell_names = list(sat_config["shells"].keys())
+
+    # sat_idx_list holds the CUMULATIVE satellite count per shell, so shell k owns
+    # indices [sat_idx_list[k-1], sat_idx_list[k]) - an exclusive upper bound. The
+    # walk below only stays in range if the TLE file holds exactly as many
+    # satellites as the shells declare; when it does not, sid runs off the end of
+    # sat_idx_list and every GSL worker thread dies on IndexError.
+    total_configured_sats = sat_idx_list[-1]
+    if len(satellites_by_index) != total_configured_sats:
+        shell_sizes = ", ".join(
+            f"{name}={sat_config['shells'][name]['orbits']}x{sat_config['shells'][name]['sat_per_orbit']}"
+            for name in shell_names
+        )
+        raise ValueError(
+            f"Satellite count mismatch: {len(satellites_by_index)} satellites were loaded from "
+            f"the TLE file, but sat_config declares {total_configured_sats} ({shell_sizes}). "
+            "This is usually a stale or appended TLE file for this simulation timestamp "
+            "(generate_TLE_main.py opens the TLE in append mode) - delete the generated TLE "
+            "for this timestamp and re-run TLE generation."
+        )
 
     # Iterate over each ground station
     for gs in ground_stations:
         shell = 0
         # Iterate over the range of satellite indices
         for sid in range(len(satellites_by_index)):
-            while sid>sat_idx_list[shell]:
+            # Advance to the shell that owns this index. The bound is exclusive, so
+            # this must be '>=': with '>' the first satellite of every shell after
+            # the first was charged the previous shell's altitude / max GSL length.
+            while sid >= sat_idx_list[shell]:
                 shell = shell + 1
-            max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][list(sat_config["shells"].keys())[shell]])
+            max_gsl_length_m = calc_max_gsl_length(main_config, sat_config["shells"][shell_names[shell]])
             # Check if max GSL length is valid
             if max_gsl_length_m == -1:
                 if main_config["Debug"] == 1:
@@ -520,15 +543,14 @@ def mininet_add_ISLs(
                 subsat_list = [sts for orb in same_orbit_sat_list for sts in orb]
                 #print(subsat_list)
                 total_sat_name_list = [sat.name.split(" ")[0] for sat in subsat_list]  # List of strs
-                thread = threading.Thread(target=calc_distance_sat_sat_thread, args=(subsat_list, satellites_by_name, satellites_by_index, satellites_sorted_in_orbits, t, max_isl_search_length, current_sat_satellites_in_range[count]))
+                thread = ExceptionPropagatingThread(target=calc_distance_sat_sat_thread, args=(subsat_list, satellites_by_name, satellites_by_index, satellites_sorted_in_orbits, t, max_isl_search_length, current_sat_satellites_in_range[count]))
                 thread_list.append(thread)
                 count += 1
 
             # Start and join threads for parallel execution
             for thread in thread_list:
                 thread.start()
-            for thread in thread_list:
-                thread.join()
+            join_threads(thread_list, "ISL distance")
             
             current_sat_satellites_in_range_flatten = [sats for sat_list in current_sat_satellites_in_range for sats in sat_list]
             for i in range(n_orbits):
@@ -749,15 +771,14 @@ def mininet_add_GSLs_parallel(
     # Divide ground stations into pools and create threads
     for i in range(0, len(ground_stations), int(num_of_gs_per_pool)):
         subgs_list = ground_stations[i:i+int(num_of_gs_per_pool)]
-        thread = threading.Thread(target=_calc_gs_sat_thread, args=(subgs_list, satellites_by_name, satellites_by_index, t, main_config, sat_config, ground_station_satellites_in_range[count]))
+        thread = ExceptionPropagatingThread(target=_calc_gs_sat_thread, args=(subgs_list, satellites_by_name, satellites_by_index, t, main_config, sat_config, ground_station_satellites_in_range[count]))
         thread_list.append(thread)
         count += 1
 
     # Start and join threads for parallel execution
     for thread in thread_list:
         thread.start()
-    for thread in thread_list:
-        thread.join()
+    join_threads(thread_list, "GSL distance")
 
     # Prepare temporary list for association criteria processing
     ground_station_satellites_in_range_temporary = []

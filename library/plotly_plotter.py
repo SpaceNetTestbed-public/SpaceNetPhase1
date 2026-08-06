@@ -34,7 +34,7 @@ import yaml
 
 import re
 import numpy as np
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from mpl_toolkits.basemap import Basemap
 
 
@@ -780,15 +780,38 @@ def gif_creator():
     gif_utils.convert_gif(gif_path, gif_path+gif_name, 350)
     print('Exiting and saving...')
 
+# Timestamp suffix written by the utils.save_* helpers: YYYY_M_D_H_M_S, where the
+# seconds field is stringified from a float and is NOT always a whole number
+# (main.py uses str(float(s)), so a 0.25s granularity yields e.g. ..._51.25.txt).
+# Groups: year, month, day, hour, minute, seconds (integer or fractional).
+_TIMESTAMP_PATTERN = r'(\d{4})_(\d{1,2})_(\d{1,2})_(\d{1,2})_(\d{1,2})_(\d+(?:\.\d+)?)'
+
 def extract_datetime(name: str):
-    # Match both 2024_9_27_22_15_6.0 and 2024_09_27_22_15_06.0
-    m = re.search(r'(\d{4})_(\d{1,2})_(\d{1,2})_(\d{1,2})_(\d{1,2})_(\d{1,2})', name)
+    # Matches 2024_9_27_22_15_6.0, 2024_09_27_22_15_06.0 and fractional seconds
+    # such as 2024_9_27_22_15_51.25. The decimals have to survive into the sort
+    # key, otherwise same-second files compare equal and the stable sort leaves
+    # them in os.listdir order - which matchFilePath then indexes positionally.
+    m = re.search(_TIMESTAMP_PATTERN, name)
     if m:
-        y, mo, d, h, mi, s = map(int, m.groups())
-        return datetime(y, mo, d, h, mi, s)
+        y, mo, d, h, mi = (int(g) for g in m.groups()[:5])
+        try:
+            # timedelta carries the fractional part into microseconds for us
+            return datetime(y, mo, d, h, mi) + timedelta(seconds=float(m.group(6)))
+        except ValueError:
+            pass  # e.g. month/day out of range - treat the name as unparseable
     return datetime.max  # fallback so invalid names sort last
 
+def timestampedFilePattern(prefix: str) -> str:
+    """Regex matching '<prefix><timestamp>.txt' for any timestamp seconds value."""
+    return r'^' + re.escape(prefix) + _TIMESTAMP_PATTERN + r'\.txt$'
+
 def matchFilePath(folder, pattern):
+    if not os.path.isdir(folder):
+        raise FileNotFoundError(
+            f"Expected Phase 1 output folder is missing: {folder}. "
+            "The topology generation step did not produce output for this "
+            "experiment - re-run Phase 1 before generating plots/GIFs."
+        )
     files = sorted(os.listdir(folder), key=extract_datetime)
     count = 0
     for filename in files:
@@ -796,7 +819,10 @@ def matchFilePath(folder, pattern):
             filepath = os.path.join(folder, filename)
             return filepath
         count += 1
-    raise Exception("No matching pattern for folder: ", folder)
+    raise FileNotFoundError(
+        f"No file matching {pattern!r} at time step index {time_step_count} "
+        f"in folder: {folder} ({len(files)} file(s) present)."
+    )
 
 
 def file_to_unix(filename: str) -> int:
@@ -899,11 +925,11 @@ def setConfigurations():
     time_step_count         = 0
     if (time_step != 0 and _timespan % sat_config['Sim_Length']['TimeStepDuration'] == 0):
         time_step_count = time_step // sat_config['Sim_Length']['TimeStepDuration']
-    optimal_route_filepath  = matchFilePath(outputfolder_path + 'output/optimal_routes/'+operator_name, r'^best_path.*.0.txt$')
-    gs_filepath             = open(matchFilePath(outputfolder_path + 'output/terrestrial_info/', r'^terrestrial_.*.0.txt$'), 'r')
-    node_indices_filepath   = matchFilePath(outputfolder_path + 'output/node_indices/'+operator_name, r'^nodeindex.*.0.txt')
+    optimal_route_filepath  = matchFilePath(outputfolder_path + 'output/optimal_routes/'+operator_name, timestampedFilePattern('best_path_'))
+    gs_filepath             = open(matchFilePath(outputfolder_path + 'output/terrestrial_info/', timestampedFilePattern('terrestrial_')), 'r')
+    node_indices_filepath   = matchFilePath(outputfolder_path + 'output/node_indices/'+operator_name, timestampedFilePattern('nodeindex_'))
     tle_file                = open('dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+file_to_unix(node_indices_filepath), 'r')
-    conn_filepath           = matchFilePath(outputfolder_path + 'output/connectivity/'+operator_name, r'^topology_.*.0.txt')
+    conn_filepath           = matchFilePath(outputfolder_path + 'output/connectivity/'+operator_name, timestampedFilePattern('topology_'))
     orb_sat_txt             = outputfolder_path + 'output/satellites_orbits/orbits_satellites.txt'
     conn_folder             = outputfolder_path + 'output/connectivity/'+operator_name+'/'
     opt_route_folder        = outputfolder_path + 'output/optimal_routes/'+operator_name+'/'
