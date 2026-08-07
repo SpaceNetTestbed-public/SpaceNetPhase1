@@ -92,7 +92,9 @@ plotted_sat_index                   = {}
 conn_mat                            = {}
 optimal_routes                      = []
 optimal_orbits                      = []
-num_links                           = []
+# Keyed by node index -> ISL count. Must NOT be a list: conn_mat only contains
+# satellites that have at least one link, so positions do not track node indices.
+num_links                           = {}
 dt_hist                             = []
 epoch_hist                          = []
 lats                                = []
@@ -228,8 +230,10 @@ def debugging_section(sat_orbit_index, sat_index_orbit):
 
     # Link Counts
     count = 0
-    for i, js in conn_mat.items():
-        num_links.append(len(js))
+    for node_index_str, js in conn_mat.items():
+        # Key by node index so lookups line up; satellites absent from conn_mat
+        # are isolated at this timestep and correctly report 0 links.
+        num_links[int(node_index_str)] = len(js)
         if len(js)>4: count += 1
 
     # Parse Optimal Route
@@ -391,7 +395,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
             
             if plot_debug and node_assigned_alias == node_index_to_alias_topology_dict.get(ref, ""):
                 c = 'red'
-            elif plot_debug and node_idx < len(num_links) and num_links[node_idx] > 4:
+            elif plot_debug and num_links.get(node_idx, 0) > 4:
                 c = 'darkcyan'
             else:
                 try:
@@ -529,10 +533,11 @@ def gif_creator():
                         conn_mat[line[0]] = [int(line[1])]
                     else:
                         conn_mat[line[0]].append(int(line[1])) # Actually a nested list
-        num_links = []
+        num_links = {}
         count = 0
-        for i, js in conn_mat.items():
-            num_links.append(len(js))
+        for node_index_str, js in conn_mat.items():
+            # See the module-level note: index by node id, not insertion order.
+            num_links[int(node_index_str)] = len(js)
             if len(js)>4:
                 count += 1
         conn_mat_global[itr] = conn_mat
@@ -633,17 +638,31 @@ def gif_creator():
                 if not any(gs_type in node_alias for gs_type in gs_alias_list):
 
                     node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
+                    # shell_color is keyed by the CUMULATIVE satellite count per
+                    # shell, so shell k owns indices [prev, shell_list[k]) - the
+                    # bound is exclusive, hence '>=' (with '>' the first satellite
+                    # of every shell after the first got the previous shell's
+                    # colour). Running off the end means the node index file holds
+                    # more satellites than sat_config declares.
                     shell_span = 0
                     shell_list = list(shell_color.keys())
-                    while node_idx>shell_list[shell_span]:
+                    while shell_span < len(shell_list) and node_idx >= shell_list[shell_span]:
                         shell_span += 1
+                    if shell_span >= len(shell_list):
+                        raise IndexError(
+                            f"Satellite node index {node_idx} ({node_assigned_alias}) is beyond the "
+                            f"{shell_list[-1]} satellites declared by sat_config shells "
+                            f"(cumulative bounds {shell_list}). The node index file and sat_config "
+                            "describe different constellations - regenerate Phase 1 output for this "
+                            "config before plotting."
+                        )
                     coloring_shell_sats = shell_color[shell_list[shell_span]]
 
                     x, y = m(node_lon, node_lat)
                     if node_assigned_alias == node_index_to_alias_topology_dict[ref] and plot_debug:
                         plt.scatter(x, y, s=50, marker="o", facecolors='none', edgecolors='red', zorder=20)
                         #plt.text(x, y-0.5, ref, fontsize=15, color='red', zorder=100)
-                    elif num_links[node_alias_to_index_topology_dict[node_assigned_alias]]>4 and plot_debug:
+                    elif plot_debug and num_links.get(node_idx, 0) > 4:
                         plt.scatter(x, y, s=20, marker="o", facecolors='darkcyan', edgecolors='darkcyan', zorder=20)
                         #plt.text(x, y-0.5, node_alias_to_index_topology_dict[node_assigned_alias], fontsize=7, zorder=100)
                     else:
