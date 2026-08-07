@@ -115,6 +115,36 @@ def get_orbital_planes_classifications(
     for i in range(0, len(dump_orbital_data["RAAN"])):
         list_of_values[i] = float(dump_orbital_data["RAAN"][i])
 
+    # Jenks needs at least as many DISTINCT values as requested classes, so a
+    # shell with too few (or zero) matching satellites blows up inside jenkspy
+    # with a message that names neither the shell nor the TLE file. Satellites
+    # are grouped into planes by RAAN, so the requested orbit count cannot
+    # exceed the number of distinct RAAN values that survived the filter above.
+    shell_label = f"shell{shell_num + 1}"
+    unique_raan = sorted(set(list_of_values))
+    if len(unique_raan) < number_of_orbits:
+        inc_lo, inc_hi = orbits_inclination + thresh2, orbits_inclination + thresh1
+        alt_lo, alt_hi = orbits_altitude + thresh4, orbits_altitude + thresh3
+        if not list_of_values:
+            raise ValueError(
+                f"No satellites in '{tle_filename}' match {shell_label}: none of the "
+                f"{len(Lines) // 3} satellites fall within inclination "
+                f"[{inc_lo:.4f}, {inc_hi:.4f}) deg AND altitude "
+                f"({alt_lo:.3f}, {alt_hi:.3f}) km. "
+                "Note that generate_TLE only produces satellites for shell1 "
+                "(generate_TLE_main.py hardcodes it), so any additional shell in "
+                "sat_config.yaml has no TLE data behind it. Either remove the unused "
+                "shell(s) from the config, or supply a TLE file that covers this shell."
+            )
+        raise ValueError(
+            f"{shell_label} requests {number_of_orbits} orbital planes, but its "
+            f"{len(list_of_values)} matching satellites in '{tle_filename}' span only "
+            f"{len(unique_raan)} distinct RAAN value(s): {unique_raan}. Jenks cannot "
+            f"split {len(unique_raan)} unique value(s) into {number_of_orbits} classes. "
+            f"Lower 'orbits' for {shell_label} to at most {len(unique_raan)}, or use a "
+            "TLE file with more orbital planes."
+        )
+
     # Use Jenks Natural Breaks classification to determine orbital planes
     breaks = jenkspy.jenks_breaks(list_of_values, n_classes=number_of_orbits)
     totalsatellites = 0
