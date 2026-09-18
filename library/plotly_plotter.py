@@ -369,48 +369,67 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     gs_lons, gs_lats, gs_text = [], [], []
 
     # --- 1. PARSE NODES ---
+    sat_shell_labels = []
     for node_alias, node_info in node_info_topology_at_t.items():
         node_assigned_alias = node_info[0]
         node_lon, node_lat = node_info[1], node_info[2]
-        
+
         # Ground Stations
         if any(gs_type in node_alias for gs_type in gs_alias_list):
             gs_lons.append(node_lon)
             gs_lats.append(node_lat)
             gs_text.append(f"{node_alias} ({node_assigned_alias})")
-        
+
         # Satellites
         else:
             sat_lons.append(node_lon)
             sat_lats.append(node_lat)
             sat_text.append(node_assigned_alias)
-            
+
             # Color Logic
             c = 'orange'
+            shell_label = 'Satellites'
             node_idx = node_alias_to_index_topology_dict.get(node_assigned_alias, 0)
-            
+
             if plot_debug and node_assigned_alias == node_index_to_alias_topology_dict.get(ref, ""):
                 c = 'red'
+                shell_label = 'Debug: Reference Satellite'
             elif plot_debug and node_idx < len(num_links) and num_links[node_idx] > 4:
                 c = 'darkcyan'
+                shell_label = 'Debug: High Link Count'
             else:
                 try:
                     shell_list = sorted(list(shell_color.keys()))
                     c = shell_color[shell_list[-1]]
-                    for s in shell_list:
+                    shell_label = f'Shell {len(shell_list)} Satellites'
+                    for shell_idx, s in enumerate(shell_list):
                         if node_idx <= s:
                             c = shell_color[s]
+                            shell_label = f'Shell {shell_idx + 1} Satellites'
                             break
                 except:
                     pass
             sat_colors.append(c)
+            sat_shell_labels.append(shell_label)
 
     # --- 2. ADD TRACES (NODES) ---
-    fig.add_trace(go.Scattergeo(
-        lon=sat_lons, lat=sat_lats, text=sat_text, mode='markers',
-        marker=dict(size=4, color=sat_colors, opacity=0.8, symbol='circle'),
-        name='Satellites'
-    ))
+    # One trace per shell so each gets its own legend entry. Plotly draws
+    # one legend swatch per trace, not per color, so a single combined
+    # trace could only ever show one "Satellites" entry regardless of how
+    # many shells were present.
+    shell_buckets = {}
+    for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
+        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color})
+        bucket['lon'].append(lon)
+        bucket['lat'].append(lat)
+        bucket['text'].append(text)
+
+    for label, bucket in shell_buckets.items():
+        fig.add_trace(go.Scattergeo(
+            lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
+            marker=dict(size=4, color=bucket['color'], opacity=0.8, symbol='circle'),
+            name=label
+        ))
 
     fig.add_trace(go.Scattergeo(
         lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
@@ -715,7 +734,12 @@ def gif_creator():
                     plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
                     #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
         handles, labels = plt.gca().get_legend_handles_labels()
-        sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
+        shell_list = sorted(list(shell_color.keys()))
+        sat_shell_markers = [
+            mlines.Line2D([], [], c=shell_color[shell_list[i]], markerfacecolor='none', markersize=6,
+                          label=f'Shell {i + 1} Satellites', marker='o', linestyle='None')
+            for i in range(len(shell_list))
+        ]
         gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
 
         # PLOT OPTIMAL ROUTE
@@ -734,8 +758,11 @@ def gif_creator():
         blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
         green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
         red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
-        handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
-        labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+        handles.extend(sat_shell_markers + [gs_marker, blue_line, green_line, red_line])
+        labels.extend([m.get_label() for m in sat_shell_markers] + [gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+        plt.legend(handles=handles, labels=labels, loc='upper left',
+                   bbox_to_anchor=(1.01, 1.0), fontsize=7, markerscale=0.8,
+                   frameon=True, borderaxespad=0.0)
 
         # Iterate over pairs of nodes in the optimal route
         for i in range(len(optimal_route_at_t) - 1):
