@@ -403,7 +403,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
                     c = shell_color[shell_list[-1]]
                     shell_label = f'Shell {len(shell_list)} Satellites'
                     for shell_idx, s in enumerate(shell_list):
-                        if node_idx <= s:
+                        if node_idx < s:
                             c = shell_color[s]
                             shell_label = f'Shell {shell_idx + 1} Satellites'
                             break
@@ -654,7 +654,7 @@ def gif_creator():
                     node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
                     shell_span = 0
                     shell_list = list(shell_color.keys())
-                    while node_idx>shell_list[shell_span]:
+                    while node_idx>=shell_list[shell_span]:
                         shell_span += 1
                     coloring_shell_sats = shell_color[shell_list[shell_span]]
 
