@@ -75,6 +75,7 @@ from mininet.topo import Topo
 from mininet.log import setLogLevel, info
 from mininet.node import OVSController
 import yaml
+from shutil import copyfile
 import sys
 sys.path.append("../")
 from mobility.read_live_tles import *
@@ -564,6 +565,11 @@ def save_node_index_and_terrestrial_info(
     # Close file to minimize memory leaks
     nodeindex_log.close()
     terrestrial_log.close()
+
+def save_tle_file(store_loc, fetch_loc):
+    file_name = store_loc.split('/')[-1]
+    check_create_path(store_loc)
+    copyfile(fetch_loc, store_loc+file_name)
 
 def save_xyz_2_csv(
                         coordinate_list         : list, 

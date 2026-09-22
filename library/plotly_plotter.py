@@ -929,7 +929,8 @@ def setConfigurations():
     optimal_route_filepath  = matchFilePath(outputfolder_path + 'output/optimal_routes/'+operator_name, r'^best_path.*.0.txt$')
     gs_filepath             = open(matchFilePath(outputfolder_path + 'output/terrestrial_info/', r'^terrestrial_.*.0.txt$'), 'r')
     node_indices_filepath   = matchFilePath(outputfolder_path + 'output/node_indices/'+operator_name, r'^nodeindex.*.0.txt')
-    tle_file                = open('dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+file_to_unix(node_indices_filepath), 'r')
+    tle_file_name           = os.listdir(outputfolder_path + 'output/TLE/')[0]
+    tle_file                = open(outputfolder_path + 'output/TLE/' + tle_file_name, 'r')
     conn_filepath           = matchFilePath(outputfolder_path + 'output/connectivity/'+operator_name, r'^topology_.*.0.txt')
     orb_sat_txt             = outputfolder_path + 'output/satellites_orbits/orbits_satellites.txt'
     conn_folder             = outputfolder_path + 'output/connectivity/'+operator_name+'/'
