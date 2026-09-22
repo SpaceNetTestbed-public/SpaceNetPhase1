@@ -567,7 +567,7 @@ def save_node_index_and_terrestrial_info(
     terrestrial_log.close()
 
 def save_tle_file(store_loc, fetch_loc):
-    file_name = store_loc.split('/')[-1]
+    file_name = fetch_loc.split('/')[-1]
     check_create_path(store_loc)
     copyfile(fetch_loc, store_loc+file_name)
 
