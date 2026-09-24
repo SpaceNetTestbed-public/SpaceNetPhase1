@@ -47,7 +47,7 @@ plot_GSs                = False
 plot_only_optimal       = False
 plot_in_3D              = False
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
-plot_optimal_orbits     = True   #Plots all the orbits involved in the optimal path
+plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = 50 #30  
 lat0_3d                 = -15 #-35      
@@ -105,11 +105,11 @@ t_current                           = None
 PLOTLY_SAT_MARKERSIZE = 5
 PLOTLY_GS_MARKERSIZE = 5
 PLOTLY_PATH_LINEWIDTH = 3
-PLOTLY_ORBIT_LINEWIDTH = 1
+PLOTLY_ORBIT_LINEWIDTH = 3
 PLOTLY_SAT_ALPHA = 1
 PLOTLY_GS_ALPHA = 1
 PLOTLY_PATH_ALPHA = 0.6
-PLOTLY_ORBIT_ALPHA = 0.5
+PLOTLY_ORBIT_ALPHA = 0.6
 
 
 
@@ -423,7 +423,14 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     # z-ordering: add_trace line types first and then marker types such that nodes
     # layer on top of the lines for better representation
 
-    # --- 2. PLOT OPTIMAL ROUTE ---
+    # --- 2. Ground station MARKERS ---
+    fig.add_trace(go.Scattergeo(
+        lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
+        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='purple')),
+        name='Ground Stations'
+    ))
+
+    # --- 3. PLOT OPTIMAL ROUTE ---
     type_lons = {'sat-sat': [], 'sat-gs': [], 'gs-gs': []}
     type_lats = {'sat-sat': [], 'sat-gs': [], 'gs-gs': []}
     
@@ -465,14 +472,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
                 name=f'Link: {key.upper()}', opacity=PLOTLY_PATH_ALPHA
             ))
 
-    # --- 3. Ground station MARKERS ---
-    fig.add_trace(go.Scattergeo(
-        lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
-        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='purple')),
-        name='Ground Stations'
-    ))
-
-    # --- 3. PLOT DEBUG ORBITS ---
+    # --- 4. PLOT DEBUG ORBITS ---
     orbit_lons, orbit_lats = [], []
     if plot_optimal_orbits:
         for orb_idx in unique_orbits_list:
@@ -490,11 +490,11 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
         
         fig.add_trace(go.Scattergeo(
             lon=orbit_lons, lat=orbit_lats, mode='lines',
-            line=dict(width=PLOTLY_ORBIT_LINEWIDTH, color='cyan', dash='dot'),
+            line=dict(width=PLOTLY_ORBIT_LINEWIDTH, color='cyan'),
             name='Active Orbits', opacity=PLOTLY_ORBIT_ALPHA
         ))
 
-    # --- 4. ADD TRACES (NODES) ---
+    # --- 5. ADD TRACES (NODES) ---
     # One trace per shell so each gets its own legend entry. Plotly draws
     # one legend swatch per trace, not per color, so a single combined
     # trace could only ever show one "Satellites" entry regardless of how
