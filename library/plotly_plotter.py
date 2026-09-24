@@ -47,7 +47,7 @@ plot_GSs                = False
 plot_only_optimal       = False
 plot_in_3D              = False
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
-plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
+plot_optimal_orbits     = True   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = 50 #30  
 lat0_3d                 = -15 #-35      
@@ -465,6 +465,13 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
                 name=f'Link: {key.upper()}', opacity=PLOTLY_PATH_ALPHA
             ))
 
+    # --- 3. Ground station MARKERS ---
+    fig.add_trace(go.Scattergeo(
+        lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
+        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='purple')),
+        name='Ground Stations'
+    ))
+
     # --- 3. PLOT DEBUG ORBITS ---
     orbit_lons, orbit_lats = [], []
     if plot_optimal_orbits:
@@ -505,12 +512,6 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
             marker=dict(size=PLOTLY_SAT_MARKERSIZE, color=bucket['color'], opacity=PLOTLY_SAT_ALPHA, symbol='circle'),
             name=label
         ))
-
-    fig.add_trace(go.Scattergeo(
-        lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
-        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='purple')),
-        name='Ground Stations'
-    ))
 
     # --- 6. LAYOUT CONFIGURATION ---
     fig.update_layout(
