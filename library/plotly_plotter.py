@@ -412,32 +412,10 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
             sat_colors.append(c)
             sat_shell_labels.append(shell_label)
 
-    # --- 2. ADD TRACES (NODES) ---
-    # One trace per shell so each gets its own legend entry. Plotly draws
-    # one legend swatch per trace, not per color, so a single combined
-    # trace could only ever show one "Satellites" entry regardless of how
-    # many shells were present.
-    shell_buckets = {}
-    for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
-        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color})
-        bucket['lon'].append(lon)
-        bucket['lat'].append(lat)
-        bucket['text'].append(text)
+    # z-ordering: add_trace line types first and then marker types such that nodes
+    # layer on top of the lines for better representation
 
-    for label, bucket in shell_buckets.items():
-        fig.add_trace(go.Scattergeo(
-            lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
-            marker=dict(size=4, color=bucket['color'], opacity=0.8, symbol='circle'),
-            name=label
-        ))
-
-    fig.add_trace(go.Scattergeo(
-        lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
-        marker=dict(size=10, color='purple', symbol='diamond', line=dict(width=1, color='white')),
-        name='Ground Stations'
-    ))
-
-    # --- 3. PLOT OPTIMAL ROUTE ---
+    # --- 2. PLOT OPTIMAL ROUTE ---
     type_lons = {'sat-sat': [], 'sat-gs': [], 'gs-gs': []}
     type_lats = {'sat-sat': [], 'sat-gs': [], 'gs-gs': []}
     
@@ -479,27 +457,52 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
                 name=f'Link: {key.upper()}'
             ))
 
-    # --- 4. PLOT DEBUG ORBITS ---
+    # --- 3. PLOT DEBUG ORBITS ---
     orbit_lons, orbit_lats = [], []
     if plot_optimal_orbits:
         for orb_idx in unique_orbits_list:
-             orb_sats = sat_orbit_index[orb_idx]
-             temp_lons, temp_lats = [], []
-             for s in orb_sats:
-                 if s in plotted_sat_index:
-                     temp_lons.append(plotted_sat_index[s][1])
-                     temp_lats.append(plotted_sat_index[s][0])
-             if temp_lons:
-                 temp_lons.append(temp_lons[0]) 
-                 temp_lats.append(temp_lats[0])
-                 orbit_lons.extend(temp_lons + [None])
-                 orbit_lats.extend(temp_lats + [None])
+            orb_sats = sat_orbit_index[orb_idx]
+            temp_lons, temp_lats = [], []
+            for s in orb_sats:
+                if s in plotted_sat_index:
+                    temp_lons.append(plotted_sat_index[s][1])
+                    temp_lats.append(plotted_sat_index[s][0])
+            if temp_lons:
+                temp_lons.append(temp_lons[0]) 
+                temp_lats.append(temp_lats[0])
+                orbit_lons.extend(temp_lons + [None])
+                orbit_lats.extend(temp_lats + [None])
         
         fig.add_trace(go.Scattergeo(
             lon=orbit_lons, lat=orbit_lats, mode='lines',
             line=dict(width=1, color='cyan', dash='dot'),
             name='Active Orbits', opacity=0.5
         ))
+
+    # --- 4. ADD TRACES (NODES) ---
+    # One trace per shell so each gets its own legend entry. Plotly draws
+    # one legend swatch per trace, not per color, so a single combined
+    # trace could only ever show one "Satellites" entry regardless of how
+    # many shells were present.
+    shell_buckets = {}
+    for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
+        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color})
+        bucket['lon'].append(lon)
+        bucket['lat'].append(lat)
+        bucket['text'].append(text)
+
+    for label, bucket in shell_buckets.items():
+        fig.add_trace(go.Scattergeo(
+            lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
+            marker=dict(size=4, color=bucket['color'], opacity=0.8, symbol='circle'),
+            name=label
+        ))
+
+    fig.add_trace(go.Scattergeo(
+        lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
+        marker=dict(size=10, color='purple', symbol='diamond', line=dict(width=1, color='white')),
+        name='Ground Stations'
+    ))
 
     # --- 6. LAYOUT CONFIGURATION ---
     fig.update_layout(
