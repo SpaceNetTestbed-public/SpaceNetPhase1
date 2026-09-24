@@ -508,7 +508,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
 
     fig.add_trace(go.Scattergeo(
         lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
-        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='white')),
+        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='purple')),
         name='Ground Stations'
     ))
 
