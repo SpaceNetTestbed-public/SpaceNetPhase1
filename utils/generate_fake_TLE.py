@@ -132,7 +132,7 @@ def generate_virtual_TLE(
     ma_str          = tle_format_field(MA, 3, 4, 0)
 
     # Add other content for Lines 1 & 2 using random/fixed generation
-    sat_title_str   = op_name + "-" + str(1000 + iter_num)
+    sat_title_str   = op_name.upper() + "-" + str(1000 + iter_num)
     sat_cat_str     = str(int(np.random.uniform(10000, 99999)))
     sat_class_str   = "U"
     intl_desg_str   = "98065A  "

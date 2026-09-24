@@ -47,7 +47,7 @@ plot_GSs                = False
 plot_only_optimal       = False
 plot_in_3D              = False
 plot_debug              = False   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
-plot_optimal_orbits     = True   #Plots all the orbits involved in the optimal path
+plot_optimal_orbits     = False   #Plots all the orbits involved in the optimal path
 make_gif                = True   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)
 lon0_3d                 = 50 #30  
 lat0_3d                 = -15 #-35      
@@ -887,7 +887,7 @@ def setConfigurations():
     plot_only_optimal       = config['plot_only_optimal']
     plot_in_3D              = config['plot_in_3D']
     plot_debug              = config['plot_debug']   #Plots linked sats to the given sat index and their respective orbits AND also darkcyan satellites that have more than 4 ISLs
-    # plot_optimal_orbits     = config['plot_optimal_orbits']   #Plots all the orbits involved in the optimal path
+    plot_optimal_orbits     = config['plot_optimal_orbits']   #Plots all the orbits involved in the optimal path
     make_gif                = config['make_gif']   # Makes gif of all the timestep plots in this file existyin in current output path  (REQUIREMENTS: CONNECTIVITY FILES AND OPTIMAL_PATH FILES SHOULD BE EXISTING AND SEPERATE FILES FOR EACH TIMESTEP | line 153 hardcode should be rechecked)   
     ll                      = [0.5, 0.5]   #scaling of the 3D plot (non-negetive) (lower left point) [0.7, 0.7]
     ur                      = [0.5, 0.5]   #scaling of the 3D plot (non-negetive) (upper right point) [0.7, 0.7]
