@@ -102,6 +102,10 @@ total_num_sat                       = 0
 total_num_gs                        = 0
 t_current                           = None
 
+PLOTLY_SAT_MARKERSIZE = 5
+PLOTLY_GS_MARKERSIZE = 10
+PLOTLY_PATH_LINEWIDTH = 3
+PLOTLY_ORBIT_LINEWIDTH = 1
 
 
 
@@ -453,7 +457,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
         if type_lons[key]:
             fig.add_trace(go.Scattergeo(
                 lon=type_lons[key], lat=type_lats[key], mode='lines',
-                line=dict(width=4, color=colors[key]),
+                line=dict(width=PLOTLY_PATH_LINEWIDTH, color=colors[key]),
                 name=f'Link: {key.upper()}'
             ))
 
@@ -475,7 +479,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
         
         fig.add_trace(go.Scattergeo(
             lon=orbit_lons, lat=orbit_lats, mode='lines',
-            line=dict(width=1, color='cyan', dash='dot'),
+            line=dict(width=PLOTLY_ORBIT_LINEWIDTH, color='cyan', dash='dot'),
             name='Active Orbits', opacity=0.5
         ))
 
@@ -494,13 +498,13 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     for label, bucket in shell_buckets.items():
         fig.add_trace(go.Scattergeo(
             lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
-            marker=dict(size=4, color=bucket['color'], opacity=0.8, symbol='circle'),
+            marker=dict(size=PLOTLY_SAT_MARKERSIZE, color=bucket['color'], opacity=0.8, symbol='circle'),
             name=label
         ))
 
     fig.add_trace(go.Scattergeo(
         lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
-        marker=dict(size=10, color='purple', symbol='diamond', line=dict(width=1, color='white')),
+        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', symbol='diamond', line=dict(width=1, color='white')),
         name='Ground Stations'
     ))
 
