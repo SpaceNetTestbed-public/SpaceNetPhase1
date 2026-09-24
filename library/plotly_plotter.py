@@ -103,7 +103,7 @@ total_num_gs                        = 0
 t_current                           = None
 
 PLOTLY_SAT_MARKERSIZE = 5
-PLOTLY_GS_MARKERSIZE = 10
+PLOTLY_GS_MARKERSIZE = 5
 PLOTLY_PATH_LINEWIDTH = 3
 PLOTLY_ORBIT_LINEWIDTH = 1
 PLOTLY_SAT_ALPHA = 1
