@@ -28,5 +28,5 @@ shells:
         body: <Celestial body>                      # Primary body (current options: Earth/Moon)
         perturber: <Third body>                     # Leave blank if body=Earth
 
-# TLE file directory (if generating TLEs, TLE file will save to this directory; if providing TLE, match TLEFilePath to TLE location directory)
-TLEFilePath: /home/spacenet/simulator/dynamic-topology-generator/utils/
+# TLE file directory (UNCOMMENT if you have a custom location for your TLE)
+# TLEFilePath: utils/myTLE_path/
