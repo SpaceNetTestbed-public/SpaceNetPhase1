@@ -501,19 +501,21 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     # many shells were present.
     shell_buckets = {}
     for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
-        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color})
+        
+        if node_alias_to_index_topology_dict[text] in optimal_route_at_epoch:
+            alpha = PLOTLY_OPTIMAL_NODE_ALPHA
+        else:
+            alpha = PLOTLY_SAT_ALPHA
+
+        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color, 'alpha': alpha})
         bucket['lon'].append(lon)
         bucket['lat'].append(lat)
         bucket['text'].append(text)
 
     for label, bucket in shell_buckets.items():
-        if node_alias_to_index_topology_dict[bucket['text']] in optimal_route_at_epoch:
-            alpha = PLOTLY_OPTIMAL_NODE_ALPHA
-        else:
-            alpha = PLOTLY_SAT_ALPHA
         fig.add_trace(go.Scattergeo(
             lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
-            marker=dict(size=PLOTLY_SAT_MARKERSIZE, color=bucket['color'], opacity=alpha, symbol='circle'),
+            marker=dict(size=PLOTLY_SAT_MARKERSIZE, color=bucket['color'], opacity=bucket['alpha'], symbol='circle'),
             name=label
         ))
 
