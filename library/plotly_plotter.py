@@ -520,7 +520,7 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     for label, bucket in shell_buckets.items():
         fig.add_trace(go.Scattergeo(
             lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
-            marker=dict(size=bucket['marker_size'], color=bucket['color'], opacity=bucket['alpha'], symbol='circle'),
+            marker=dict(size=bucket['marker_size'], line=None, color=bucket['color'], opacity=bucket['alpha'], symbol='circle'),
             name=label
         ))
 
