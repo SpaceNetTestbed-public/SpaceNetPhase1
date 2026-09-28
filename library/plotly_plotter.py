@@ -101,12 +101,13 @@ total_num_sat                       = 0
 total_num_gs                        = 0
 t_current                           = None
 
+PLOTLY_OPTIMAL_NODE_MARKERSIZE = 7
 PLOTLY_SAT_MARKERSIZE = 5
 PLOTLY_GS_MARKERSIZE = 5
 PLOTLY_PATH_LINEWIDTH = 3
 PLOTLY_ORBIT_LINEWIDTH = 3
 PLOTLY_OPTIMAL_NODE_ALPHA = 1
-PLOTLY_SAT_ALPHA = 0.8
+PLOTLY_SAT_ALPHA = 0.4
 PLOTLY_GS_ALPHA = 1
 PLOTLY_PATH_ALPHA = 0.6
 PLOTLY_ORBIT_ALPHA = 0.6
@@ -502,18 +503,22 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     shell_buckets = {}
     for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
         
-        print(text, optimal_route_at_epoch, text in optimal_route_at_epoch)
         if text in optimal_route_at_epoch:
             alpha = PLOTLY_OPTIMAL_NODE_ALPHA
+            size = PLOTLY_OPTIMAL_NODE_MARKERSIZE
         else:
             alpha = PLOTLY_SAT_ALPHA
+            size = PLOTLY_SAT_MARKERSIZE
 
-        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color, 'alpha': alpha})
+        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color, 'alpha': [], 'marker_size': []})
         bucket['lon'].append(lon)
         bucket['lat'].append(lat)
         bucket['text'].append(text)
+        bucket['alpha'].append(alpha)
+        bucket['marker_size'].append(size)
 
     for label, bucket in shell_buckets.items():
+        print(bucket['alpha'], bucket['marker_size'])
         fig.add_trace(go.Scattergeo(
             lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
             marker=dict(size=PLOTLY_SAT_MARKERSIZE, color=bucket['color'], opacity=bucket['alpha'], symbol='circle'),
