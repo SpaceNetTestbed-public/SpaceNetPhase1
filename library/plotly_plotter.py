@@ -502,7 +502,8 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     shell_buckets = {}
     for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
         
-        if node_alias_to_index_topology_dict[text] in optimal_route_at_epoch:
+        print(text, optimal_route_at_epoch, text in optimal_route_at_epoch)
+        if text in optimal_route_at_epoch:
             alpha = PLOTLY_OPTIMAL_NODE_ALPHA
         else:
             alpha = PLOTLY_SAT_ALPHA
