@@ -132,9 +132,9 @@ def generate_virtual_TLE(
     ma_str          = tle_format_field(MA, 3, 4, 0)
 
     # Add other content for Lines 1 & 2 using random/fixed generation
-    sat_title_str   = op_name + "-" + str(1000 + iter_num)
+    sat_title_str   = op_name.upper() + "-" + str(1000 + iter_num)
     sat_cat_str     = str(int(np.random.uniform(10000, 99999)))
-    sat_class_str   = "U"
+    sat_class_str   = "F" # F (fake) is a new classification that distinguishes SpaceNet generated TLE VS extracted TLEs
     intl_desg_str   = "98065A  "
     d1nbar_str      = "-.00022620"
     d2nbar_str      = " 00000-0"

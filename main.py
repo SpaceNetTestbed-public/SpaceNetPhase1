@@ -207,6 +207,7 @@ def main():
     coord_csv_path              = output_filepath+"/coord_store/"
     cpu_time_path               = output_filepath+"/cpu_time/"
     resource_path               = output_filepath+"/resource/"
+    store_tle_path              = output_filepath+"/TLE/"
 
     # Start the subprocess for resource logging
     if run_resource_logger:
@@ -292,6 +293,8 @@ def main():
         perturber = sat_config["shells"]["shell1"]["perturber"]
         satellites_by_name = satellites_from_tle(path_of_recent_TLE, simulation_length, main_body, perturber)  # entire sats from TLE (Dict FORMAT- 'LUNAR-####' : Poliastro Orbit type) (Globally tracked)  
     satellites_by_index = {}
+
+    save_tle_file(store_tle_path, path_of_recent_TLE)
 
     # If using t2t links, generage t2t dictionary, then add Gateways to ground stations
     t2t_dict = None

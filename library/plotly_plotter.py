@@ -76,7 +76,6 @@ Main_body = 'Moon'
 Third_body = 'Earth'
 ref = 1 #1263  # index of satellite to be debugged for ISLs (Only use with plot_debug=True)
 shell_color = {1584:"orange",1814:"green"}
-#shell_color = {440:"orange"}
 default_projection_for_moon = "ortho"
 
 
@@ -102,6 +101,16 @@ total_num_sat                       = 0
 total_num_gs                        = 0
 t_current                           = None
 
+PLOTLY_OPTIMAL_NODE_MARKERSIZE = 9
+PLOTLY_SAT_MARKERSIZE = 5
+PLOTLY_GS_MARKERSIZE = 5
+PLOTLY_PATH_LINEWIDTH = 3
+PLOTLY_ORBIT_LINEWIDTH = 3
+PLOTLY_OPTIMAL_NODE_ALPHA = 1
+PLOTLY_SAT_ALPHA = 0.75
+PLOTLY_GS_ALPHA = 1
+PLOTLY_PATH_ALPHA = 0.6
+PLOTLY_ORBIT_ALPHA = 0.6
 
 
 
@@ -369,52 +378,56 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
     gs_lons, gs_lats, gs_text = [], [], []
 
     # --- 1. PARSE NODES ---
+    sat_shell_labels = []
     for node_alias, node_info in node_info_topology_at_t.items():
         node_assigned_alias = node_info[0]
         node_lon, node_lat = node_info[1], node_info[2]
-        
+
         # Ground Stations
         if any(gs_type in node_alias for gs_type in gs_alias_list):
             gs_lons.append(node_lon)
             gs_lats.append(node_lat)
             gs_text.append(f"{node_alias} ({node_assigned_alias})")
-        
+
         # Satellites
         else:
             sat_lons.append(node_lon)
             sat_lats.append(node_lat)
             sat_text.append(node_assigned_alias)
-            
+
             # Color Logic
             c = 'orange'
+            shell_label = 'Satellites'
             node_idx = node_alias_to_index_topology_dict.get(node_assigned_alias, 0)
-            
+
             if plot_debug and node_assigned_alias == node_index_to_alias_topology_dict.get(ref, ""):
                 c = 'red'
+                shell_label = 'Debug: Reference Satellite'
             elif plot_debug and node_idx < len(num_links) and num_links[node_idx] > 4:
                 c = 'darkcyan'
+                shell_label = 'Debug: High Link Count'
             else:
                 try:
                     shell_list = sorted(list(shell_color.keys()))
                     c = shell_color[shell_list[-1]]
-                    for s in shell_list:
-                        if node_idx <= s:
+                    shell_label = f'Shell {len(shell_list)} Satellites'
+                    for shell_idx, s in enumerate(shell_list):
+                        if node_idx < s:
                             c = shell_color[s]
+                            shell_label = f'Shell {shell_idx + 1} Satellites'
                             break
                 except:
                     pass
             sat_colors.append(c)
+            sat_shell_labels.append(shell_label)
 
-    # --- 2. ADD TRACES (NODES) ---
-    fig.add_trace(go.Scattergeo(
-        lon=sat_lons, lat=sat_lats, text=sat_text, mode='markers',
-        marker=dict(size=4, color=sat_colors, opacity=0.8, symbol='circle'),
-        name='Satellites'
-    ))
+    # z-ordering: add_trace line types first and then marker types such that nodes
+    # layer on top of the lines for better representation
 
+    # --- 2. Ground station MARKERS ---
     fig.add_trace(go.Scattergeo(
         lon=gs_lons, lat=gs_lats, text=gs_text, mode='markers',
-        marker=dict(size=10, color='purple', symbol='diamond', line=dict(width=1, color='white')),
+        marker=dict(size=PLOTLY_GS_MARKERSIZE, color='purple', opacity=PLOTLY_GS_ALPHA, symbol='diamond', line=dict(width=1, color='purple')),
         name='Ground Stations'
     ))
 
@@ -456,30 +469,59 @@ def final_plotting(optimal_route_at_epoch, count, unique_orbits_list):
         if type_lons[key]:
             fig.add_trace(go.Scattergeo(
                 lon=type_lons[key], lat=type_lats[key], mode='lines',
-                line=dict(width=4, color=colors[key]),
-                name=f'Link: {key.upper()}'
+                line=dict(width=PLOTLY_PATH_LINEWIDTH, color=colors[key]),
+                name=f'Link: {key.upper()}', opacity=PLOTLY_PATH_ALPHA
             ))
 
     # --- 4. PLOT DEBUG ORBITS ---
     orbit_lons, orbit_lats = [], []
     if plot_optimal_orbits:
         for orb_idx in unique_orbits_list:
-             orb_sats = sat_orbit_index[orb_idx]
-             temp_lons, temp_lats = [], []
-             for s in orb_sats:
-                 if s in plotted_sat_index:
-                     temp_lons.append(plotted_sat_index[s][1])
-                     temp_lats.append(plotted_sat_index[s][0])
-             if temp_lons:
-                 temp_lons.append(temp_lons[0]) 
-                 temp_lats.append(temp_lats[0])
-                 orbit_lons.extend(temp_lons + [None])
-                 orbit_lats.extend(temp_lats + [None])
+            orb_sats = sat_orbit_index[orb_idx]
+            temp_lons, temp_lats = [], []
+            for s in orb_sats:
+                if s in plotted_sat_index:
+                    temp_lons.append(plotted_sat_index[s][1])
+                    temp_lats.append(plotted_sat_index[s][0])
+            if temp_lons:
+                temp_lons.append(temp_lons[0]) 
+                temp_lats.append(temp_lats[0])
+                orbit_lons.extend(temp_lons + [None])
+                orbit_lats.extend(temp_lats + [None])
         
         fig.add_trace(go.Scattergeo(
             lon=orbit_lons, lat=orbit_lats, mode='lines',
-            line=dict(width=1, color='cyan', dash='dot'),
-            name='Active Orbits', opacity=0.5
+            line=dict(width=PLOTLY_ORBIT_LINEWIDTH, color='cyan'),
+            name='Active Orbits', opacity=PLOTLY_ORBIT_ALPHA
+        ))
+
+    # --- 5. ADD TRACES (NODES) ---
+    # One trace per shell so each gets its own legend entry. Plotly draws
+    # one legend swatch per trace, not per color, so a single combined
+    # trace could only ever show one "Satellites" entry regardless of how
+    # many shells were present.
+    shell_buckets = {}
+    for lon, lat, text, color, label in zip(sat_lons, sat_lats, sat_text, sat_colors, sat_shell_labels):
+        
+        if text in optimal_route_at_epoch:
+            alpha = PLOTLY_OPTIMAL_NODE_ALPHA
+            size = PLOTLY_OPTIMAL_NODE_MARKERSIZE
+        else:
+            alpha = PLOTLY_SAT_ALPHA
+            size = PLOTLY_SAT_MARKERSIZE
+
+        bucket = shell_buckets.setdefault(label, {'lon': [], 'lat': [], 'text': [], 'color': color, 'alpha': [], 'marker_size': []})
+        bucket['lon'].append(lon)
+        bucket['lat'].append(lat)
+        bucket['text'].append(text)
+        bucket['alpha'].append(alpha)
+        bucket['marker_size'].append(size)
+
+    for label, bucket in shell_buckets.items():
+        fig.add_trace(go.Scattergeo(
+            lon=bucket['lon'], lat=bucket['lat'], text=bucket['text'], mode='markers',
+            marker=dict(size=bucket['marker_size'], line=dict(width=0), color=bucket['color'], opacity=bucket['alpha'], symbol='circle'),
+            name=label
         ))
 
     # --- 6. LAYOUT CONFIGURATION ---
@@ -635,7 +677,7 @@ def gif_creator():
                     node_idx = node_alias_to_index_topology_dict[node_assigned_alias]
                     shell_span = 0
                     shell_list = list(shell_color.keys())
-                    while node_idx>shell_list[shell_span]:
+                    while node_idx>=shell_list[shell_span]:
                         shell_span += 1
                     coloring_shell_sats = shell_color[shell_list[shell_span]]
 
@@ -715,7 +757,12 @@ def gif_creator():
                     plt.scatter(x, y, s=20, marker='o', facecolors='None', edgecolors='purple', zorder=4, linewidth=2)
                     #plt.text(x, y-700000, node_assigned_alias, fontsize=10, color='red', zorder=75)
         handles, labels = plt.gca().get_legend_handles_labels()
-        sat_marker = mlines.Line2D([], [], c='black', markerfacecolor='none', markersize=6, label='Satellite', marker='o', linestyle='None')
+        shell_list = sorted(list(shell_color.keys()))
+        sat_shell_markers = [
+            mlines.Line2D([], [], c=shell_color[shell_list[i]], markerfacecolor='none', markersize=6,
+                          label=f'Shell {i + 1} Satellites', marker='o', linestyle='None')
+            for i in range(len(shell_list))
+        ]
         gs_marker = mlines.Line2D([], [], c='purple', markerfacecolor='none', markersize=6, label='Ground Station (GW, CT, IE)', marker='p', linestyle='None')
 
         # PLOT OPTIMAL ROUTE
@@ -734,8 +781,11 @@ def gif_creator():
         blue_line = mlines.Line2D([], [], color=colors['sat-sat'], markersize=5, label='Sat-Sat', linestyle='--')
         green_line = mlines.Line2D([], [], color=colors['sat-gs'], markersize=5, label='GS-Sat', linestyle='--')
         red_line = mlines.Line2D([], [], color=colors['gs-gs'], markersize=5, label='GS-GS', linestyle='--')
-        handles.extend([sat_marker, gs_marker, blue_line, green_line, red_line])
-        labels.extend([sat_marker.get_label(), gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+        handles.extend(sat_shell_markers + [gs_marker, blue_line, green_line, red_line])
+        labels.extend([m.get_label() for m in sat_shell_markers] + [gs_marker.get_label(), blue_line.get_label(), green_line.get_label(), red_line.get_label()])
+        plt.legend(handles=handles, labels=labels, loc='upper left',
+                   bbox_to_anchor=(1.01, 1.0), fontsize=7, markerscale=0.8,
+                   frameon=True, borderaxespad=0.0)
 
         # Iterate over pairs of nodes in the optimal route
         for i in range(len(optimal_route_at_t) - 1):
@@ -902,7 +952,8 @@ def setConfigurations():
     optimal_route_filepath  = matchFilePath(outputfolder_path + 'output/optimal_routes/'+operator_name, r'^best_path.*.0.txt$')
     gs_filepath             = open(matchFilePath(outputfolder_path + 'output/terrestrial_info/', r'^terrestrial_.*.0.txt$'), 'r')
     node_indices_filepath   = matchFilePath(outputfolder_path + 'output/node_indices/'+operator_name, r'^nodeindex.*.0.txt')
-    tle_file                = open('dynamic-topology-generator/utils/'+operator_name+'_tles/'+operator_name+'_'+file_to_unix(node_indices_filepath), 'r')
+    tle_file_name           = os.listdir(outputfolder_path + 'output/TLE/')[0]
+    tle_file                = open(outputfolder_path + 'output/TLE/' + tle_file_name, 'r')
     conn_filepath           = matchFilePath(outputfolder_path + 'output/connectivity/'+operator_name, r'^topology_.*.0.txt')
     orb_sat_txt             = outputfolder_path + 'output/satellites_orbits/orbits_satellites.txt'
     conn_folder             = outputfolder_path + 'output/connectivity/'+operator_name+'/'
