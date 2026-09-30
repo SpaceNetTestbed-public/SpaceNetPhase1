@@ -268,7 +268,7 @@ def main():
 
     # Get the path of the most recent TLE file based on the timestamp
     path_of_recent_TLE  = get_recent_TLEs_using_timestamp(tle_file_path, time_timestamp, operator_name)
-    tle_timestamp       = path_of_recent_TLE.split("_")[2]
+    tle_timestamp       = path_of_recent_TLE.split("_")[-1]
     print("\n\n..... Phase-0: Configuration Set-up:")
     print(".......... Operator Name: \t\t", operator_name)
     print(".......... Start Epoch: \t\t", datetime.fromtimestamp(int(time_timestamp)).strftime('%B %d, %Y %H:%M:%S UTC'))
