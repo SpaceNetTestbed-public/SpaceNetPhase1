@@ -28,7 +28,7 @@ Important parameters that the users can toggle specific to their testbed experim
 | SourceNode, DestNode  | string value  | ground station names in str  |
 | RouteWeight  | latency/distance/capacity/congestion  | Routing strategy  |
 | AssociationCritGSL  | BASED_ON_DISTANCE_ONLY_MININET  | Ground Station Link conneciton strategy  |
-| UseWeatherData  | 0/1  | Using weather information  |
+| UseWeatherData  | 0/1  | Using weather information runs on openweather environment key (ENV_VAR - OPENWEATHER_APIKEY)  |
 | TopoCrit  | 0,1 or 2  | Enabling/disabling ISTN  |
 | generate_TLE  | true/false  | generates custom TLE  |
 
