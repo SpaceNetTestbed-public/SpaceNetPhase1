@@ -40,8 +40,7 @@ logger = logging.getLogger(__name__)
 # =================================================================================== #
 # ---------------------------- BUILT-IN ASSUMPTIONS --------------------------------- #
 # =================================================================================== #
-#api_key                                 = "d06b0a02f8377dff811a2a6d0882a2d6"
-api_key                                 = "cab2710f043a0aeedb61b28b3a316146" #Contains weather history subscription of OpenWeather API (One Call API 3.0)
+api_key                                 = os.getenv("OPENWEATHER_APIKEY", "cab2710f043a0aeedb61b28b3a316146") #Contains weather history subscription of OpenWeather API (One Call API 3.0)
 channelFreq_isls                        = 37.0      # GHz
 channelFreq_sat_to_ground               = 12.7      # GHz
 channelFreq_ground_to_sat               = 14.5      # GHz
